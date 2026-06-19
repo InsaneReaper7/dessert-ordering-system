@@ -280,9 +280,9 @@ fun OrderLogCard(order: Order) {
             )
 
             // Toppings
-            if (order.toppings.isNotEmpty()) {
+            if (order.toppings != null && order.toppings.isNotEmpty()) {
                 val formattedToppings = order.toppings.joinToString(", ") { t ->
-                    t.substring(0, 1).uppercase() + t.substring(1)
+                    if (t.isNotEmpty()) t.substring(0, 1).uppercase() + t.substring(1) else ""
                 }
                 Text(
                     text = "Toppings: $formattedToppings",
@@ -293,7 +293,7 @@ fun OrderLogCard(order: Order) {
             }
 
             // Notes
-            if (order.notes.isNotEmpty()) {
+            if (order.notes != null && order.notes.isNotEmpty()) {
                 Text(
                     text = "Notes: \"${order.notes}\"",
                     fontSize = 12.sp,
@@ -302,6 +302,7 @@ fun OrderLogCard(order: Order) {
                     modifier = Modifier.padding(top = 6.dp)
                 )
             }
+
 
             Divider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
 

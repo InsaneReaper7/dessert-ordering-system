@@ -13,12 +13,13 @@ data class Order(
     val customer_phone: String,
     val dessert_id: String,
     val size: String,
-    val toppings: List<String>,
-    val notes: String,
+    val toppings: List<String>?,
+    val notes: String?,
     val total_price: Double?,
     val pickup_delivery: String,
     val created_at: String
 )
+
 
 
 enum class ConnectionState {

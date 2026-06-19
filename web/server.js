@@ -99,11 +99,13 @@ function broadcastNewOrder(order) {
       customer_phone: order.customer_phone,
       dessert_id: order.dessert_id,
       size: order.size,
-      toppings: order.toppings,
+      toppings: order.toppings || [],
+      notes: order.notes || "",
       total_price: order.total_price,
       pickup_delivery: order.pickup_delivery,
       created_at: new Date().toISOString()
     }
+
   });
 
   // Send to Android app
