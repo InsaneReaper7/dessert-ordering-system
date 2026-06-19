@@ -1,0 +1,184 @@
+const fs = require('fs');
+const path = require('path');
+const { Client } = require('pg');
+const sqlite3 = require('sqlite3');
+
+const isPostgres = !!process.env.DATABASE_URL;
+let dbClient = null;
+
+// Initialize connection
+async function initDB() {
+  if (isPostgres) {
+    console.log('Using PostgreSQL database');
+    dbClient = new Client({
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
+    await dbClient.connect();
+  } else {
+    console.log('Using SQLite database');
+    const dbDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    const dbPath = path.join(dbDir, 'desserts.db');
+    dbClient = new sqlite3.Database(dbPath);
+  }
+
+  await createTables();
+  await seedData();
+}
+
+// Helper to execute SQL queries on both DBs
+function query(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    if (isPostgres) {
+      // Convert SQLite parameter placeholders (?) to PostgreSQL ($1, $2...)
+      let pgSql = sql;
+      let paramCount = 1;
+      while (pgSql.includes('?')) {
+        pgSql = pgSql.replace('?', `$${paramCount++}`);
+      }
+      // Replace SQL-specific types or functions if needed
+      pgSql = pgSql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY');
+      pgSql = pgSql.replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/gi, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+      pgSql = pgSql.replace(/IFNOTEXISTS/gi, 'IF NOT EXISTS');
+
+      dbClient.query(pgSql, params)
+        .then(res => resolve(res.rows))
+        .catch(err => reject(err));
+    } else {
+      // For SELECT queries
+      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+        dbClient.all(sql, params, (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        });
+      } else {
+        // For INSERT, UPDATE, DELETE queries
+        dbClient.run(sql, params, function(err) {
+          if (err) reject(err);
+          else resolve({ insertId: this.lastID, changes: this.changes });
+        });
+      }
+    }
+  });
+}
+
+async function createTables() {
+  // Create desserts table
+  await query(`
+    CREATE TABLE IF NOT EXISTS desserts (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      description TEXT,
+      price_8x5 REAL,
+      price_9x9 REAL,
+      has_toppings INTEGER DEFAULT 0,
+      image_url VARCHAR(255)
+    )
+  `);
+
+  // Create orders table
+  await query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_name VARCHAR(100) NOT NULL,
+      customer_phone VARCHAR(50) NOT NULL,
+      customer_email VARCHAR(100) NOT NULL,
+      dessert_id VARCHAR(50) NOT NULL,
+      size VARCHAR(10) NOT NULL,
+      toppings TEXT,
+      notes TEXT,
+      total_price REAL,
+      status VARCHAR(20) DEFAULT 'pending',
+      pickup_delivery VARCHAR(20) NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function seedData() {
+  const desserts = await query('SELECT COUNT(*) as count FROM desserts');
+  const count = desserts[0].count;
+  
+  if (count === 0) {
+    console.log('Seeding initial dessert items...');
+    const initialDesserts = [
+      {
+        id: 'brownies',
+        name: 'Fudge Brownies',
+        description: 'Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.',
+        price_8x5: null, // TBD
+        price_9x9: null, // TBD
+        has_toppings: 1,
+        image_url: '/images/brownies.png'
+      },
+      {
+        id: 'blondies',
+        name: 'Classic Blondies',
+        description: 'Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.',
+        price_8x5: null, // TBD
+        price_9x9: null, // TBD
+        has_toppings: 1,
+        image_url: '/images/blondies.png'
+      },
+      {
+        id: 'lemon_bars',
+        name: 'Tangy Lemon Bars',
+        description: 'Tangy, sweet freshly squeezed lemon curd on a buttery shortbread crust, dusted with powdered sugar.',
+        price_8x5: 12.00, // Fixed
+        price_9x9: null, // TBD
+        has_toppings: 0,
+        image_url: '/images/lemon_bars.png'
+      }
+    ];
+
+    for (const dessert of initialDesserts) {
+      await query(
+        'INSERT INTO desserts (id, name, description, price_8x5, price_9x9, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.has_toppings, dessert.image_url]
+      );
+    }
+  }
+}
+
+// Database helper functions
+module.exports = {
+  initDB,
+  query,
+  
+  // Desserts
+  getDesserts: () => query('SELECT * FROM desserts'),
+  getDessertById: (id) => query('SELECT * FROM desserts WHERE id = ?', [id]).then(rows => rows[0]),
+  addDessert: (id, name, desc, p8x5, p9x9, toppings, img) => 
+    query('INSERT INTO desserts (id, name, description, price_8x5, price_9x9, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+      [id, name, desc, p8x5, p9x9, toppings, img]),
+  updateDessertPrices: (id, p8x5, p9x9) => 
+    query('UPDATE desserts SET price_8x5 = ?, price_9x9 = ? WHERE id = ?', [p8x5, p9x9, id]),
+  
+  // Orders
+  getOrders: () => query('SELECT * FROM orders ORDER BY created_at DESC'),
+  getOrderById: (id) => query('SELECT * FROM orders WHERE id = ?', [id]).then(rows => rows[0]),
+  createOrder: (order) => query(
+    `INSERT INTO orders 
+     (customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, total_price, status, pickup_delivery) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      order.customer_name,
+      order.customer_phone,
+      order.customer_email,
+      order.dessert_id,
+      order.size,
+      JSON.stringify(order.toppings || []),
+      order.notes || '',
+      order.total_price, // Will be null or numerical
+      'pending',
+      order.pickup_delivery
+    ]
+  ),
+  updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),
+  deleteOrder: (id) => query('DELETE FROM orders WHERE id = ?', [id])
+};

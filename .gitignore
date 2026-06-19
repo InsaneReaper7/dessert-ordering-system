@@ -1,0 +1,16 @@
+# Node.js
+web/node_modules/
+web/.env
+web/data/
+*.log
+
+# Android / Gradle
+.gradle/
+**/build/
+**/local.properties
+.idea/
+*.apk
+
+# OS files
+.DS_Store
+Thumbs.db

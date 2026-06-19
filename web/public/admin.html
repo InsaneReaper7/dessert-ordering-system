@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sugar & Crumb | Admin Dashboard</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-container">
+      <div class="logo">
+        <span class="logo-serif">Admin Portal</span>
+        <span class="logo-subtitle">Sugar & Crumb Bakery</span>
+      </div>
+      <div class="header-actions">
+        <button id="logout-btn" class="btn hidden" onclick="handleLogout()" style="padding: 6px 14px; font-size: 13px; border-radius: 6px; background-color: var(--primary); color: #fff;">Logout</button>
+        <a href="index.html" class="nav-link" style="font-size: 14px;">View Menu</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Card container (Centered) -->
+  <div id="login-container" class="container container-narrow" style="padding-top: 80px; padding-bottom: 80px;">
+    <div class="login-card">
+      <h2 class="section-title">Admin Login</h2>
+      <p class="section-subtitle">Enter the password to access the sales tracker and manage customer orders.</p>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="admin-password">Dashboard Password</label>
+          <input type="password" id="admin-password" placeholder="••••••••" required style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 16px;">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Enter Dashboard</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Content (hidden by default) -->
+  <div id="dashboard-container" class="container hidden" style="padding-top: 40px; padding-bottom: 80px;">
+    <!-- WebSocket connection alert status -->
+    <div class="connection-banner">
+      <div class="connection-status">
+        <span class="status-indicator offline" id="connection-indicator"></span>
+        <span id="connection-text">WebSocket: Disconnected</span>
+      </div>
+      <div class="connection-actions">
+        <button class="btn btn-test-ping" id="test-ping-btn" onclick="sendTestPing()">
+          <span class="btn-icon">🔊</span> Test Phone Chime
+        </button>
+      </div>
+    </div>
+
+    <!-- Overview Stats Cards -->
+    <div class="grid grid-3" style="margin-top: 32px;">
+      <div class="stat-card">
+        <span class="stat-label">Sales (Today)</span>
+        <h2 class="stat-value" id="stats-sales-today">$0.00</h2>
+        <span class="stat-subtext">*Excluding TBD orders</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Sales (This Month)</span>
+        <h2 class="stat-value" id="stats-sales-month">$0.00</h2>
+        <span class="stat-subtext">*Excluding TBD orders</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Sales (This Year)</span>
+        <h2 class="stat-value" id="stats-sales-year">$0.00</h2>
+        <span class="stat-subtext">*Excluding TBD orders</span>
+      </div>
+    </div>
+
+    <!-- Analytics Charts (Horizontal Progress Bars) -->
+    <div class="grid grid-2" style="margin-top: 32px;">
+      <div class="analytics-card">
+        <h3 class="analytics-title">Dessert Item Quantities Sold</h3>
+        <div id="item-sales-bars" class="bar-chart-container">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+      <div class="analytics-card">
+        <h3 class="analytics-title">Top Toppings Popularity</h3>
+        <div id="topping-popularity-bars" class="bar-chart-container">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div class="orders-table-card" style="margin-top: 40px;">
+      <div class="card-header">
+        <h3 class="card-title">Customer Orders Log</h3>
+        <span class="order-count-badge" id="order-count">0 Orders</span>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Item Details</th>
+              <th>Fulfillment</th>
+              <th>Total Price</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody">
+            <tr>
+              <td colspan="8" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                Loading orders...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio elements for in-browser ding sound -->
+  <audio id="ding-audio" src="/assets/oven_timer_ding.wav" preload="auto"></audio>
+
+  <script src="admin.js"></script>
+</body>
+</html>
