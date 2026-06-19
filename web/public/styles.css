@@ -772,3 +772,40 @@ textarea {
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Language Selector */
+.lang-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: rgba(44, 27, 24, 0.05);
+  padding: 4px 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  margin-left: 12px;
+}
+
+.lang-btn {
+  background: none;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 10px;
+  transition: var(--transition);
+}
+
+.lang-btn.active {
+  background-color: var(--primary);
+  color: var(--bg);
+}
+
+.lang-divider {
+  font-size: 11px;
+  color: var(--border);
+  user-select: none;
+}
+

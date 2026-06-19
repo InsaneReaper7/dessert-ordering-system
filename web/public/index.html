@@ -19,11 +19,16 @@
     <div class="container header-container">
       <div class="logo">
         <span class="logo-serif">Sugar & Crumb</span>
-        <span class="logo-subtitle">Artisan Small-Batch Bakery</span>
+        <span class="logo-subtitle" data-i18n="logo_subtitle">Artisan Small-Batch Bakery</span>
       </div>
       <nav class="nav">
-        <a href="#menu" class="nav-link">Our Desserts</a>
-        <a href="#order" class="nav-link order-btn-nav">Order Now</a>
+        <a href="#menu" class="nav-link" data-i18n="nav_menu">Our Desserts</a>
+        <a href="#order" class="nav-link order-btn-nav" data-i18n="nav_order">Order Now</a>
+        <div class="lang-selector">
+          <button id="lang-btn-en" class="lang-btn active" onclick="setLanguage('en')">EN</button>
+          <span class="lang-divider">|</span>
+          <button id="lang-btn-es" class="lang-btn" onclick="setLanguage('es')">ES</button>
+        </div>
       </nav>
     </div>
   </header>
@@ -33,10 +38,10 @@
     <div class="hero-bg" style="background-image: linear-gradient(rgba(44, 27, 24, 0.75), rgba(44, 27, 24, 0.85)), url('/images/bakery_banner.png');"></div>
     <div class="container hero-container">
       <div class="hero-content">
-        <h1 class="hero-title">Handcrafted Sweets, Baked with Love.</h1>
-        <p class="hero-subtitle">Freshly baked cookies, brownies, blondies, and fruit bars customized to your liking. Made to order for family, friends, and coworkers.</p>
+        <h1 class="hero-title" data-i18n="hero_title">Handcrafted Sweets, Baked with Love.</h1>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">Freshly baked cookies, brownies, blondies, and fruit bars customized to your liking. Made to order for family, friends, and coworkers.</p>
         <div class="hero-actions">
-          <a href="#menu" class="btn btn-primary">Browse the Menu</a>
+          <a href="#menu" class="btn btn-primary" data-i18n="hero_btn">Browse the Menu</a>
         </div>
       </div>
     </div>
@@ -47,18 +52,18 @@
     <div class="container grid grid-3">
       <div class="feature-card">
         <div class="feature-icon">✨</div>
-        <h3 class="feature-title">Baked to Order</h3>
-        <p class="feature-text">Every single batch is baked fresh specifically for you. No stale shelf desserts here.</p>
+        <h3 class="feature-title" data-i18n="feature_baked_title">Baked to Order</h3>
+        <p class="feature-text" data-i18n="feature_baked_text">Every single batch is baked fresh specifically for you. No stale shelf desserts here.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🍫</div>
-        <h3 class="feature-title">Premium Ingredients</h3>
-        <p class="feature-text">From Belgian chocolate chips to fresh lemons, we only use the highest quality ingredients.</p>
+        <h3 class="feature-title" data-i18n="feature_ingredients_title">Premium Ingredients</h3>
+        <p class="feature-text" data-i18n="feature_ingredients_text">From Belgian chocolate chips to fresh lemons, we only use the highest quality ingredients.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🚚</div>
-        <h3 class="feature-title">Pickup or Delivery</h3>
-        <p class="feature-text">Collect your order directly from us or coordinate a delivery location at work or home.</p>
+        <h3 class="feature-title" data-i18n="feature_delivery_title">Pickup or Delivery</h3>
+        <p class="feature-text" data-i18n="feature_delivery_text">Collect your order directly from us or coordinate a delivery location at work or home.</p>
       </div>
     </div>
   </section>
@@ -66,11 +71,10 @@
   <!-- Menu Section -->
   <section id="menu" class="menu-section">
     <div class="container">
-      <h2 class="section-title">Freshly Baked Menu</h2>
-      <p class="section-subtitle">Select your favorite dessert below to customize its size and choose premium toppings.</p>
+      <h2 class="section-title" data-i18n="menu_title">Freshly Baked Menu</h2>
+      <p class="section-subtitle" data-i18n="menu_subtitle">Select your favorite dessert below to customize its size and choose premium toppings.</p>
       
       <div id="desserts-grid" class="grid grid-3 menu-grid">
-        <!-- Loaded dynamically via app.js -->
         <div class="loading-spinner">Loading desserts...</div>
       </div>
     </div>
@@ -80,35 +84,34 @@
   <section id="order" class="order-section">
     <div class="container container-narrow">
       <div class="order-card-wrapper">
-        <h2 class="section-title text-center">Place Your Order</h2>
-        <p class="section-subtitle text-center">Customize your treat. We'll receive a notification instantly and reach out to coordinate payment and pickup/delivery.</p>
+        <h2 class="section-title text-center" data-i18n="order_title">Place Your Order</h2>
+        <p class="section-subtitle text-center" data-i18n="order_subtitle">Customize your treat. We'll receive a notification instantly and reach out to coordinate payment and pickup/delivery.</p>
         
         <form id="order-form" class="order-form">
           <!-- Step 1: Dessert Selection -->
           <div class="form-group">
-            <label for="dessert-select">Select Dessert</label>
+            <label for="dessert-select" data-i18n="form_label_dessert">Select Dessert</label>
             <select id="dessert-select" name="dessert_id" required>
-              <option value="" disabled selected>Choose a dessert...</option>
-              <!-- Populated dynamically -->
+              <option value="" disabled selected data-i18n="form_placeholder_dessert">Choose a dessert...</option>
             </select>
           </div>
 
           <!-- Step 2: Size Selection -->
           <div class="form-group">
-            <label>Choose Pan Size</label>
+            <label data-i18n="form_label_size">Choose Pan Size</label>
             <div class="radio-group">
               <label class="radio-label">
                 <input type="radio" name="size" value="8x5" checked required>
                 <div class="radio-design">
-                  <span class="size-title">8" x 5" Baking Pan</span>
-                  <span class="size-desc" id="price-8x5-desc">Lemon Bars: $12.00 | Others: TBD</span>
+                  <span class="size-title" data-i18n="form_size_8x5">8" x 5" Baking Pan</span>
+                  <span class="size-desc" id="price-8x5-desc" data-i18n="form_size_lemon_8x5">Lemon Bars: $12.00 | Others: TBD</span>
                 </div>
               </label>
               <label class="radio-label">
                 <input type="radio" name="size" value="9x9" required>
                 <div class="radio-design">
-                  <span class="size-title">9" x 9" Baking Pan</span>
-                  <span class="size-desc">Pricing: TBD</span>
+                  <span class="size-title" data-i18n="form_size_9x9">9" x 9" Baking Pan</span>
+                  <span class="size-desc" data-i18n="form_size_pricing_tbd">Pricing: TBD</span>
                 </div>
               </label>
             </div>
@@ -116,99 +119,99 @@
 
           <!-- Step 3: Toppings Selection (Conditional, shown for brownies/blondies) -->
           <div id="toppings-container" class="form-group hidden">
-            <label>Choose Toppings / Extra Ingredients <span class="label-optional">(Toppings pricing: TBD)</span></label>
-            <p class="form-help">Customize your brownie or blondie! Select all the ingredients you would like mixed in or sprinkled on top.</p>
+            <label><span data-i18n="form_label_toppings">Choose Toppings / Extra Ingredients</span> <span class="label-optional" data-i18n="form_label_toppings_optional">(Toppings pricing: TBD)</span></label>
+            <p class="form-help" data-i18n="form_toppings_help">Customize your brownie or blondie! Select all the ingredients you would like mixed in or sprinkled on top.</p>
             <div class="checkbox-grid">
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="walnuts">
-                <span class="checkbox-design">Walnuts</span>
+                <span class="checkbox-design" data-i18n="topping_walnuts">Walnuts</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="pecans">
-                <span class="checkbox-design">Pecans</span>
+                <span class="checkbox-design" data-i18n="topping_pecans">Pecans</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="marshmallow dots">
-                <span class="checkbox-design">Marshmallow Dots</span>
+                <span class="checkbox-design" data-i18n="topping_marshmallow_dots">Marshmallow Dots</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="caramels dots">
-                <span class="checkbox-design">Caramel Dots</span>
+                <span class="checkbox-design" data-i18n="topping_caramels_dots">Caramel Dots</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="chocolate chips">
-                <span class="checkbox-design">Chocolate Chips</span>
+                <span class="checkbox-design" data-i18n="topping_chocolate_chips">Chocolate Chips</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="butterscotch chips">
-                <span class="checkbox-design">Butterscotch Chips</span>
+                <span class="checkbox-design" data-i18n="topping_butterscotch_chips">Butterscotch Chips</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="white chocolate chips">
-                <span class="checkbox-design">White Chocolate Chips</span>
+                <span class="checkbox-design" data-i18n="topping_white_chocolate_chips">White Chocolate Chips</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" name="toppings" value="vanilla chips">
-                <span class="checkbox-design">Vanilla Chips</span>
+                <span class="checkbox-design" data-i18n="topping_vanilla_chips">Vanilla Chips</span>
               </label>
             </div>
           </div>
 
           <!-- Step 4: Special Notes -->
           <div class="form-group">
-            <label for="order-notes">Special Requests / Notes</label>
-            <textarea id="order-notes" name="notes" placeholder="Any dietary preferences or custom notes? E.g., 'half walnuts, half chocolate chips'"></textarea>
+            <label for="order-notes" data-i18n="form_label_notes">Special Requests / Notes</label>
+            <textarea id="order-notes" name="notes" data-i18n-placeholder="form_placeholder_notes" placeholder="Any dietary preferences or custom notes? E.g., 'half walnuts, half chocolate chips'"></textarea>
           </div>
 
           <!-- Step 5: Pickup or Delivery -->
           <div class="form-group">
-            <label for="pickup-delivery">Pickup or Delivery?</label>
+            <label for="pickup-delivery" data-i18n="form_label_fulfillment">Pickup or Delivery?</label>
             <select id="pickup-delivery" name="pickup_delivery" required>
-              <option value="" disabled selected>Select fulfillment method...</option>
-              <option value="pickup">Self Pickup</option>
-              <option value="delivery">Coordinate Delivery (Friends/Coworkers/Family only)</option>
+              <option value="" disabled selected data-i18n="form_placeholder_fulfillment">Select fulfillment method...</option>
+              <option value="pickup" data-i18n="form_fulfillment_pickup">Self Pickup</option>
+              <option value="delivery" data-i18n="form_fulfillment_delivery">Coordinate Delivery (Friends/Coworkers/Family only)</option>
             </select>
           </div>
 
           <!-- Step 6: Customer Details -->
           <div class="customer-info-section">
-            <h3 class="subsection-title">Your Contact Details</h3>
+            <h3 class="subsection-title" data-i18n="form_label_contact">Your Contact Details</h3>
             <div class="grid grid-2">
               <div class="form-group">
-                <label for="customer-name">Full Name</label>
-                <input type="text" id="customer-name" name="customer_name" placeholder="John Doe" required>
+                <label for="customer-name" data-i18n="form_label_name">Full Name</label>
+                <input type="text" id="customer-name" name="customer_name" data-i18n-placeholder="form_label_name" placeholder="John Doe" required>
               </div>
               <div class="form-group">
-                <label for="customer-phone">Phone Number</label>
+                <label for="customer-phone" data-i18n="form_label_phone">Phone Number</label>
                 <input type="tel" id="customer-phone" name="customer_phone" placeholder="(555) 000-0000" required>
               </div>
             </div>
             <div class="form-group">
-              <label for="customer-email">Email Address</label>
+              <label for="customer-email" data-i18n="form_label_email">Email Address</label>
               <input type="email" id="customer-email" name="customer_email" placeholder="john.doe@example.com" required>
             </div>
           </div>
 
           <!-- Pricing & Checkout Summary -->
           <div class="order-summary-card">
-            <h4 class="summary-title">Order Summary</h4>
+            <h4 class="summary-title" data-i18n="summary_title">Order Summary</h4>
             <div class="summary-row">
-              <span id="summary-item-name">Dessert: Select item</span>
-              <span id="summary-item-price">TBD</span>
+              <span id="summary-item-name" data-i18n="summary_default_dessert">Dessert: Select item</span>
+              <span id="summary-item-price" data-i18n="summary_total_tbd">TBD</span>
             </div>
             <div class="summary-row" id="summary-toppings-row">
-              <span>Toppings selected:</span>
-              <span id="summary-toppings-list">None</span>
+              <span data-i18n="summary_label_toppings">Toppings selected:</span>
+              <span id="summary-toppings-list" data-i18n="summary_no_toppings">None</span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-row total-row">
-              <span>Estimated Total:</span>
-              <span id="summary-total-price" class="price-highlight">TBD</span>
+              <span data-i18n="summary_label_total">Estimated Total:</span>
+              <span id="summary-total-price" class="price-highlight" data-i18n="summary_total_tbd">TBD</span>
             </div>
-            <p class="price-disclaimer">* Since some prices are TBD, we will confirm the exact price and payment details when we contact you.</p>
+            <p class="price-disclaimer" data-i18n="summary_disclaimer">* Since some prices are TBD, we will confirm the exact price and payment details when we contact you.</p>
           </div>
 
-          <button type="submit" id="submit-order-btn" class="btn btn-primary btn-block">Place Order</button>
+          <button type="submit" id="submit-order-btn" class="btn btn-primary btn-block" data-i18n="btn_submit_order">Place Order</button>
         </form>
       </div>
     </div>
@@ -218,25 +221,25 @@
   <div id="success-modal" class="modal">
     <div class="modal-content text-center">
       <div class="modal-success-icon">🎉</div>
-      <h2 class="modal-title">Order Placed!</h2>
-      <p class="modal-text">Thank you, <span id="success-customer-name"></span>! Your order has been successfully sent to the kitchen.</p>
+      <h2 class="modal-title" data-i18n="success_modal_title">Order Placed!</h2>
+      <p class="modal-text"><span id="success-message-translated">Thank you, <span id="success-customer-name"></span>! Your order has been successfully sent to the kitchen.</span></p>
       <div class="modal-details">
-        <p><strong>Dessert:</strong> <span id="success-dessert-name"></span></p>
-        <p><strong>Size:</strong> <span id="success-size"></span></p>
-        <p><strong>Fulfillment:</strong> <span id="success-fulfillment"></span></p>
-        <p class="success-total-price"><strong>Total Price:</strong> <span id="success-price"></span></p>
+        <p><strong data-i18n="success_modal_dessert">Dessert:</strong> <span id="success-dessert-name"></span></p>
+        <p><strong data-i18n="success_modal_size">Size:</strong> <span id="success-size"></span></p>
+        <p><strong data-i18n="success_modal_fulfillment">Fulfillment:</strong> <span id="success-fulfillment"></span></p>
+        <p class="success-total-price"><strong data-i18n="success_modal_total">Total Price:</strong> <span id="success-price"></span></p>
       </div>
-      <p class="modal-subtext">A notification has been pinged to the chef's phone. We will contact you at <span id="success-phone"></span> shortly to confirm price & delivery!</p>
-      <button class="btn btn-primary" onclick="closeSuccessModal()">Close Window</button>
+      <p class="modal-subtext"><span id="success-subtext-translated">A notification has been pinged to the chef's phone. We will contact you at <span id="success-phone"></span> shortly to confirm price & delivery!</span></p>
+      <button class="btn btn-primary" onclick="closeSuccessModal()" data-i18n="success_modal_close">Close Window</button>
     </div>
   </div>
 
   <!-- Footer -->
   <footer class="footer">
     <div class="container footer-container text-center">
-      <p>&copy; 2026 Sugar & Crumb Bakery. Handcrafted goodies.</p>
+      <p data-i18n="footer_copy">&copy; 2026 Sugar & Crumb Bakery. Handcrafted goodies.</p>
       <div class="footer-links">
-        <a href="admin.html" class="footer-link-admin">Admin Portal</a>
+        <a href="admin.html" class="footer-link-admin" data-i18n="footer_admin">Admin Portal</a>
       </div>
     </div>
   </footer>
