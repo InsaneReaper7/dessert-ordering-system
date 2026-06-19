@@ -256,10 +256,14 @@ function renderOrders(orders) {
   });
 }
 
-// REST endpoints for action buttons
 async function updateStatus(orderId, status) {
+  if (status === 'cancelled' && !confirm('Are you sure you want to cancel this order?')) {
+    return;
+  }
+
   try {
     const response = await fetch(`/api/admin/orders/${orderId}`, {
+
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
