@@ -518,7 +518,6 @@ async function handleFormSubmit(e) {
     // Get translated dessert name
     const translatedName = itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name;
 
-    document.getElementById('success-customer-name').textContent = customerName;
     document.getElementById('success-dessert-name').textContent = translatedName;
     
     // Translate size description
@@ -531,7 +530,7 @@ async function handleFormSubmit(e) {
     
     // Total price
     document.getElementById('success-price').textContent = result.total_price === 'TBD' ? `${i18n[currentLang].summary_total_tbd} (${currentLang === 'es' ? 'Por confirmar' : 'To be confirmed'})` : `$${result.total_price.toFixed(2)}`;
-    document.getElementById('success-phone').textContent = customerPhone;
+
 
     document.getElementById('success-modal').style.display = 'block';
 
