@@ -89,9 +89,28 @@ wss.on('close', () => {
   clearInterval(interval);
 });
 
+// Generic WebSocket broadcast helper
+function broadcast(payloadObj) {
+  const payloadStr = JSON.stringify(payloadObj);
+  
+  // Send to Android app
+  clients.adminApp.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payloadStr);
+    }
+  });
+
+  // Send to Web Admin portal
+  clients.adminWeb.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payloadStr);
+    }
+  });
+}
+
 // Broadcast order notifications to all connected WebSockets
 function broadcastNewOrder(order) {
-  const payload = JSON.stringify({
+  broadcast({
     type: 'new_order',
     order: {
       id: order.id,
@@ -104,21 +123,6 @@ function broadcastNewOrder(order) {
       total_price: order.total_price,
       pickup_delivery: order.pickup_delivery,
       created_at: new Date().toISOString()
-    }
-
-  });
-
-  // Send to Android app
-  clients.adminApp.forEach((ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(payload);
-    }
-  });
-
-  // Send to Web Admin portal
-  clients.adminWeb.forEach((ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(payload);
     }
   });
 }
@@ -315,6 +319,10 @@ app.patch('/api/admin/orders/:id', authenticateAdminToken, async (req, res) => {
 
   try {
     await db.updateOrderStatus(id, status);
+    
+    // Broadcast status sync to all clients
+    broadcast({ type: 'order_updated', id: parseInt(id), status });
+    
     res.json({ message: 'Order status updated' });
   } catch (err) {
     console.error('Failed to update status:', err);
@@ -327,12 +335,17 @@ app.delete('/api/admin/orders/:id', authenticateAdminToken, async (req, res) => 
   const { id } = req.params;
   try {
     await db.deleteOrder(id);
+    
+    // Broadcast deletion sync to all clients
+    broadcast({ type: 'order_deleted', id: parseInt(id) });
+    
     res.json({ message: 'Order deleted successfully' });
   } catch (err) {
     console.error('Failed to delete order:', err);
     res.status(500).json({ error: 'Database deletion failed' });
   }
 });
+
 
 // Admin: Send test ping to app
 app.post('/api/admin/ping', authenticateAdminToken, (req, res) => {

@@ -111,7 +111,18 @@ class NotifierService : Service() {
             .pingInterval(25, TimeUnit.SECONDS) // Auto pings to keep connection alive
             .build()
 
-        val request = Request.Builder().url(wsUrl).build()
+        val sharedPrefs = getSharedPreferences("dessert_notifier_prefs", Context.MODE_PRIVATE)
+        val token = sharedPrefs.getString("admin_token", "") ?: ""
+
+        val request = Request.Builder()
+            .url(wsUrl)
+            .apply {
+                if (token.isNotEmpty()) {
+                    addHeader("Authorization", "Bearer $token")
+                }
+            }
+            .build()
+
         webSocket = client?.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "WebSocket Opened")
@@ -181,7 +192,15 @@ class NotifierService : Service() {
                     val message = json.get("message")?.asString ?: "Connection Test Successful!"
                     showNotification("Oven Chime Test", message)
                 }
+            } else if (type == "order_updated") {
+                val orderId = json.get("id").asInt
+                val status = json.get("status").asString
+                OrderRepository.updateOrder(this, orderId, status)
+            } else if (type == "order_deleted") {
+                val orderId = json.get("id").asInt
+                OrderRepository.deleteOrder(this, orderId)
             }
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse websocket message", e)
         }

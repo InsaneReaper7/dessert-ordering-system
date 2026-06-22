@@ -1,8 +1,7 @@
 package com.example.dessertnotifier.ui.main
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,19 +18,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,23 +47,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation3.runtime.NavKey
-import com.example.dessertnotifier.NotifierService
 import com.example.dessertnotifier.data.ConnectionState
 import com.example.dessertnotifier.data.Order
 import com.example.dessertnotifier.data.OrderRepository
+import com.google.gson.JsonObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun MainScreen(
-    onItemClick: (NavKey) -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val connectionState by OrderRepository.connectionStatus.collectAsState()
     val orders by OrderRepository.orders.collectAsState()
-
-    val sharedPrefs = remember { context.getSharedPreferences("dessert_notifier_prefs", Context.MODE_PRIVATE) }
-    var serverUrlInput by remember { mutableStateOf(sharedPrefs.getString("server_url", "") ?: "") }
 
     Column(
         modifier = modifier
@@ -66,75 +75,43 @@ fun MainScreen(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // App Title
-        Text(
-            text = "Sugar & Crumb",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = "Artisan Order Monitor",
-            fontSize = 14.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 20.dp)
-        )
-
-        // 1. Connection Status Card
-        ConnectionStatusCard(connectionState)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 2. Settings / URL Configuration Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        // Top Bar with Settings gear
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Text(
-                    text = "Server Configuration",
+                    text = "Sugar & Crumb",
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    color = MaterialTheme.colorScheme.primary
                 )
-
-                OutlinedTextField(
-                    value = serverUrlInput,
-                    onValueChange = { serverUrlInput = it },
-                    label = { Text("Server Base URL") },
-                    placeholder = { Text("e.g. my-desserts.up.railway.app") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                Text(
+                    text = "Artisan Order Monitor",
+                    fontSize = 14.sp,
+                    color = Color.Gray
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = {
-                        // Save URL
-                        sharedPrefs.edit().putString("server_url", serverUrlInput).apply()
-                        
-                        // Restart NotifierService to apply new URL
-                        val serviceIntent = Intent(context, NotifierService::class.java)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            context.startForegroundService(serviceIntent)
-                        } else {
-                            context.startService(serviceIntent)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Save & Connect")
-                }
+            }
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
 
+        // Connection Status Card
+        ConnectionStatusCard(connectionState)
+
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 3. Orders Header
+        // Orders Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -158,7 +135,7 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // 4. Orders List
+        // Orders List
         if (orders.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -206,7 +183,6 @@ fun ConnectionStatusCard(state: ConnectionState) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Pulse dot
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -225,7 +201,7 @@ fun ConnectionStatusCard(state: ConnectionState) {
                     text = when (state) {
                         ConnectionState.CONNECTED -> "App is ready to receive instant order dings"
                         ConnectionState.CONNECTING -> "Reconnecting to server..."
-                        ConnectionState.DISCONNECTED -> "Check internet connection or server status"
+                        ConnectionState.DISCONNECTED -> "Check configuration, password or server status"
                     },
                     fontSize = 12.sp,
                     color = Color.DarkGray
@@ -237,6 +213,84 @@ fun ConnectionStatusCard(state: ConnectionState) {
 
 @Composable
 fun OrderLogCard(order: Order) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    val sharedPrefs = remember { context.getSharedPreferences("dessert_notifier_prefs", Context.MODE_PRIVATE) }
+    val serverUrl = remember { sharedPrefs.getString("server_url", "") ?: "" }
+    val token = remember { sharedPrefs.getString("admin_token", "") ?: "" }
+
+    var isPendingAction by remember { mutableStateOf(false) }
+    var showCancelDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Alert dialogs for verification
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = { Text("Cancel Order") },
+            text = { Text("Are you sure you want to cancel order #${order.id}?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCancelDialog = false
+                        isPendingAction = true
+                        scope.launch {
+                            val success = updateOrderStatusApi(context, serverUrl, token, order.id, "cancelled")
+                            isPendingAction = false
+                            if (success) {
+                                Toast.makeText(context, "Order #${order.id} cancelled successfully", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to cancel order! Check server connection.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) {
+                    Text("Yes, Cancel")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showCancelDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Remove Order Log") },
+            text = { Text("Are you sure you want to permanently delete order #${order.id}?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        isPendingAction = true
+                        scope.launch {
+                            val success = deleteOrderApi(context, serverUrl, token, order.id)
+                            isPendingAction = false
+                            if (success) {
+                                Toast.makeText(context, "Order #${order.id} removed", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to delete order! Check server connection.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+                ) {
+                    Text("Yes, Remove")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -244,13 +298,14 @@ fun OrderLogCard(order: Order) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${order.customer_name}",
+                    text = order.customer_name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
@@ -261,6 +316,7 @@ fun OrderLogCard(order: Order) {
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+            
             Text(
                 text = "${order.customer_phone}  |  Fulfillment: ${order.pickup_delivery.uppercase()}",
                 fontSize = 12.sp,
@@ -268,9 +324,9 @@ fun OrderLogCard(order: Order) {
                 modifier = Modifier.padding(vertical = 4.dp)
             )
             
-            Divider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
 
-            // Items
+            // Item Details
             var dessertName = order.dessert_id.replace('_', ' ')
             dessertName = dessertName.substring(0, 1).uppercase() + dessertName.substring(1)
             Text(
@@ -303,22 +359,115 @@ fun OrderLogCard(order: Order) {
                 )
             }
 
+            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
 
-            Divider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
-
-            // Pricing
+            // Pricing and Status Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Fulfillment Status:", fontSize = 12.sp, color = Color.Gray)
-                Text(
-                    text = if (order.total_price == null) "Price: TBD" else "Total: $${String.format("%.2f", order.total_price)}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Column {
+                    Text(
+                        text = if (order.total_price == null) "Price: TBD" else "Total: $${String.format("%.2f", order.total_price)}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Text(
+                        text = "Status: ${order.status.uppercase()}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = when (order.status) {
+                            "pending" -> Color(0xFFF59E0B)
+                            "completed" -> Color(0xFF10B981)
+                            else -> Color(0xFFEF4444)
+                        }
+                    )
+                }
+
+                // Action Buttons
+                if (order.status == "pending") {
+                    Button(
+                        onClick = { showCancelDialog = true },
+                        enabled = !isPendingAction,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("Cancel", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else if (order.status == "cancelled") {
+                    Button(
+                        onClick = { showDeleteDialog = true },
+                        enabled = !isPendingAction,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Remove", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+// REST call to update status
+private suspend fun updateOrderStatusApi(context: Context, serverUrl: String, token: String, orderId: Int, status: String): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            if (serverUrl.isEmpty() || token.isEmpty()) return@withContext false
+            val client = OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .build()
+
+            val jsonBody = JsonObject().apply {
+                addProperty("status", status)
+            }
+            val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$serverUrl/api/admin/orders/$orderId")
+                .patch(requestBody)
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            return@withContext response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext false
+        }
+    }
+}
+
+// REST call to delete order
+private suspend fun deleteOrderApi(context: Context, serverUrl: String, token: String, orderId: Int): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            if (serverUrl.isEmpty() || token.isEmpty()) return@withContext false
+            val client = OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .build()
+
+            val request = Request.Builder()
+                .url("$serverUrl/api/admin/orders/$orderId")
+                .delete()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            val response = client.newCall(request).execute()
+            return@withContext response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext false
         }
     }
 }

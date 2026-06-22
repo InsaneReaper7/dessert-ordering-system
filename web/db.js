@@ -101,42 +101,76 @@ async function createTables() {
 }
 
 async function seedData() {
-  const desserts = await query('SELECT COUNT(*) as count FROM desserts');
-  const count = desserts[0].count;
-  
-  if (count === 0) {
-    console.log('Seeding initial dessert items...');
-    const initialDesserts = [
-      {
-        id: 'brownies',
-        name: 'Fudge Brownies',
-        description: 'Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.',
-        price_8x5: null, // TBD
-        price_9x9: null, // TBD
-        has_toppings: 1,
-        image_url: '/images/brownies.png'
-      },
-      {
-        id: 'blondies',
-        name: 'Classic Blondies',
-        description: 'Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.',
-        price_8x5: null, // TBD
-        price_9x9: null, // TBD
-        has_toppings: 1,
-        image_url: '/images/blondies.png'
-      },
-      {
-        id: 'lemon_bars',
-        name: 'Tangy Lemon Bars',
-        description: 'Tangy, sweet freshly squeezed lemon curd on a buttery shortbread crust, dusted with powdered sugar.',
-        price_8x5: 12.00, // Fixed
-        price_9x9: null, // TBD
-        has_toppings: 0,
-        image_url: '/images/lemon_bars.png'
-      }
-    ];
+  const initialDesserts = [
+    {
+      id: 'brownies',
+      name: 'Fudge Brownies',
+      description: 'Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 1,
+      image_url: '/images/brownies.png'
+    },
+    {
+      id: 'blondies',
+      name: 'Classic Blondies',
+      description: 'Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 1,
+      image_url: '/images/blondies.png'
+    },
+    {
+      id: 'lemon_bars',
+      name: 'Tangy Lemon Bars',
+      description: 'Tangy, sweet freshly squeezed lemon curd on a buttery shortbread crust, dusted with powdered sugar.',
+      price_8x5: 12.00, // Fixed
+      price_9x9: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/lemon_bars.png'
+    },
+    {
+      id: 'mango_bars',
+      name: 'Tangy Mango Bars',
+      description: 'Tangy and sweet tropical mango curd on a buttery shortbread crust, dusted with powdered sugar.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/mango_bars.png'
+    },
+    {
+      id: 'pineapple_bars',
+      name: 'Sweet Pineapple Bars',
+      description: 'Tangy, caramelized golden pineapple curd on a buttery shortbread crust, dusted with powdered sugar.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/pineapple_bars.png'
+    },
+    {
+      id: 'butterscotch_blondies',
+      name: 'Golden Butterscotch Blondies',
+      description: 'Specialty blondies loaded with premium butterscotch chips, giving a rich brown sugar and butterscotch finish.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 1,
+      image_url: '/images/butterscotch_blondies.png'
+    },
+    {
+      id: 'caramel_butterscotch_crunch_blondies',
+      name: 'Caramel Butterscotch Crunch Blondies',
+      description: 'Specialty blondies loaded with butterscotch chips, chewy caramel bits, and toasted walnuts for the ultimate crunch.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 1,
+      image_url: '/images/caramel_butterscotch_crunch_blondies.png'
+    }
+  ];
 
-    for (const dessert of initialDesserts) {
+  for (const dessert of initialDesserts) {
+    const exists = await query('SELECT COUNT(*) as count FROM desserts WHERE id = ?', [dessert.id]);
+    if (Number(exists[0].count) === 0) {
+      console.log(`Seeding new dessert item: ${dessert.name}`);
       await query(
         'INSERT INTO desserts (id, name, description, price_8x5, price_9x9, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.has_toppings, dessert.image_url]
@@ -144,6 +178,7 @@ async function seedData() {
     }
   }
 }
+
 
 // Database helper functions
 module.exports = {

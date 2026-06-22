@@ -167,8 +167,37 @@ const itemTranslations = {
       en: "Tangy, sweet freshly squeezed lemon curd on a buttery shortbread crust, dusted with powdered sugar.", 
       es: "Crema de limón fresca, ácida y dulce sobre una base de galleta de mantequilla, espolvoreada con azúcar glass." 
     }
+  },
+  mango_bars: {
+    name: { en: "Tangy Mango Bars", es: "Barras de Mango" },
+    desc: { 
+      en: "Tangy and sweet tropical mango curd on a buttery shortbread crust, dusted with powdered sugar.", 
+      es: "Crema de mango fresca, dulce y tropical sobre una base de galleta de mantequilla, espolvoreada con azúcar glass." 
+    }
+  },
+  pineapple_bars: {
+    name: { en: "Sweet Pineapple Bars", es: "Barras de Piña" },
+    desc: { 
+      en: "Tangy, caramelized golden pineapple curd on a buttery shortbread crust, dusted with powdered sugar.", 
+      es: "Crema de piña fresca y caramelizada sobre una base de galleta de mantequilla, espolvoreada con azúcar glass." 
+    }
+  },
+  butterscotch_blondies: {
+    name: { en: "Golden Butterscotch Blondies", es: "Blondies de Butterscotch" },
+    desc: { 
+      en: "Specialty blondies loaded with premium butterscotch chips, giving a rich brown sugar and butterscotch finish.", 
+      es: "Blondies especiales cargados con chispas de butterscotch premium, con un rico acabado de azúcar morena y mantequilla tostada." 
+    }
+  },
+  caramel_butterscotch_crunch_blondies: {
+    name: { en: "Caramel Butterscotch Crunch Blondies", es: "Blondies Crunch de Caramelo y Butterscotch" },
+    desc: { 
+      en: "Specialty blondies loaded with butterscotch chips, chewy caramel bits, and toasted walnuts for the ultimate crunch.", 
+      es: "Blondies especiales cargados con chispas de butterscotch, trozos de caramelo masticable y nueces tostadas para un crujido inigualable." 
+    }
   }
 };
+
 
 document.addEventListener('DOMContentLoaded', () => {
   detectInitialLanguage();

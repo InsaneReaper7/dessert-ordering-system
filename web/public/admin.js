@@ -321,7 +321,11 @@ function connectWebSocket() {
         
         // Show Browser Notification
         showBrowserNotification(data.order);
+      } else if (data.type === 'order_updated' || data.type === 'order_deleted') {
+        loadOrders();
+        loadStats();
       }
+
     } catch (e) {
       console.error(e);
     }

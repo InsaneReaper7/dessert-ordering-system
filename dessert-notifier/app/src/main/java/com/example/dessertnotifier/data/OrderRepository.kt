@@ -16,9 +16,11 @@ data class Order(
     val toppings: List<String>?,
     val notes: String?,
     val total_price: Double?,
+    val status: String,
     val pickup_delivery: String,
     val created_at: String
 )
+
 
 
 
@@ -57,6 +59,21 @@ object OrderRepository {
 
         saveOrders(context, trimmedList)
     }
+
+    fun updateOrder(context: Context, id: Int, status: String) {
+        val currentList = _orders.value.map {
+            if (it.id == id) it.copy(status = status) else it
+        }
+        _orders.value = currentList
+        saveOrders(context, currentList)
+    }
+
+    fun deleteOrder(context: Context, id: Int) {
+        val currentList = _orders.value.filter { it.id != id }
+        _orders.value = currentList
+        saveOrders(context, currentList)
+    }
+
 
     fun loadOrders(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
