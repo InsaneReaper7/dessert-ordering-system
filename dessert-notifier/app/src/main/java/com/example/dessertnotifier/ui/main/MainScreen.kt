@@ -375,10 +375,10 @@ fun OrderLogCard(order: Order) {
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
-                        text = "Status: ${order.status.uppercase()}",
+                        text = "Status: ${order.safeStatus.uppercase()}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = when (order.status) {
+                        color = when (order.safeStatus) {
                             "pending" -> Color(0xFFF59E0B)
                             "completed" -> Color(0xFF10B981)
                             else -> Color(0xFFEF4444)
@@ -387,7 +387,7 @@ fun OrderLogCard(order: Order) {
                 }
 
                 // Action Buttons
-                if (order.status == "pending") {
+                if (order.safeStatus == "pending") {
                     Button(
                         onClick = { showCancelDialog = true },
                         enabled = !isPendingAction,
@@ -397,7 +397,7 @@ fun OrderLogCard(order: Order) {
                     ) {
                         Text("Cancel", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
-                } else if (order.status == "cancelled") {
+                } else if (order.safeStatus == "cancelled") {
                     Button(
                         onClick = { showDeleteDialog = true },
                         enabled = !isPendingAction,

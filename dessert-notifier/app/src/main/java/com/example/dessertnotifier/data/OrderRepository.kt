@@ -16,10 +16,13 @@ data class Order(
     val toppings: List<String>?,
     val notes: String?,
     val total_price: Double?,
-    val status: String,
+    val status: String?,
     val pickup_delivery: String,
     val created_at: String
-)
+) {
+    val safeStatus: String
+        get() = status ?: "pending"
+}
 
 
 

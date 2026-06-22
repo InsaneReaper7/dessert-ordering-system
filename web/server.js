@@ -121,6 +121,7 @@ function broadcastNewOrder(order) {
       toppings: order.toppings || [],
       notes: order.notes || "",
       total_price: order.total_price,
+      status: order.status || 'pending',
       pickup_delivery: order.pickup_delivery,
       created_at: new Date().toISOString()
     }
