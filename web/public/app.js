@@ -195,6 +195,13 @@ const itemTranslations = {
       en: "Specialty blondies loaded with butterscotch chips, chewy caramel bits, and toasted walnuts for the ultimate crunch.", 
       es: "Blondies especiales cargados con chispas de butterscotch, trozos de caramelo masticable y nueces tostadas para un crujido inigualable." 
     }
+  },
+  marshmallow_swirl_brownies: {
+    name: { en: "Marshmallow Swirl Brownies", es: "Brownies con Remolino de Malvavisco" },
+    desc: { 
+      en: "Rich, fudgy chocolate brownies swirled with sweet, gooey melted marshmallow fluff.", 
+      es: "Brownies de chocolate ricos y melosos con un remolino de crema de malvavisco dulce y derretida." 
+    }
   }
 };
 
@@ -260,6 +267,54 @@ function updateLanguageUI() {
     const key = el.getAttribute('data-i18n-placeholder');
     if (i18n[currentLang][key]) {
       el.placeholder = i18n[currentLang][key];
+    }
+  });
+
+  updateAdditionsCheckboxes();
+}
+
+// Check and disable checkboxes of ingredients already included in the selected dessert
+function updateAdditionsCheckboxes() {
+  const select = document.getElementById('dessert-select');
+  if (!select) return;
+  const dessertId = select.value;
+  
+  const toppingsContainer = document.getElementById('toppings-container');
+  if (!toppingsContainer) return;
+  
+  const toppingsCheckboxes = toppingsContainer.querySelectorAll('input[name="toppings"]');
+  
+  // Pre-included ingredients mapping
+  const preIncludedMap = {
+    'marshmallow_swirl_brownies': ['marshmallow dots'],
+    'butterscotch_blondies': ['butterscotch chips'],
+    'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts']
+  };
+  
+  const includedToppings = preIncludedMap[dessertId] || [];
+  
+  toppingsCheckboxes.forEach(cb => {
+    const isIncluded = includedToppings.includes(cb.value);
+    const span = cb.nextElementSibling;
+    if (!span) return;
+    
+    const i18nKey = span.getAttribute('data-i18n');
+    let baseText = i18n[currentLang][i18nKey] || span.textContent;
+    
+    // Remove any previously appended "Included" labels
+    baseText = baseText.replace(/ \((Included|Incluido|Already Included|Ya incluido)\)/i, '');
+    
+    if (isIncluded) {
+      cb.checked = true;
+      cb.disabled = true;
+      const suffix = currentLang === 'es' ? ' (Ya incluido)' : ' (Included)';
+      span.textContent = baseText + suffix;
+    } else {
+      if (cb.disabled) {
+        cb.checked = false;
+        cb.disabled = false;
+      }
+      span.textContent = baseText;
     }
   });
 }
@@ -423,6 +478,8 @@ function handleDessertChange(dessertId) {
     const checkedBoxes = toppingsContainer.querySelectorAll('input[name="toppings"]:checked');
     checkedBoxes.forEach(cb => { cb.checked = false; });
   }
+
+  updateAdditionsCheckboxes();
 }
 
 // Calculate cost and refresh summary box
@@ -450,6 +507,11 @@ function updateOrderSummary() {
   const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
     .map(cb => cb.value);
 
+  // Get only extra custom toppings (not disabled)
+  const extraToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
+    .filter(cb => !cb.disabled)
+    .map(cb => cb.value);
+
   // Get translated dessert name
   const translatedName = itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name;
   const sizeText = size === '8x5' ? '8x5' : '9x9';
@@ -457,7 +519,7 @@ function updateOrderSummary() {
 
   // Calculate pricing
   let basePrice = size === '9x9' ? selectedDessert.price_9x9 : selectedDessert.price_8x5;
-  let hasTBD = basePrice === null || checkedToppings.length > 0;
+  let hasTBD = basePrice === null || extraToppings.length > 0;
 
   // Render individual base price
   if (summaryItemPrice) {
@@ -466,8 +528,8 @@ function updateOrderSummary() {
 
   // Render toppings list with translations
   if (summaryToppingsList) {
-    if (checkedToppings.length > 0) {
-      const formatted = checkedToppings.map(t => {
+    if (extraToppings.length > 0) {
+      const formatted = extraToppings.map(t => {
         // Map local checkbox value to translation key (e.g. 'walnuts' -> 'topping_walnuts')
         const translationKey = 'topping_' + t.toLowerCase().replace(' ', '_');
         return i18n[currentLang][translationKey] || t;

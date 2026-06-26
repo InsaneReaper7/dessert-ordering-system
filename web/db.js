@@ -164,6 +164,15 @@ async function seedData() {
       price_9x9: null, // TBD
       has_toppings: 1,
       image_url: '/images/caramel_butterscotch_crunch_blondies.png'
+    },
+    {
+      id: 'marshmallow_swirl_brownies',
+      name: 'Marshmallow Swirl Brownies',
+      description: 'Rich, fudgy chocolate brownies swirled with sweet, gooey melted marshmallow fluff.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 1,
+      image_url: '/images/marshmallow_swirl_brownies.png'
     }
   ];
 
