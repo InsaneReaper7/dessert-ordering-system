@@ -127,6 +127,7 @@ class NotifierService : Service() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "WebSocket Opened")
                 OrderRepository.updateConnectionState(ConnectionState.CONNECTED)
+                OrderRepository.fetchOrdersFromServer(this@NotifierService)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {

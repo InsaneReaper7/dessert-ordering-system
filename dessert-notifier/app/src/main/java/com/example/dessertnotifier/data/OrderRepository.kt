@@ -6,6 +6,9 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 data class Order(
     val id: Int,
@@ -96,5 +99,47 @@ object OrderRepository {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = gson.toJson(list)
         prefs.edit().putString(KEY_ORDERS, json).apply()
+    }
+
+    fun fetchOrdersFromServer(context: Context, callback: ((Boolean) -> Unit)? = null) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val serverUrl = sharedPrefs.getString("server_url", "") ?: ""
+        val token = sharedPrefs.getString("admin_token", "") ?: ""
+
+        if (serverUrl.isEmpty() || token.isEmpty()) {
+            callback?.invoke(false)
+            return
+        }
+
+        Thread {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(5, TimeUnit.SECONDS)
+                    .readTimeout(5, TimeUnit.SECONDS)
+                    .build()
+
+                val request = Request.Builder()
+                    .url("$serverUrl/api/admin/orders")
+                    .get()
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val responseStr = response.body?.string() ?: ""
+                    val type = object : TypeToken<List<Order>>() {}.type
+                    val loaded: List<Order> = gson.fromJson(responseStr, type)
+                    
+                    _orders.value = loaded
+                    saveOrders(context, loaded)
+                    callback?.invoke(true)
+                } else {
+                    callback?.invoke(false)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                callback?.invoke(false)
+            }
+        }.start()
     }
 }

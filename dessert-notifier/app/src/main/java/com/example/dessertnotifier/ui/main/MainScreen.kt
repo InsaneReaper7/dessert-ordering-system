@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +69,12 @@ fun MainScreen(
 ) {
     val connectionState by OrderRepository.connectionStatus.collectAsState()
     val orders by OrderRepository.orders.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        OrderRepository.loadOrders(context)
+        OrderRepository.fetchOrdersFromServer(context)
+    }
 
     Column(
         modifier = modifier
@@ -96,13 +104,26 @@ fun MainScreen(
                     color = Color.Gray
                 )
             }
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = {
+                    OrderRepository.fetchOrdersFromServer(context)
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
 
