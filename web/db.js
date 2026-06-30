@@ -173,6 +173,33 @@ async function seedData() {
       price_9x9: null, // TBD
       has_toppings: 1,
       image_url: '/images/marshmallow_swirl_brownies.png'
+    },
+    {
+      id: 'pina_colada_bars',
+      name: 'Piña Colada Bars',
+      description: 'Tropical coconut and sweet pineapple curd layered on a buttery shortbread crust, topped with toasted coconut flakes.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/pina_colada_bars.png'
+    },
+    {
+      id: 'coconut_cream_bars',
+      name: 'Coconut Cream Bars',
+      description: 'Rich, velvety coconut custard on a buttery shortbread crust, generously dusted with shredded coconut.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/coconut_cream_bars.png'
+    },
+    {
+      id: 'cinnamon_rolls',
+      name: 'Artisan Cinnamon Rolls',
+      description: 'Soft, fluffy sweet rolls swirled with buttery cinnamon sugar, topped with rich cream cheese icing.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/cinnamon_rolls.png'
     }
   ];
 

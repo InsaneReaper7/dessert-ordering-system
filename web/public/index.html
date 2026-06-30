@@ -98,22 +98,9 @@
 
           <!-- Step 2: Size Selection -->
           <div class="form-group">
-            <label data-i18n="form_label_size">Choose Pan Size</label>
-            <div class="radio-group">
-              <label class="radio-label">
-                <input type="radio" name="size" value="8x5" checked required>
-                <div class="radio-design">
-                  <span class="size-title" data-i18n="form_size_8x5">8" x 5" Baking Pan</span>
-                  <span class="size-desc" id="price-8x5-desc" data-i18n="form_size_lemon_8x5">Lemon Bars: $12.00 | Others: TBD</span>
-                </div>
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="size" value="9x9" required>
-                <div class="radio-design">
-                  <span class="size-title" data-i18n="form_size_9x9">9" x 9" Baking Pan</span>
-                  <span class="size-desc" data-i18n="form_size_pricing_tbd">Pricing: TBD</span>
-                </div>
-              </label>
+            <label id="size-section-label" data-i18n="form_label_size">Choose Pan Size</label>
+            <div id="size-options-container" class="radio-group">
+              <!-- Dynamically populated from JS -->
             </div>
           </div>
 

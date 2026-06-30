@@ -71,7 +71,15 @@ const i18n = {
     // Miscellaneous
     card_starting_at: "Starting at",
     card_customizable: "Customizable",
-    card_customize_btn: "Customize"
+    card_customize_btn: "Customize",
+    size_1_roll_title: "Single Cinnamon Roll",
+    size_1_roll_desc: "Pricing: TBD",
+    size_4_pack_title: "Pack of 4 Rolls",
+    size_4_pack_desc: "Pricing: TBD",
+    size_6_pack_title: "Pack of 6 Rolls",
+    size_6_pack_desc: "Pricing: TBD",
+    size_full_tray_title: "Full Tray (12 Rolls)",
+    size_full_tray_desc: "Pricing: TBD"
   },
   es: {
     logo_subtitle: "Panadería Artesanal en Pequeños Lotes",
@@ -141,7 +149,15 @@ const i18n = {
     // Miscellaneous
     card_starting_at: "Desde",
     card_customizable: "Personalizable",
-    card_customize_btn: "Personalizar"
+    card_customize_btn: "Personalizar",
+    size_1_roll_title: "Rollo de Canela Individual",
+    size_1_roll_desc: "Precio: TBD",
+    size_4_pack_title: "Paquete de 4 Rollos",
+    size_4_pack_desc: "Precio: TBD",
+    size_6_pack_title: "Paquete de 6 Rollos",
+    size_6_pack_desc: "Precio: TBD",
+    size_full_tray_title: "Bandeja Completa (12 Rollos)",
+    size_full_tray_desc: "Precio: TBD"
   }
 };
 
@@ -201,6 +217,27 @@ const itemTranslations = {
     desc: { 
       en: "Rich, fudgy chocolate brownies swirled with sweet, gooey melted marshmallow fluff.", 
       es: "Brownies de chocolate ricos y melosos con un remolino de crema de malvavisco dulce y derretida." 
+    }
+  },
+  pina_colada_bars: {
+    name: { en: "Piña Colada Bars", es: "Barras de Piña Colada" },
+    desc: { 
+      en: "Tropical coconut and sweet pineapple curd layered on a buttery shortbread crust, topped with toasted coconut flakes.", 
+      es: "Crema de coco tropical y piña dulce sobre una base de galleta de mantequilla, cubierta con hojuelas de coco tostadas." 
+    }
+  },
+  coconut_cream_bars: {
+    name: { en: "Coconut Cream Bars", es: "Barras de Crema de Coco" },
+    desc: { 
+      en: "Rich, velvety coconut custard on a buttery shortbread crust, generously dusted with shredded coconut.", 
+      es: "Crema de coco rica y aterciopelada sobre una base de galleta de mantequilla, generosamente espolvoreada con coco rallado." 
+    }
+  },
+  cinnamon_rolls: {
+    name: { en: "Artisan Cinnamon Rolls", es: "Rollos de Canela Artesanales" },
+    desc: { 
+      en: "Soft, fluffy sweet rolls swirled with buttery cinnamon sugar, topped with rich cream cheese icing.", 
+      es: "Rollos dulces, suaves y esponjosos con un remolino de azúcar y canela con mantequilla, cubiertos con glaseado de queso crema." 
     }
   }
 };
@@ -271,6 +308,10 @@ function updateLanguageUI() {
   });
 
   updateAdditionsCheckboxes();
+  const select = document.getElementById('dessert-select');
+  if (select) {
+    renderSizeOptions(select.value);
+  }
 }
 
 // Check and disable checkboxes of ingredients already included in the selected dessert
@@ -316,6 +357,79 @@ function updateAdditionsCheckboxes() {
       }
       span.textContent = baseText;
     }
+  });
+}
+
+// Render dynamic size or quantity options depending on selected dessert
+function renderSizeOptions(dessertId) {
+  const container = document.getElementById('size-options-container');
+  const sectionLabel = document.getElementById('size-section-label');
+  if (!container || !sectionLabel) return;
+  if (!dessertId) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const prevSelected = container.querySelector('input[name="size"]:checked')?.value;
+  let html = '';
+
+  if (dessertId === 'cinnamon_rolls') {
+    sectionLabel.textContent = currentLang === 'es' ? 'Selecciona la Cantidad' : 'Select Quantity';
+    
+    const options = [
+      { value: '1_roll', titleKey: 'size_1_roll_title', descKey: 'size_1_roll_desc' },
+      { value: '4_pack', titleKey: 'size_4_pack_title', descKey: 'size_4_pack_desc' },
+      { value: '6_pack', titleKey: 'size_6_pack_title', descKey: 'size_6_pack_desc' },
+      { value: 'full_tray', titleKey: 'size_full_tray_title', descKey: 'size_full_tray_desc' }
+    ];
+
+    options.forEach((opt, idx) => {
+      const isChecked = prevSelected === opt.value || (!prevSelected && idx === 0);
+      html += `
+        <label class="radio-label">
+          <input type="radio" name="size" value="${opt.value}" ${isChecked ? 'checked' : ''} required>
+          <div class="radio-design">
+            <span class="size-title">${i18n[currentLang][opt.titleKey]}</span>
+            <span class="size-desc">${i18n[currentLang][opt.descKey]}</span>
+          </div>
+        </label>
+      `;
+    });
+  } else {
+    sectionLabel.textContent = currentLang === 'es' ? 'Elige el Tamaño del Molde' : 'Choose Pan Size';
+    
+    const isLemon = dessertId === 'lemon_bars';
+    const price8x5Text = isLemon 
+      ? (currentLang === 'es' ? 'Barras de Limón: $12.00' : 'Lemon Bars: $12.00')
+      : (currentLang === 'es' ? 'Precio: TBD' : 'Pricing: TBD');
+      
+    const is8x5Checked = prevSelected === '8x5' || !prevSelected || (prevSelected !== '8x5' && prevSelected !== '9x9');
+    const is9x9Checked = prevSelected === '9x9';
+
+    html += `
+      <label class="radio-label">
+        <input type="radio" name="size" value="8x5" ${is8x5Checked ? 'checked' : ''} required>
+        <div class="radio-design">
+          <span class="size-title">${i18n[currentLang].form_size_8x5}</span>
+          <span class="size-desc">${price8x5Text}</span>
+        </div>
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="size" value="9x9" ${is9x9Checked ? 'checked' : ''} required>
+        <div class="radio-design">
+          <span class="size-title">${i18n[currentLang].form_size_9x9}</span>
+          <span class="size-desc">${i18n[currentLang].form_size_pricing_tbd}</span>
+        </div>
+      </label>
+    `;
+  }
+
+  container.innerHTML = html;
+
+  // Re-attach event listeners
+  const sizeRadios = document.getElementsByName('size');
+  sizeRadios.forEach(radio => {
+    radio.addEventListener('change', updateOrderSummary);
   });
 }
 
@@ -479,6 +593,7 @@ function handleDessertChange(dessertId) {
     checkedBoxes.forEach(cb => { cb.checked = false; });
   }
 
+  renderSizeOptions(dessertId);
   updateAdditionsCheckboxes();
 }
 
@@ -514,11 +629,29 @@ function updateOrderSummary() {
 
   // Get translated dessert name
   const translatedName = itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name;
-  const sizeText = size === '8x5' ? '8x5' : '9x9';
+  
+  let sizeText = size;
+  if (size === '8x5' || size === '9x9') {
+    sizeText = size;
+  } else {
+    const sizeKeys = {
+      '1_roll': currentLang === 'es' ? '1 Rollo' : '1 Roll',
+      '4_pack': currentLang === 'es' ? 'Paquete de 4' : '4 Pack',
+      '6_pack': currentLang === 'es' ? 'Paquete de 6' : '6 Pack',
+      'full_tray': currentLang === 'es' ? 'Bandeja Completa' : 'Full Tray'
+    };
+    sizeText = sizeKeys[size] || size;
+  }
+  
   if (summaryItemName) summaryItemName.textContent = `${translatedName} (${sizeText})`;
 
   // Calculate pricing
-  let basePrice = size === '9x9' ? selectedDessert.price_9x9 : selectedDessert.price_8x5;
+  let basePrice = null;
+  if (size === '8x5') {
+    basePrice = selectedDessert.price_8x5;
+  } else if (size === '9x9') {
+    basePrice = selectedDessert.price_9x9;
+  }
   let hasTBD = basePrice === null || extraToppings.length > 0;
 
   // Render individual base price
@@ -612,7 +745,20 @@ async function handleFormSubmit(e) {
     document.getElementById('success-dessert-name').textContent = translatedName;
     
     // Translate size description
-    const translatedSize = size === '8x5' ? i18n[currentLang].form_size_8x5 : i18n[currentLang].form_size_9x9;
+    let translatedSize = '';
+    if (size === '8x5') {
+      translatedSize = i18n[currentLang].form_size_8x5;
+    } else if (size === '9x9') {
+      translatedSize = i18n[currentLang].form_size_9x9;
+    } else {
+      const sizeKeys = {
+        '1_roll': currentLang === 'es' ? '1 Rollo' : '1 Roll',
+        '4_pack': currentLang === 'es' ? 'Paquete de 4' : '4 Pack',
+        '6_pack': currentLang === 'es' ? 'Paquete de 6' : '6 Pack',
+        'full_tray': currentLang === 'es' ? 'Bandeja Completa' : 'Full Tray'
+      };
+      translatedSize = sizeKeys[size] || size;
+    }
     document.getElementById('success-size').textContent = translatedSize;
     
     // Translate fulfillment
