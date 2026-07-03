@@ -471,6 +471,24 @@ app.delete('/api/admin/recipes/:id', authenticateAdminToken, async (req, res) =>
 });
 
 
+// Admin: Update ingredient amount in a recipe
+app.put('/api/admin/recipes/:id', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { amount } = req.body;
+  if (amount === undefined || amount === null) {
+    return res.status(400).json({ error: 'Amount is required' });
+  }
+
+  try {
+    await db.query('UPDATE recipe_ingredients SET amount = ? WHERE id = ?', [Number(amount), id]);
+    res.json({ message: 'Recipe ingredient amount updated successfully' });
+  } catch (err) {
+    console.error('Failed to update recipe ingredient amount:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
+
 // Admin: Send test ping to app
 app.post('/api/admin/ping', authenticateAdminToken, (req, res) => {
   console.log('Admin triggered manual test ping');

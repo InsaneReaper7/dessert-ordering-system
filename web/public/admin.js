@@ -753,13 +753,16 @@ function renderRecipes(recipeIngredients, inventory) {
         const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
         
         tableHtml += `
-          <tr>
+          <tr data-id="${ing.id}" data-name="${ing.ingredient_name}">
             <td><strong>${ing.ingredient_name}</strong></td>
-            <td>${ing.amount}</td>
+            <td>
+              <input type="number" class="cost-input recipe-amount-input" value="${ing.amount}" readonly step="0.01" style="width: 80px; text-align: center;">
+            </td>
             <td><code>${ing.unit}</code></td>
             <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
             <td>$${computedCost.toFixed(2)}</td>
-            <td>
+            <td class="recipe-actions-cell">
+              <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">Edit</button>
               <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">Remove</button>
             </td>
           </tr>
@@ -872,6 +875,73 @@ async function deleteRecipeIngredient(id) {
       throw new Error(result.error || 'Failed to remove ingredient');
     }
 
+    loadRecipes();
+    loadOrders();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function editRecipeRow(btn, id) {
+  const tr = btn.closest('tr');
+  const input = tr.querySelector('.recipe-amount-input');
+  
+  input.removeAttribute('readonly');
+  input.dataset.original = input.value;
+  input.focus();
+  input.select();
+  
+  const cell = tr.querySelector('.recipe-actions-cell');
+  cell.innerHTML = `
+    <button class="btn-action btn-complete" onclick="saveRecipeIngredientAmount(this, ${id})">Save</button>
+    <button class="btn-action btn-cancel" onclick="cancelEditRecipeRow(this)">Cancel</button>
+  `;
+}
+
+function cancelEditRecipeRow(btn) {
+  const tr = btn.closest('tr');
+  const input = tr.querySelector('.recipe-amount-input');
+  
+  input.value = input.dataset.original;
+  input.setAttribute('readonly', 'true');
+  
+  const cell = tr.querySelector('.recipe-actions-cell');
+  const id = tr.dataset.id;
+  cell.innerHTML = `
+    <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${id})">Edit</button>
+    <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${id})">Remove</button>
+  `;
+}
+
+async function saveRecipeIngredientAmount(btn, id) {
+  const tr = btn.closest('tr');
+  const input = tr.querySelector('.recipe-amount-input');
+  const newAmount = parseFloat(input.value);
+  const ingredientName = tr.dataset.name;
+  
+  if (isNaN(newAmount) || newAmount <= 0) {
+    alert('Please enter a valid amount greater than 0');
+    return;
+  }
+  
+  const confirmChange = confirm(`Are you sure you want to change the amount of '${ingredientName}' in this recipe?`);
+  if (!confirmChange) return;
+  
+  try {
+    const response = await fetch(`/api/admin/recipes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ amount: newAmount })
+    });
+    
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to update recipe amount');
+    }
+    
     loadRecipes();
     loadOrders();
   } catch (err) {
