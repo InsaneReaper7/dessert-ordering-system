@@ -950,7 +950,11 @@ function renderRecipes(recipeIngredients, inventory) {
 
     sectionCard.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
-        <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${d.name}</h4>
+        <!-- Clickable Title & Caret for Collapse/Expand -->
+        <div onclick="toggleRecipeCardCollapse('${d.id}')" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+          <span id="collapse-icon-${d.id}" style="font-size: 14px; color: var(--text-muted); font-weight: bold; width: 14px; display: inline-block;">▶</span>
+          <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${d.name}</h4>
+        </div>
         
         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
           <!-- Permanent Base Mold/Yield Selector -->
@@ -969,7 +973,11 @@ function renderRecipes(recipeIngredients, inventory) {
           <span id="base-cost-display-${d.id}" data-original-cost="${totalRecipeBaseCost}" style="font-weight: bold; color: var(--primary); font-size: 14px;">Base Cost: $${totalRecipeBaseCost.toFixed(2)}</span>
         </div>
       </div>
-      ${tableHtml}
+      
+      <!-- Collapsible Body Container (hidden by default) -->
+      <div id="recipe-body-${d.id}" class="recipe-card-body hidden" style="transition: all 0.2s ease;">
+        ${tableHtml}
+      </div>
     `;
     
     container.appendChild(sectionCard);
@@ -1443,6 +1451,14 @@ function handleScaleDisplay(dessertId, targetMold) {
     }
   }
 
+  // Auto-expand card if scaled
+  const body = document.getElementById(`recipe-body-${dessertId}`);
+  const icon = document.getElementById(`collapse-icon-${dessertId}`);
+  if (body && body.classList.contains('hidden') && targetMold !== 'original') {
+    body.classList.remove('hidden');
+    if (icon) icon.innerText = '▼';
+  }
+
   // Multiply ingredients list amounts and costs
   const table = document.getElementById(`recipe-table-${dessertId}`);
   if (table) {
@@ -1476,4 +1492,37 @@ function handleScaleDisplay(dessertId, targetMold) {
     const scaledCost = originalCost * multiplier;
     costDisplay.innerText = `Base Cost: $${scaledCost.toFixed(2)}`;
   }
+}
+
+// Toggle collapse/expand of a single recipe card
+function toggleRecipeCardCollapse(dessertId) {
+  const body = document.getElementById(`recipe-body-${dessertId}`);
+  const icon = document.getElementById(`collapse-icon-${dessertId}`);
+  if (!body) return;
+
+  const isHidden = body.classList.contains('hidden');
+  if (isHidden) {
+    body.classList.remove('hidden');
+    if (icon) icon.innerText = '▼';
+  } else {
+    body.classList.add('hidden');
+    if (icon) icon.innerText = '▶';
+  }
+}
+
+// Expand or Collapse all recipe cards
+function toggleAllRecipeCards(expand) {
+  dessertsCache.forEach(d => {
+    const body = document.getElementById(`recipe-body-${d.id}`);
+    const icon = document.getElementById(`collapse-icon-${d.id}`);
+    if (body) {
+      if (expand) {
+        body.classList.remove('hidden');
+        if (icon) icon.innerText = '▼';
+      } else {
+        body.classList.add('hidden');
+        if (icon) icon.innerText = '▶';
+      }
+    }
+  });
 }

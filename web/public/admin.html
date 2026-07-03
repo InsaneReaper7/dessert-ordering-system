@@ -297,6 +297,13 @@
             </form>
           </div>
 
+          <!-- Expand/Collapse all controls -->
+          <div style="margin: 0 24px; display: flex; justify-content: flex-end; gap: 12px; font-size: 13px;">
+            <a href="#" onclick="toggleAllRecipeCards(true); return false;" style="color: var(--primary); font-weight: 500; text-decoration: none;">📂 Expand All</a>
+            <span style="color: var(--border);">|</span>
+            <a href="#" onclick="toggleAllRecipeCards(false); return false;" style="color: var(--primary); font-weight: 500; text-decoration: none;">📁 Collapse All</a>
+          </div>
+
           <!-- Recipe Ingredients Display Container -->
           <div id="recipes-formulation-list" style="padding: 24px; display: flex; flex-direction: column; gap: 24px;">
             <!-- Rendered dynamically as tables per recipe -->
