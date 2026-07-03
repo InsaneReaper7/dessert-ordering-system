@@ -139,9 +139,33 @@ async function createTables() {
       name VARCHAR(100) UNIQUE NOT NULL,
       bulk_cost REAL NOT NULL DEFAULT 0.0,
       bulk_qty REAL NOT NULL DEFAULT 1.0,
-      unit VARCHAR(10) NOT NULL DEFAULT 'g'
+      unit VARCHAR(10) NOT NULL DEFAULT 'g',
+      tax_rate REAL NOT NULL DEFAULT 0.0
     )
   `);
+
+  // Migrate ingredients table to include tax_rate column if missing in existing database
+  try {
+    let hasTaxRate = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'ingredients' AND column_name = 'tax_rate'
+      `);
+      hasTaxRate = res.length > 0;
+    } else {
+      const info = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='ingredients' AND sql LIKE '%tax_rate%'");
+      hasTaxRate = info.length > 0;
+    }
+
+    if (!hasTaxRate) {
+      console.log('Adding column tax_rate to ingredients table...');
+      await query("ALTER TABLE ingredients ADD COLUMN tax_rate REAL DEFAULT 0.0");
+    }
+  } catch (e) {
+    console.error('Error during ingredients schema migration for tax_rate, skipping:', e);
+  }
 
   // Create recipe_ingredients table (Recipe formulation)
   await query(`
@@ -344,9 +368,9 @@ module.exports = {
     }
     return { changes: 0 };
   },
-  updateIngredient: (id, bulk_cost, bulk_qty, unit) => 
-    query('UPDATE ingredients SET bulk_cost = ?, bulk_qty = ?, unit = ? WHERE id = ?', 
-      [bulk_cost, bulk_qty, unit, id]),
+  updateIngredient: (id, bulk_cost, bulk_qty, unit, tax_rate) => 
+    query('UPDATE ingredients SET bulk_cost = ?, bulk_qty = ?, unit = ?, tax_rate = ? WHERE id = ?', 
+      [bulk_cost, bulk_qty, unit, tax_rate || 0.0, id]),
   deleteIngredient: (id) => query('DELETE FROM ingredients WHERE id = ?', [id]),
 
   // Recipe Ingredients CRUD (Recipe formulation)
@@ -376,12 +400,13 @@ module.exports = {
     // Fetch recipe ingredients used in this recipe
     const recipeIngredients = await query('SELECT * FROM recipe_ingredients WHERE dessert_id = ?', [order.dessert_id]);
     
-    // Fetch bulk inventory prices
-    const inventory = await query('SELECT name, bulk_cost, bulk_qty FROM ingredients');
+    // Fetch bulk inventory prices (including tax_rate)
+    const inventory = await query('SELECT name, bulk_cost, bulk_qty, tax_rate FROM ingredients');
     const costMap = {};
     inventory.forEach(item => {
       const qty = item.bulk_qty || 1.0;
-      costMap[item.name.toLowerCase().trim()] = (item.bulk_cost || 0.0) / qty;
+      const costWithTax = (item.bulk_cost || 0.0) * (1 + (item.tax_rate || 0.0));
+      costMap[item.name.toLowerCase().trim()] = costWithTax / qty;
     });
 
     let toppingsArr = [];

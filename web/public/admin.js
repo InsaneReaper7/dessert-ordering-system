@@ -482,7 +482,7 @@ function renderIngredients(ingredients, recipeIngredients) {
   tbody.innerHTML = '';
   
   if (ingredients.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding: 40px; color: var(--text-muted);">No ingredients registered. Build recipes on the 'Current Recipes' tab first!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">No ingredients registered. Build recipes on the 'Current Recipes' tab first!</td></tr>`;
     renderRecipeCostsList({}, 'recipe-costs-list');
     return;
   }
@@ -492,6 +492,7 @@ function renderIngredients(ingredients, recipeIngredients) {
     tr.dataset.id = ing.id;
     tr.dataset.name = ing.name;
     tr.dataset.unit = ing.unit;
+    tr.dataset.tax = ing.tax_rate || 0.0;
     
     tr.innerHTML = `
       <td><strong>${ing.name}</strong></td>
@@ -500,6 +501,11 @@ function renderIngredients(ingredients, recipeIngredients) {
       </td>
       <td>
         <input type="number" class="cost-input" value="${ing.bulk_qty}" readonly step="0.01">
+      </td>
+      <td>
+        <span class="status-badge ${ing.tax_rate > 0 ? 'cancelled' : 'completed'}" style="font-size: 11px;">
+          ${((ing.tax_rate || 0.0) * 100).toFixed(1)}%
+        </span>
       </td>
       <td>
         <span class="status-badge completed" style="font-size: 11px;">${ing.unit}</span>
@@ -517,7 +523,8 @@ function renderIngredients(ingredients, recipeIngredients) {
   // Calculate base batch costs for each recipe using inventory unit prices
   const costMap = {};
   ingredients.forEach(item => {
-    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+    const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+    costMap[item.name.toLowerCase().trim()] = costWithTax / item.bulk_qty;
   });
   
   const baseCosts = {};
@@ -562,8 +569,18 @@ function editIngredientRow(btn, id) {
     input.dataset.original = input.value;
   });
   
+  // Replace the tax column with a select dropdown
+  const taxCell = tr.cells[3];
+  const currentTax = parseFloat(tr.dataset.tax || 0.0);
+  taxCell.innerHTML = `
+    <select class="tax-select cost-input" style="padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white; width: 100%; box-sizing: border-box;">
+      <option value="0" ${currentTax === 0 ? 'selected' : ''}>0%</option>
+      <option value="0.115" ${Math.abs(currentTax - 0.115) < 0.01 ? 'selected' : ''}>11.5%</option>
+    </select>
+  `;
+  
   // Replace the unit column with a select dropdown
-  const unitCell = tr.cells[3];
+  const unitCell = tr.cells[4];
   const currentUnit = tr.dataset.unit;
   unitCell.innerHTML = `
     <select class="unit-select cost-input" style="padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white; width: 100%; box-sizing: border-box;">
@@ -596,8 +613,17 @@ function cancelEditIngredientRow(btn) {
     input.setAttribute('readonly', 'true');
   });
   
+  // Restore tax badge
+  const taxCell = tr.cells[3];
+  const taxVal = parseFloat(tr.dataset.tax) || 0.0;
+  taxCell.innerHTML = `
+    <span class="status-badge ${taxVal > 0 ? 'cancelled' : 'completed'}" style="font-size: 11px;">
+      ${(taxVal * 100).toFixed(1)}%
+    </span>
+  `;
+  
   // Restore unit badge
-  const unitCell = tr.cells[3];
+  const unitCell = tr.cells[4];
   unitCell.innerHTML = `<span class="status-badge completed" style="font-size: 11px;">${tr.dataset.unit}</span>`;
   
   // Restore action buttons
@@ -605,6 +631,7 @@ function cancelEditIngredientRow(btn) {
   const id = tr.dataset.id;
   actionsCell.innerHTML = `
     <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${id})">Edit</button>
+    <button class="btn-action btn-reset" onclick="resetIngredientCost(${id})">Reset</button>
     <button class="btn-action btn-delete" onclick="deleteIngredient(${id})">Delete</button>
   `;
 }
@@ -614,6 +641,7 @@ async function saveIngredientCost(btn, id) {
   const inputs = tr.querySelectorAll('.cost-input');
   const newCost = parseFloat(inputs[0].value);
   const newQty = parseFloat(inputs[1].value);
+  const selectedTax = parseFloat(tr.querySelector('.tax-select').value);
   const selectedUnit = tr.querySelector('.unit-select').value;
   
   if (isNaN(newCost) || newCost < 0 || isNaN(newQty) || newQty <= 0) {
@@ -621,7 +649,7 @@ async function saveIngredientCost(btn, id) {
     return;
   }
   
-  const confirmChange = confirm("Are you sure you want to change the bulk cost and quantity of this ingredient?");
+  const confirmChange = confirm("Are you sure you want to change the bulk cost, quantity, and tax of this ingredient?");
   if (!confirmChange) {
     return;
   }
@@ -653,7 +681,8 @@ async function saveIngredientCost(btn, id) {
       body: JSON.stringify({
         bulk_cost: newCost,
         bulk_qty: finalQty,
-        unit: finalUnit
+        unit: finalUnit,
+        tax_rate: selectedTax
       })
     });
     
@@ -694,7 +723,7 @@ async function resetIngredientCost(id) {
   const tr = document.querySelector(`tr[data-id="${id}"]`);
   const unit = tr ? tr.dataset.unit : 'g';
   
-  const confirmChange = confirm("Are you sure you want to reset the bulk cost and quantity of this ingredient?");
+  const confirmChange = confirm("Are you sure you want to reset the bulk cost, quantity, and tax of this ingredient?");
   if (!confirmChange) {
     return;
   }
@@ -709,7 +738,8 @@ async function resetIngredientCost(id) {
       body: JSON.stringify({
         bulk_cost: 0.00,
         bulk_qty: 1.00,
-        unit: unit
+        unit: unit,
+        tax_rate: 0.0
       })
     });
     
@@ -782,10 +812,11 @@ function renderRecipes(recipeIngredients, inventory) {
     }
   });
   
-  // Create unit cost lookup map
+  // Create unit cost lookup map (including tax_rate)
   const costMap = {};
   inventory.forEach(item => {
-    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+    const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+    costMap[item.name.toLowerCase().trim()] = costWithTax / item.bulk_qty;
   });
   
   const baseCosts = {};
@@ -1137,10 +1168,11 @@ function calculateRequiredStock() {
   const totals = {};
   let totalBakingBatches = 0;
   
-  // Build lookup costs map
+  // Build lookup costs map (including tax_rate)
   const costMap = {};
   inventoryCache.forEach(item => {
-    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+    const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+    costMap[item.name.toLowerCase().trim()] = costWithTax / item.bulk_qty;
   });
   
   dessertsCache.forEach(d => {
@@ -1214,7 +1246,8 @@ function copyShoppingListToClipboard() {
   
   const costMap = {};
   inventoryCache.forEach(item => {
-    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+    const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+    costMap[item.name.toLowerCase().trim()] = costWithTax / item.bulk_qty;
   });
 
   dessertsCache.forEach(d => {

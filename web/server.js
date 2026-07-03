@@ -384,13 +384,13 @@ app.post('/api/admin/ingredients', authenticateAdminToken, async (req, res) => {
 // Admin: Update ingredient bulk pricing in inventory
 app.put('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { bulk_cost, bulk_qty, unit } = req.body;
+  const { bulk_cost, bulk_qty, unit, tax_rate } = req.body;
   if (bulk_cost === undefined || bulk_cost === null || bulk_qty === undefined || bulk_qty === null || !unit) {
     return res.status(400).json({ error: 'Bulk cost, bulk quantity, and unit are required' });
   }
 
   try {
-    await db.updateIngredient(id, Number(bulk_cost), Number(bulk_qty), unit);
+    await db.updateIngredient(id, Number(bulk_cost), Number(bulk_qty), unit, Number(tax_rate || 0.0));
     res.json({ message: 'Ingredient bulk pricing updated successfully' });
   } catch (err) {
     console.error('Failed to update ingredient:', err);
