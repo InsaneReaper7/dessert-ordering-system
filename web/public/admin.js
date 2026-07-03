@@ -448,6 +448,13 @@ async function populateDessertsDropdown() {
   dropdown.innerHTML = html;
 }
 
+function toggleAddIngredientForm() {
+  const card = document.getElementById('add-ingredient-card');
+  if (card) {
+    card.classList.toggle('hidden');
+  }
+}
+
 function toggleToppingFields(checked) {
   const group = document.getElementById('ing-topping-value-group');
   if (group) {
@@ -485,6 +492,7 @@ async function handleAddIngredient(e) {
     // Reset form
     document.getElementById('add-ingredient-form').reset();
     toggleToppingFields(false);
+    toggleAddIngredientForm(); // Collapse form card after saving
 
     // Refresh lists
     loadIngredients();
@@ -496,6 +504,14 @@ async function handleAddIngredient(e) {
 
 async function loadIngredients() {
   try {
+    // Ensure dessertsCache is loaded before rendering
+    if (dessertsCache.length === 0) {
+      const resp = await fetch('/api/desserts');
+      if (resp.ok) {
+        dessertsCache = await resp.json();
+      }
+    }
+
     const response = await fetch('/api/admin/ingredients', {
       headers: { 'Authorization': `Bearer ${token}` }
     });

@@ -140,9 +140,59 @@
       <div class="grid grid-3-1">
         <!-- Ingredients Table Card -->
         <div class="orders-table-card">
-          <div class="card-header">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <h3 class="card-title">All Recipe Ingredients</h3>
+            <button class="btn btn-primary" onclick="toggleAddIngredientForm()" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer;">+ Add Ingredient</button>
           </div>
+
+          <!-- Collapsible Add Ingredient Form (hidden by default) -->
+          <div id="add-ingredient-card" class="analytics-card hidden" style="margin: 16px; padding: 20px; border-bottom: 1px solid var(--border);">
+            <h4 class="analytics-title" style="font-size: 16px; margin-bottom: 16px; border-bottom: none; padding-bottom: 0;">Add New Ingredient</h4>
+            <form id="add-ingredient-form" onsubmit="handleAddIngredient(event)">
+              <div class="grid grid-3" style="margin-top: 0; gap: 16px;">
+                <div class="form-group">
+                  <label for="ing-name" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Ingredient Name</label>
+                  <input type="text" id="ing-name" placeholder="e.g. Butter" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+                </div>
+                <div class="form-group">
+                  <label for="ing-dessert" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Recipe / Dessert</label>
+                  <select id="ing-dessert" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ing-cost" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Cost per Batch ($)</label>
+                  <input type="number" id="ing-cost" step="0.01" placeholder="e.g. 1.25" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                  <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
+                    <input type="checkbox" id="ing-is-topping" onchange="toggleToppingFields(this.checked)" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+                    <label for="ing-is-topping" style="margin-bottom: 0; font-weight: 500; font-size: 13px; cursor: pointer; user-select: none;">Is an Optional Topping</label>
+                  </div>
+                  <div id="ing-topping-value-group" class="form-group hidden" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
+                    <label for="ing-topping-value" style="font-weight: 500; font-size: 13px; margin-bottom: 0;">Topping Value:</label>
+                    <select id="ing-topping-value" style="padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
+                      <option value="walnuts">Walnuts</option>
+                      <option value="pecans">Pecans</option>
+                      <option value="marshmallow dots">Marshmallow Dots</option>
+                      <option value="caramels dots">Caramel Dots</option>
+                      <option value="chocolate chips">Chocolate Chips</option>
+                      <option value="butterscotch chips">Butterscotch Chips</option>
+                      <option value="white chocolate chips">White Chocolate Chips</option>
+                      <option value="vanilla chips">Vanilla Chips</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                  <button type="button" class="btn" onclick="toggleAddIngredientForm()" style="padding: 8px 16px; background-color: #e5e7eb; color: var(--text-main); font-weight: 500; font-size: 13px; border-radius: 6px; cursor: pointer;">Cancel</button>
+                  <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer;">Save Ingredient</button>
+                </div>
+              </div>
+            </form>
+          </div>
+          
           <div class="table-responsive">
             <table class="orders-table">
               <thead>
@@ -166,48 +216,8 @@
           </div>
         </div>
 
-        <!-- Add Ingredient Card & Recipe Cost Summaries -->
+        <!-- Sidebar card: Recipe Cost Summaries -->
         <div class="sidebar-cards-container" style="display: flex; flex-direction: column; gap: 24px;">
-          <!-- Add Ingredient Form -->
-          <div class="analytics-card">
-            <h3 class="analytics-title" style="margin-bottom: 20px;">Add New Ingredient</h3>
-            <form id="add-ingredient-form" onsubmit="handleAddIngredient(event)">
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label for="ing-name" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Ingredient Name</label>
-                <input type="text" id="ing-name" placeholder="e.g. Butter" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
-              </div>
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label for="ing-dessert" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Recipe / Dessert</label>
-                <select id="ing-dessert" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
-                  <!-- Populated dynamically -->
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label for="ing-cost" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Cost per Batch ($)</label>
-                <input type="number" id="ing-cost" step="0.01" placeholder="e.g. 1.25" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
-              </div>
-              <div class="form-group" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="ing-is-topping" onchange="toggleToppingFields(this.checked)" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-                <label for="ing-is-topping" style="margin-bottom: 0; font-weight: 500; font-size: 13px; cursor: pointer; user-select: none;">Is an Optional Topping</label>
-              </div>
-              <div id="ing-topping-value-group" class="form-group hidden" style="margin-bottom: 20px;">
-                <label for="ing-topping-value" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Topping Checkbox Value</label>
-                <select id="ing-topping-value" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
-                  <option value="walnuts">Walnuts</option>
-                  <option value="pecans">Pecans</option>
-                  <option value="marshmallow dots">Marshmallow Dots</option>
-                  <option value="caramels dots">Caramel Dots</option>
-                  <option value="chocolate chips">Chocolate Chips</option>
-                  <option value="butterscotch chips">Butterscotch Chips</option>
-                  <option value="white chocolate chips">White Chocolate Chips</option>
-                  <option value="vanilla chips">Vanilla Chips</option>
-                </select>
-              </div>
-              <button type="submit" class="btn btn-primary btn-block" style="padding: 10px; cursor: pointer;">Add Ingredient</button>
-            </form>
-          </div>
-
-          <!-- Recipe Cost Summaries -->
           <div class="analytics-card">
             <h3 class="analytics-title" style="margin-bottom: 16px;">Base Batch Costs</h3>
             <div id="recipe-costs-list" style="display: flex; flex-direction: column; gap: 12px;">
