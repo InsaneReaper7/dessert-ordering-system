@@ -860,7 +860,7 @@ async function populateRecipeDessertsDropdown() {
 
   let html = '<option value="">-- Select Dessert / Recipe --</option>';
   dessertsCache.forEach(d => {
-    html += `<option value="${d.id}">${d.name}</option>';
+    html += `<option value="${d.id}">${d.name}</option>`;
   });
   dropdown.innerHTML = html;
 }
