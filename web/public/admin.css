@@ -330,6 +330,15 @@
   background-color: rgba(239, 68, 68, 0.05);
 }
 
+.btn-reset {
+  background-color: #f59e0b;
+  color: #ffffff;
+}
+
+.btn-reset:hover {
+  background-color: #d97706;
+}
+
 /* Animations */
 @keyframes pulse {
   0% {

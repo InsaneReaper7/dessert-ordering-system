@@ -506,6 +506,7 @@ function renderIngredients(ingredients, recipeIngredients) {
       </td>
       <td>
         <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${ing.id})">Edit</button>
+        <button class="btn-action btn-reset" onclick="resetIngredientCost(${ing.id})">Reset</button>
         <button class="btn-action btn-delete" onclick="deleteIngredient(${ing.id})">Delete</button>
       </td>
     `;
@@ -682,6 +683,41 @@ async function deleteIngredient(id) {
       throw new Error(result.error || 'Failed to delete ingredient');
     }
 
+    loadIngredients();
+    loadOrders();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function resetIngredientCost(id) {
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  const unit = tr ? tr.dataset.unit : 'g';
+  
+  const confirmChange = confirm("Are you sure you want to reset the bulk cost and quantity of this ingredient?");
+  if (!confirmChange) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/admin/ingredients/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        bulk_cost: 0.00,
+        bulk_qty: 1.00,
+        unit: unit
+      })
+    });
+    
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to reset ingredient cost');
+    }
+    
     loadIngredients();
     loadOrders();
   } catch (err) {
