@@ -492,6 +492,23 @@ app.put('/api/admin/recipes/:id', authenticateAdminToken, async (req, res) => {
   }
 });
 
+// Admin: Update dessert base mold size
+app.put('/api/admin/desserts/:id/base-mold', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { base_mold } = req.body;
+  if (!base_mold) {
+    return res.status(400).json({ error: 'Base mold size is required' });
+  }
+
+  try {
+    await db.query('UPDATE desserts SET base_mold = ? WHERE id = ?', [base_mold, id]);
+    res.json({ message: 'Dessert base mold updated successfully' });
+  } catch (err) {
+    console.error('Failed to update dessert base mold:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
 
 // Admin: Send test ping to app
 app.post('/api/admin/ping', authenticateAdminToken, (req, res) => {

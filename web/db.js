@@ -77,9 +77,36 @@ async function createTables() {
       price_8x5 REAL,
       price_9x9 REAL,
       has_toppings INTEGER DEFAULT 0,
-      image_url VARCHAR(255)
+      image_url VARCHAR(255),
+      base_mold VARCHAR(50) DEFAULT '9x9'
     )
   `);
+
+  // Migrate desserts table to include base_mold column if missing in existing database
+  try {
+    let hasBaseMold = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'desserts' AND column_name = 'base_mold'
+      `);
+      hasBaseMold = res.length > 0;
+    } else {
+      const info = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='desserts' AND sql LIKE '%base_mold%'");
+      hasBaseMold = info.length > 0;
+    }
+
+    if (!hasBaseMold) {
+      console.log('Adding column base_mold to desserts table...');
+      await query("ALTER TABLE desserts ADD COLUMN base_mold VARCHAR(50) DEFAULT '9x9'");
+      
+      // Update initial values (brownies/blondies recipes are formulated for 11x7 pan)
+      await query("UPDATE desserts SET base_mold = '11x7' WHERE id IN ('brownies', 'blondies', 'marshmallow_swirl_brownies', 'butterscotch_blondies', 'caramel_butterscotch_crunch_blondies')");
+    }
+  } catch (e) {
+    console.error('Error during desserts schema migration for base_mold, skipping:', e);
+  }
 
   // Create orders table
   await query(`

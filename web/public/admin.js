@@ -429,8 +429,8 @@ function switchTab(tabId) {
 
 let dessertsCache = [];
 
-async function fetchDessertsCache() {
-  if (dessertsCache.length === 0) {
+async function fetchDessertsCache(force = false) {
+  if (dessertsCache.length === 0 || force) {
     try {
       const response = await fetch('/api/desserts');
       if (response.ok) {
@@ -846,7 +846,7 @@ function renderRecipes(recipeIngredients, inventory) {
       
       tableHtml = `
         <div class="table-responsive">
-          <table class="orders-table" style="margin-top: 10px;">
+          <table class="orders-table" id="recipe-table-${d.id}" style="margin-top: 10px;">
             <thead>
               <tr>
                 <th>Ingredient</th>
@@ -882,14 +882,14 @@ function renderRecipes(recipeIngredients, inventory) {
           const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
           
           tableHtml += `
-            <tr data-id="${ing.id}" data-name="${ing.ingredient_name}" data-unit="${ing.unit}">
+            <tr data-id="${ing.id}" data-name="${ing.ingredient_name}" data-unit="${ing.unit}" data-original-amount="${ing.amount}" data-unit-cost="${unitCost}">
               <td><strong>${ing.ingredient_name}</strong></td>
               <td>
                 <input type="number" class="cost-input recipe-amount-input" value="${ing.amount}" readonly step="0.01" style="width: 80px; text-align: center;">
               </td>
               <td><code>${ing.unit}</code></td>
               <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
-              <td>$${computedCost.toFixed(2)}</td>
+              <td class="recipe-cost-cell">$${computedCost.toFixed(2)}</td>
               <td class="recipe-actions-cell">
                 <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">Edit</button>
                 <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">Remove</button>
@@ -908,10 +908,38 @@ function renderRecipes(recipeIngredients, inventory) {
     
     baseCosts[d.id] = totalRecipeBaseCost;
     
+    const baseMold = d.base_mold || '9x9';
     sectionCard.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 6px; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
         <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${d.name}</h4>
-        <span style="font-weight: bold; color: var(--primary);">Base Cost: $${totalRecipeBaseCost.toFixed(2)}</span>
+        
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <!-- Permanent Base Mold Selector -->
+          <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <span style="font-weight: 500;">Base Mold:</span>
+            <select onchange="updateRecipeBaseMold('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: var(--primary); cursor: pointer;">
+              <option value="8x5" ${baseMold === '8x5' ? 'selected' : ''}>8x5</option>
+              <option value="8x8" ${baseMold === '8x8' ? 'selected' : ''}>8x8</option>
+              <option value="9x9" ${baseMold === '9x9' ? 'selected' : ''}>9x9</option>
+              <option value="11x7" ${baseMold === '11x7' ? 'selected' : ''}>11x7</option>
+            </select>
+          </div>
+          
+          <!-- Dynamic Display Scaler -->
+          <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <span style="font-weight: 500;">Scale To:</span>
+            <select id="scale-target-${d.id}" onchange="handleScaleDisplay('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: #10b981; cursor: pointer;">
+              <option value="original">Original</option>
+              <option value="8x5">8x5 (Selling)</option>
+              <option value="8x8">8x8 (Sellable)</option>
+              <option value="9x9">9x9</option>
+              <option value="11x7">11x7</option>
+            </select>
+            <span id="scale-badge-${d.id}" class="status-badge completed hidden" style="font-size: 11px; font-weight: 600; padding: 2px 6px;">1.0x</span>
+          </div>
+          
+          <span id="base-cost-display-${d.id}" data-original-cost="${totalRecipeBaseCost}" style="font-weight: bold; color: var(--primary); font-size: 14px;">Base Cost: $${totalRecipeBaseCost.toFixed(2)}</span>
+        </div>
       </div>
       ${tableHtml}
     `;
@@ -1311,4 +1339,105 @@ function copyShoppingListToClipboard() {
       console.error('Could not copy shopping list to clipboard:', err);
       alert('Failed to copy. Here is the text list:\n\n' + text);
     });
+}
+
+// ==========================================
+// Recipe Pan Mold Scaling Calculations
+// ==========================================
+
+const MOLD_AREAS = {
+  '8x5': 8 * 5,   // 40 sq in (Selling pan)
+  '8x8': 8 * 8,   // 64 sq in (Sellable square)
+  '9x9': 9 * 9,   // 81 sq in (Original fruit bar pan)
+  '11x7': 11 * 7  // 77 sq in (Original brownie/blondie pan)
+};
+
+function getScalingMultiplier(baseMold, targetMold) {
+  if (!baseMold || !targetMold || baseMold === targetMold) return 1.0;
+  const baseArea = MOLD_AREAS[baseMold];
+  const targetArea = MOLD_AREAS[targetMold];
+  if (!baseArea || !targetArea) return 1.0;
+  return targetArea / baseArea;
+}
+
+async function updateRecipeBaseMold(dessertId, baseMold) {
+  try {
+    const response = await fetch(`/api/admin/desserts/${dessertId}/base-mold`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ base_mold: baseMold })
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to update recipe base mold');
+    }
+
+    // Refresh memory cache of desserts and reload recipes display
+    await fetchDessertsCache(true); 
+    
+    // Auto-update display if a scaling selector is currently active
+    const scaleSelect = document.getElementById(`scale-target-${dessertId}`);
+    if (scaleSelect) {
+      handleScaleDisplay(dessertId, scaleSelect.value);
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function handleScaleDisplay(dessertId, targetMold) {
+  const dessert = dessertsCache.find(d => d.id === dessertId);
+  if (!dessert) return;
+
+  const baseMold = dessert.base_mold || '9x9';
+  const multiplier = targetMold === 'original' ? 1.0 : getScalingMultiplier(baseMold, targetMold);
+
+  // Update multiplier status badge
+  const badge = document.getElementById(`scale-badge-${dessertId}`);
+  if (badge) {
+    if (multiplier === 1.0) {
+      badge.classList.add('hidden');
+    } else {
+      badge.classList.remove('hidden');
+      badge.innerText = `${multiplier.toFixed(2)}x`;
+    }
+  }
+
+  // Multiply ingredients list amounts and costs
+  const table = document.getElementById(`recipe-table-${dessertId}`);
+  if (table) {
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      if (row.dataset.originalAmount) {
+        const originalAmount = parseFloat(row.dataset.originalAmount);
+        const unitCost = parseFloat(row.dataset.unitCost || 0.0);
+        const newAmount = originalAmount * multiplier;
+        const newCost = newAmount * unitCost;
+
+        // Update amount input box value
+        const amtInput = row.querySelector('.recipe-amount-input');
+        if (amtInput) {
+          amtInput.value = Number(newAmount.toFixed(2));
+        }
+
+        // Update cost cell text
+        const costCell = row.querySelector('.recipe-cost-cell');
+        if (costCell) {
+          costCell.innerText = `$${newCost.toFixed(2)}`;
+        }
+      }
+    });
+  }
+
+  // Update header base cost display
+  const costDisplay = document.getElementById(`base-cost-display-${dessertId}`);
+  if (costDisplay) {
+    const originalCost = parseFloat(costDisplay.dataset.originalCost) || 0.0;
+    const scaledCost = originalCost * multiplier;
+    costDisplay.innerText = `Base Cost: $${scaledCost.toFixed(2)}`;
+  }
 }
