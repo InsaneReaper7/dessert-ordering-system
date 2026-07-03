@@ -589,6 +589,7 @@ function editIngredientRow(btn, id) {
       <option value="lb">lb (Pounds)</option>
       <option value="fl oz">fl oz (Fluid Oz)</option>
       <option value="ml" ${currentUnit === 'ml' ? 'selected' : ''}>ml (Milliliters)</option>
+      <option value="dz">dz (Dozen)</option>
       <option value="unit" ${currentUnit === 'unit' ? 'selected' : ''}>unit (Whole)</option>
     </select>
   `;
@@ -667,6 +668,9 @@ async function saveIngredientCost(btn, id) {
   } else if (selectedUnit === 'fl oz') {
     finalQty = newQty * 29.5735;
     finalUnit = 'ml';
+  } else if (selectedUnit === 'dz') {
+    finalQty = newQty * 12;
+    finalUnit = 'unit';
   }
 
   finalQty = Math.round(finalQty * 100) / 100; // Round to 2 decimal places
