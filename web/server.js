@@ -471,19 +471,23 @@ app.delete('/api/admin/recipes/:id', authenticateAdminToken, async (req, res) =>
 });
 
 
-// Admin: Update ingredient amount in a recipe
+// Admin: Update ingredient amount and unit in a recipe
 app.put('/api/admin/recipes/:id', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { amount } = req.body;
+  const { amount, unit } = req.body;
   if (amount === undefined || amount === null) {
     return res.status(400).json({ error: 'Amount is required' });
   }
 
   try {
-    await db.query('UPDATE recipe_ingredients SET amount = ? WHERE id = ?', [Number(amount), id]);
-    res.json({ message: 'Recipe ingredient amount updated successfully' });
+    if (unit) {
+      await db.query('UPDATE recipe_ingredients SET amount = ?, unit = ? WHERE id = ?', [Number(amount), unit, id]);
+    } else {
+      await db.query('UPDATE recipe_ingredients SET amount = ? WHERE id = ?', [Number(amount), id]);
+    }
+    res.json({ message: 'Recipe ingredient updated successfully' });
   } catch (err) {
-    console.error('Failed to update recipe ingredient amount:', err);
+    console.error('Failed to update recipe ingredient:', err);
     res.status(500).json({ error: 'Database update failed' });
   }
 });

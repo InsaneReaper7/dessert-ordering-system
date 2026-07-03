@@ -847,7 +847,7 @@ function renderRecipes(recipeIngredients, inventory) {
           const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
           
           tableHtml += `
-            <tr data-id="${ing.id}" data-name="${ing.ingredient_name}">
+            <tr data-id="${ing.id}" data-name="${ing.ingredient_name}" data-unit="${ing.unit}">
               <td><strong>${ing.ingredient_name}</strong></td>
               <td>
                 <input type="number" class="cost-input recipe-amount-input" value="${ing.amount}" readonly step="0.01" style="width: 80px; text-align: center;">
@@ -985,6 +985,17 @@ function editRecipeRow(btn, id) {
   
   input.removeAttribute('readonly');
   input.dataset.original = input.value;
+  
+  // Replace the unit column with a select dropdown
+  const unitCell = tr.cells[2];
+  const currentUnit = tr.dataset.unit;
+  unitCell.innerHTML = `
+    <select class="recipe-unit-select" style="padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
+      <option value="g" ${currentUnit === 'g' ? 'selected' : ''}>g</option>
+      <option value="unit" ${currentUnit === 'unit' ? 'selected' : ''}>unit</option>
+    </select>
+  `;
+  
   input.focus();
   input.select();
   
@@ -1002,6 +1013,10 @@ function cancelEditRecipeRow(btn) {
   input.value = input.dataset.original;
   input.setAttribute('readonly', 'true');
   
+  // Restore unit badge
+  const unitCell = tr.cells[2];
+  unitCell.innerHTML = `<code>${tr.dataset.unit}</code>`;
+  
   const cell = tr.querySelector('.recipe-actions-cell');
   const id = tr.dataset.id;
   cell.innerHTML = `
@@ -1014,6 +1029,7 @@ async function saveRecipeIngredientAmount(btn, id) {
   const tr = btn.closest('tr');
   const input = tr.querySelector('.recipe-amount-input');
   const newAmount = parseFloat(input.value);
+  const selectedUnit = tr.querySelector('.recipe-unit-select').value;
   const ingredientName = tr.dataset.name;
   
   if (isNaN(newAmount) || newAmount <= 0) {
@@ -1021,7 +1037,7 @@ async function saveRecipeIngredientAmount(btn, id) {
     return;
   }
   
-  const confirmChange = confirm(`Are you sure you want to change the amount of '${ingredientName}' in this recipe?`);
+  const confirmChange = confirm(`Are you sure you want to change the amount and unit of '${ingredientName}' in this recipe?`);
   if (!confirmChange) return;
   
   try {
@@ -1031,7 +1047,7 @@ async function saveRecipeIngredientAmount(btn, id) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ amount: newAmount })
+      body: JSON.stringify({ amount: newAmount, unit: selectedUnit })
     });
     
     if (!response.ok) {
