@@ -398,10 +398,30 @@ app.put('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) =
   }
 });
 
-// Admin: Delete ingredient from inventory
+// Admin: Delete ingredient from inventory (with validation checking if used in active recipes)
 app.delete('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
   try {
+    // 1. Fetch ingredient details to check name
+    const ingResult = await db.query('SELECT name FROM ingredients WHERE id = ?', [id]);
+    if (ingResult && ingResult.length > 0) {
+      const ingName = ingResult[0].name;
+      
+      // 2. Query recipe ingredients to check if this name is currently used in any recipes
+      const usages = await db.query('SELECT dessert_id FROM recipe_ingredients WHERE LOWER(ingredient_name) = LOWER(?)', [ingName.trim()]);
+      if (usages && usages.length > 0) {
+        // Collect unique dessert names
+        const dessertNames = Array.from(new Set(usages.map(u => {
+          let name = u.dessert_id.replace('_', ' ');
+          return name.charAt(0).toUpperCase() + name.slice(1);
+        }))).join(', ');
+        
+        return res.status(400).json({ 
+          error: `Cannot delete '${ingName}' because it is currently used in the recipe for: ${dessertNames}. Remove it from those recipes first.` 
+        });
+      }
+    }
+
     await db.deleteIngredient(id);
     res.json({ message: 'Ingredient deleted successfully' });
   } catch (err) {
