@@ -555,11 +555,25 @@ function editIngredientRow(btn, id) {
   const tr = btn.closest('tr');
   const inputs = tr.querySelectorAll('.cost-input');
   
-  // Make inputs editable
+  // Make cost and qty editable
   inputs.forEach(input => {
     input.removeAttribute('readonly');
     input.dataset.original = input.value;
   });
+  
+  // Replace the unit column with a select dropdown
+  const unitCell = tr.cells[3];
+  const currentUnit = tr.dataset.unit;
+  unitCell.innerHTML = `
+    <select class="unit-select cost-input" style="padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white; width: 100%; box-sizing: border-box;">
+      <option value="g" ${currentUnit === 'g' ? 'selected' : ''}>g (Grams)</option>
+      <option value="oz">oz (Ounces)</option>
+      <option value="lb">lb (Pounds)</option>
+      <option value="fl oz">fl oz (Fluid Oz)</option>
+      <option value="ml" ${currentUnit === 'ml' ? 'selected' : ''}>ml (Milliliters)</option>
+      <option value="unit" ${currentUnit === 'unit' ? 'selected' : ''}>unit (Whole)</option>
+    </select>
+  `;
   
   inputs[0].focus();
   inputs[0].select();
@@ -581,6 +595,10 @@ function cancelEditIngredientRow(btn) {
     input.setAttribute('readonly', 'true');
   });
   
+  // Restore unit badge
+  const unitCell = tr.cells[3];
+  unitCell.innerHTML = `<span class="status-badge completed" style="font-size: 11px;">${tr.dataset.unit}</span>`;
+  
   // Restore action buttons
   const actionsCell = btn.parentNode;
   const id = tr.dataset.id;
@@ -595,7 +613,7 @@ async function saveIngredientCost(btn, id) {
   const inputs = tr.querySelectorAll('.cost-input');
   const newCost = parseFloat(inputs[0].value);
   const newQty = parseFloat(inputs[1].value);
-  const unit = tr.dataset.unit;
+  const selectedUnit = tr.querySelector('.unit-select').value;
   
   if (isNaN(newCost) || newCost < 0 || isNaN(newQty) || newQty <= 0) {
     alert('Please enter a valid cost (0 or greater) and quantity (greater than 0)');
@@ -606,6 +624,23 @@ async function saveIngredientCost(btn, id) {
   if (!confirmChange) {
     return;
   }
+
+  // Convert unit to standard recipe units (g, ml, unit)
+  let finalQty = newQty;
+  let finalUnit = selectedUnit;
+  
+  if (selectedUnit === 'oz') {
+    finalQty = newQty * 28.3495;
+    finalUnit = 'g';
+  } else if (selectedUnit === 'lb') {
+    finalQty = newQty * 453.592;
+    finalUnit = 'g';
+  } else if (selectedUnit === 'fl oz') {
+    finalQty = newQty * 29.5735;
+    finalUnit = 'ml';
+  }
+
+  finalQty = Math.round(finalQty * 100) / 100; // Round to 2 decimal places
   
   try {
     const response = await fetch(`/api/admin/ingredients/${id}`, {
@@ -616,8 +651,8 @@ async function saveIngredientCost(btn, id) {
       },
       body: JSON.stringify({
         bulk_cost: newCost,
-        bulk_qty: newQty,
-        unit: unit
+        bulk_qty: finalQty,
+        unit: finalUnit
       })
     });
     
