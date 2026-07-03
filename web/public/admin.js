@@ -420,16 +420,16 @@ function switchTab(tabId) {
   } else if (tabId === 'ingredients-tab') {
     document.getElementById('tab-btn-ingredients').classList.add('active');
     loadIngredients();
-    populateDessertsDropdown();
+  } else if (tabId === 'recipes-tab') {
+    document.getElementById('tab-btn-recipes').classList.add('active');
+    loadRecipes();
+    populateRecipeDessertsDropdown();
   }
 }
 
 let dessertsCache = [];
 
-async function populateDessertsDropdown() {
-  const dropdown = document.getElementById('ing-dessert');
-  if (!dropdown) return;
-  
+async function fetchDessertsCache() {
   if (dessertsCache.length === 0) {
     try {
       const response = await fetch('/api/desserts');
@@ -440,78 +440,23 @@ async function populateDessertsDropdown() {
       console.error('Failed to fetch desserts cache:', e);
     }
   }
-
-  let html = '<option value="">-- Select Recipe / Dessert --</option>';
-  dessertsCache.forEach(d => {
-    html += `<option value="${d.id}">${d.name}</option>`;
-  });
-  dropdown.innerHTML = html;
 }
 
-function toggleAddIngredientForm() {
-  const card = document.getElementById('add-ingredient-card');
-  if (card) {
-    card.classList.toggle('hidden');
-  }
-}
-
-function toggleToppingFields(checked) {
-  const group = document.getElementById('ing-topping-value-group');
-  if (group) {
-    if (checked) {
-      group.classList.remove('hidden');
-    } else {
-      group.classList.add('hidden');
-    }
-  }
-}
-
-async function handleAddIngredient(e) {
-  e.preventDefault();
-  const name = document.getElementById('ing-name').value;
-  const dessert_id = document.getElementById('ing-dessert').value;
-  const cost = document.getElementById('ing-cost').value;
-  const is_topping = document.getElementById('ing-is-topping').checked ? 1 : 0;
-  const topping_value = is_topping ? document.getElementById('ing-topping-value').value : null;
-
-  try {
-    const response = await fetch('/api/admin/ingredients', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ name, dessert_id, cost, is_topping, topping_value })
-    });
-
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(result.error || 'Failed to add ingredient');
-    }
-
-    // Reset form
-    document.getElementById('add-ingredient-form').reset();
-    toggleToppingFields(false);
-    toggleAddIngredientForm(); // Collapse form card after saving
-
-    // Refresh lists
-    loadIngredients();
-    loadOrders(); // Also reload orders to update cost display
-  } catch (err) {
-    alert(err.message);
-  }
-}
+// ==========================================
+// Tab 2: Ingredient Cost Manager (Inventory)
+// ==========================================
 
 async function loadIngredients() {
   try {
-    // Ensure dessertsCache is loaded before rendering
-    if (dessertsCache.length === 0) {
-      const resp = await fetch('/api/desserts');
-      if (resp.ok) {
-        dessertsCache = await resp.json();
-      }
-    }
+    await fetchDessertsCache();
 
+    // Fetch recipe ingredients (usage) to sum base batch costs
+    const recipesResponse = await fetch('/api/admin/recipes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const recipeIngredients = recipesResponse.ok ? await recipesResponse.json() : [];
+
+    // Fetch inventory ingredients (pricing)
     const response = await fetch('/api/admin/ingredients', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -524,21 +469,21 @@ async function loadIngredients() {
     if (!response.ok) throw new Error('Failed to fetch ingredients');
     
     const ingredients = await response.json();
-    renderIngredients(ingredients);
+    renderIngredients(ingredients, recipeIngredients);
   } catch (err) {
     console.error(err);
     document.getElementById('ingredients-tbody').innerHTML = 
-      `<tr><td colspan="6" class="text-center" style="color: red;">Error: ${err.message}</td></tr>`;
+      `<tr><td colspan="5" class="text-center" style="color: red;">Error: ${err.message}</td></tr>`;
   }
 }
 
-function renderIngredients(ingredients) {
+function renderIngredients(ingredients, recipeIngredients) {
   const tbody = document.getElementById('ingredients-tbody');
   tbody.innerHTML = '';
   
   if (ingredients.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">No ingredients registered. Add some using the form!</td></tr>`;
-    renderRecipeCosts([]);
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding: 40px; color: var(--text-muted);">No ingredients registered. Build recipes on the 'Current Recipes' tab first!</td></tr>`;
+    renderRecipeCostsList({}, 'recipe-costs-list');
     return;
   }
   
@@ -546,27 +491,19 @@ function renderIngredients(ingredients) {
     const tr = document.createElement('tr');
     tr.dataset.id = ing.id;
     tr.dataset.name = ing.name;
-    tr.dataset.dessertId = ing.dessert_id;
-    tr.dataset.isTopping = ing.is_topping;
-    tr.dataset.toppingValue = ing.topping_value || '';
-    
-    // Format recipe name nicely
-    let dessertName = ing.dessert_id.replace('_', ' ');
-    dessertName = dessertName.charAt(0).toUpperCase() + dessertName.slice(1);
-    
-    const typeLabel = ing.is_topping ? 'Topping' : 'Base Ingredient';
-    const toppingVal = ing.is_topping ? ing.topping_value : '-';
+    tr.dataset.unit = ing.unit;
     
     tr.innerHTML = `
       <td><strong>${ing.name}</strong></td>
-      <td>${dessertName}</td>
       <td>
-        $ <input type="number" class="cost-input" value="${ing.cost.toFixed(2)}" readonly step="0.01">
+        $ <input type="number" class="cost-input" value="${ing.bulk_cost.toFixed(2)}" readonly step="0.01">
       </td>
       <td>
-        <span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span>
+        <input type="number" class="cost-input" value="${ing.bulk_qty}" readonly step="0.01">
       </td>
-      <td><code>${toppingVal}</code></td>
+      <td>
+        <span class="status-badge completed" style="font-size: 11px;">${ing.unit}</span>
+      </td>
       <td>
         <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${ing.id})">Edit</button>
         <button class="btn-action btn-delete" onclick="deleteIngredient(${ing.id})">Delete</button>
@@ -576,31 +513,30 @@ function renderIngredients(ingredients) {
     tbody.appendChild(tr);
   });
   
-  renderRecipeCosts(ingredients);
-}
-
-function renderRecipeCosts(ingredients) {
-  const listContainer = document.getElementById('recipe-costs-list');
-  if (!listContainer) return;
+  // Calculate base batch costs for each recipe using inventory unit prices
+  const costMap = {};
+  ingredients.forEach(item => {
+    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+  });
   
-  // Group ingredients by dessert
   const baseCosts = {};
-  
-  // Make sure we have entries for all known desserts in cache
   dessertsCache.forEach(d => {
     baseCosts[d.id] = 0;
   });
   
-  ingredients.forEach(ing => {
-    // Sum only base ingredients for recipe base cost
+  recipeIngredients.forEach(ing => {
     if (!ing.is_topping) {
-      if (baseCosts[ing.dessert_id] === undefined) {
-        baseCosts[ing.dessert_id] = 0;
-      }
-      baseCosts[ing.dessert_id] += ing.cost;
+      const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
+      baseCosts[ing.dessert_id] += ing.amount * unitCost;
     }
   });
   
+  renderRecipeCostsList(baseCosts, 'recipe-costs-list');
+}
+
+function renderRecipeCostsList(baseCosts, containerId) {
+  const listContainer = document.getElementById(containerId);
+  if (!listContainer) return;
   listContainer.innerHTML = '';
   
   dessertsCache.forEach(d => {
@@ -617,16 +553,16 @@ function renderRecipeCosts(ingredients) {
 
 function editIngredientRow(btn, id) {
   const tr = btn.closest('tr');
-  const input = tr.querySelector('.cost-input');
-  const originalValue = input.value;
+  const inputs = tr.querySelectorAll('.cost-input');
   
-  // Make it editable
-  input.removeAttribute('readonly');
-  input.focus();
-  input.select();
+  // Make inputs editable
+  inputs.forEach(input => {
+    input.removeAttribute('readonly');
+    input.dataset.original = input.value;
+  });
   
-  // Store original value
-  input.dataset.original = originalValue;
+  inputs[0].focus();
+  inputs[0].select();
   
   // Replace buttons
   const actionsCell = btn.parentNode;
@@ -638,11 +574,12 @@ function editIngredientRow(btn, id) {
 
 function cancelEditIngredientRow(btn) {
   const tr = btn.closest('tr');
-  const input = tr.querySelector('.cost-input');
+  const inputs = tr.querySelectorAll('.cost-input');
   
-  // Restore original cost
-  input.value = input.dataset.original;
-  input.setAttribute('readonly', 'true');
+  inputs.forEach(input => {
+    input.value = input.dataset.original;
+    input.setAttribute('readonly', 'true');
+  });
   
   // Restore action buttons
   const actionsCell = btn.parentNode;
@@ -655,23 +592,20 @@ function cancelEditIngredientRow(btn) {
 
 async function saveIngredientCost(btn, id) {
   const tr = btn.closest('tr');
-  const input = tr.querySelector('.cost-input');
-  const newCost = parseFloat(input.value);
+  const inputs = tr.querySelectorAll('.cost-input');
+  const newCost = parseFloat(inputs[0].value);
+  const newQty = parseFloat(inputs[1].value);
+  const unit = tr.dataset.unit;
   
-  if (isNaN(newCost) || newCost < 0) {
-    alert('Please enter a valid cost of 0 or greater');
+  if (isNaN(newCost) || newCost < 0 || isNaN(newQty) || newQty <= 0) {
+    alert('Please enter a valid cost (0 or greater) and quantity (greater than 0)');
     return;
   }
   
-  const confirmChange = confirm("Are you sure you want to change the cost of this ingredient?");
+  const confirmChange = confirm("Are you sure you want to change the bulk cost and quantity of this ingredient?");
   if (!confirmChange) {
     return;
   }
-  
-  const name = tr.dataset.name;
-  const dessert_id = tr.dataset.dessertId;
-  const is_topping = parseInt(tr.dataset.isTopping);
-  const topping_value = tr.dataset.toppingValue || null;
   
   try {
     const response = await fetch(`/api/admin/ingredients/${id}`, {
@@ -681,11 +615,9 @@ async function saveIngredientCost(btn, id) {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        name,
-        dessert_id,
-        cost: newCost,
-        is_topping,
-        topping_value
+        bulk_cost: newCost,
+        bulk_qty: newQty,
+        unit: unit
       })
     });
     
@@ -694,7 +626,6 @@ async function saveIngredientCost(btn, id) {
       throw new Error(result.error || 'Failed to update ingredient cost');
     }
     
-    // Refresh and lock
     loadIngredients();
     loadOrders();
   } catch (err) {
@@ -703,7 +634,7 @@ async function saveIngredientCost(btn, id) {
 }
 
 async function deleteIngredient(id) {
-  if (!confirm('Are you sure you want to delete this ingredient?')) return;
+  if (!confirm('Are you sure you want to delete this ingredient from inventory?')) return;
 
   try {
     const response = await fetch(`/api/admin/ingredients/${id}`, {
@@ -717,6 +648,231 @@ async function deleteIngredient(id) {
     }
 
     loadIngredients();
+    loadOrders();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ==========================================
+// Tab 3: Current Recipes (Formulation)
+// ==========================================
+
+async function loadRecipes() {
+  try {
+    await fetchDessertsCache();
+    
+    // Fetch recipes usage
+    const response = await fetch('/api/admin/recipes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.status === 401 || response.status === 403) {
+      handleLogout();
+      return;
+    }
+    
+    if (!response.ok) throw new Error('Failed to fetch recipes');
+    
+    const recipeIngredients = await response.json();
+    
+    // Fetch inventory costs to compute granular costs per ingredient usage
+    const ingResponse = await fetch('/api/admin/ingredients', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const inventory = ingResponse.ok ? await ingResponse.json() : [];
+    
+    renderRecipes(recipeIngredients, inventory);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('recipes-formulation-list').innerHTML = 
+      `<div style="color: red; padding: 20px;">Error: ${err.message}</div>`;
+  }
+}
+
+function renderRecipes(recipeIngredients, inventory) {
+  const container = document.getElementById('recipes-formulation-list');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  // Group recipe ingredients by dessert_id
+  const recipeGroups = {};
+  dessertsCache.forEach(d => {
+    recipeGroups[d.id] = [];
+  });
+  
+  recipeIngredients.forEach(ing => {
+    if (recipeGroups[ing.dessert_id]) {
+      recipeGroups[ing.dessert_id].push(ing);
+    }
+  });
+  
+  // Create unit cost lookup map
+  const costMap = {};
+  inventory.forEach(item => {
+    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+  });
+  
+  const baseCosts = {};
+  
+  dessertsCache.forEach(d => {
+    const list = recipeGroups[d.id] || [];
+    const sectionCard = document.createElement('div');
+    sectionCard.className = 'recipe-section-card';
+    
+    let tableHtml = '';
+    let totalRecipeBaseCost = 0;
+    
+    if (list.length === 0) {
+      tableHtml = `<div style="padding: 10px; color: var(--text-muted); font-style: italic;">No ingredients added to this recipe yet. Click '+ Add Ingredient to Recipe' above.</div>`;
+    } else {
+      tableHtml = `
+        <div class="table-responsive">
+          <table class="orders-table" style="margin-top: 10px;">
+            <thead>
+              <tr>
+                <th>Ingredient</th>
+                <th>Amount Needed</th>
+                <th>Unit</th>
+                <th>Type</th>
+                <th>Cost in Batch ($)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      list.forEach(ing => {
+        const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
+        const computedCost = ing.amount * unitCost;
+        
+        if (!ing.is_topping) {
+          totalRecipeBaseCost += computedCost;
+        }
+        
+        const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
+        
+        tableHtml += `
+          <tr>
+            <td><strong>${ing.ingredient_name}</strong></td>
+            <td>${ing.amount}</td>
+            <td><code>${ing.unit}</code></td>
+            <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
+            <td>$${computedCost.toFixed(2)}</td>
+            <td>
+              <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">Remove</button>
+            </td>
+          </tr>
+        `;
+      });
+      
+      tableHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+    
+    baseCosts[d.id] = totalRecipeBaseCost;
+    
+    sectionCard.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 6px; margin-bottom: 12px;">
+        <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${d.name}</h4>
+        <span style="font-weight: bold; color: var(--primary);">Base Cost: $${totalRecipeBaseCost.toFixed(2)}</span>
+      </div>
+      ${tableHtml}
+    `;
+    
+    container.appendChild(sectionCard);
+  });
+  
+  // Render sidebar costs on recipe tab
+  renderRecipeCostsList(baseCosts, 'recipe-costs-list-recipe-tab');
+}
+
+async function populateRecipeDessertsDropdown() {
+  const dropdown = document.getElementById('recipe-dessert-select');
+  if (!dropdown) return;
+  
+  await fetchDessertsCache();
+
+  let html = '<option value="">-- Select Dessert / Recipe --</option>';
+  dessertsCache.forEach(d => {
+    html += `<option value="${d.id}">${d.name}</option>`;
+  });
+  dropdown.innerHTML = html;
+}
+
+function toggleAddRecipeIngredientForm() {
+  const card = document.getElementById('add-recipe-ingredient-card');
+  if (card) {
+    card.classList.toggle('hidden');
+  }
+}
+
+function toggleRecipeToppingFields(checked) {
+  const group = document.getElementById('recipe-ing-topping-value-group');
+  if (group) {
+    if (checked) {
+      group.classList.remove('hidden');
+    } else {
+      group.classList.add('hidden');
+    }
+  }
+}
+
+async function handleAddRecipeIngredient(e) {
+  e.preventDefault();
+  const dessert_id = document.getElementById('recipe-dessert-select').value;
+  const ingredient_name = document.getElementById('recipe-ing-name').value;
+  const amount = document.getElementById('recipe-ing-amount').value;
+  const unit = document.getElementById('recipe-ing-unit').value;
+  const is_topping = document.getElementById('recipe-ing-is-topping').checked ? 1 : 0;
+  const topping_value = is_topping ? document.getElementById('recipe-ing-topping-value').value : null;
+
+  try {
+    const response = await fetch('/api/admin/recipes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ dessert_id, ingredient_name, amount, unit, is_topping, topping_value })
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to add recipe ingredient');
+    }
+
+    // Reset form
+    document.getElementById('add-recipe-ingredient-form').reset();
+    toggleRecipeToppingFields(false);
+    toggleAddRecipeIngredientForm();
+
+    // Refresh lists
+    loadRecipes();
+    loadOrders();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function deleteRecipeIngredient(id) {
+  if (!confirm('Are you sure you want to remove this ingredient from the recipe?')) return;
+
+  try {
+    const response = await fetch(`/api/admin/recipes/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to remove ingredient');
+    }
+
+    loadRecipes();
     loadOrders();
   } catch (err) {
     alert(err.message);

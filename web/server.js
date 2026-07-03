@@ -353,7 +353,7 @@ app.delete('/api/admin/orders/:id', authenticateAdminToken, async (req, res) => 
   }
 });
 
-// Admin: Get all ingredients
+// Admin: Get all ingredients (Inventory pricing)
 app.get('/api/admin/ingredients', authenticateAdminToken, async (req, res) => {
   try {
     const ingredients = await db.getIngredients();
@@ -364,41 +364,41 @@ app.get('/api/admin/ingredients', authenticateAdminToken, async (req, res) => {
   }
 });
 
-// Admin: Add new ingredient
+// Admin: Add new ingredient to inventory
 app.post('/api/admin/ingredients', authenticateAdminToken, async (req, res) => {
-  const { name, dessert_id, cost, is_topping, topping_value } = req.body;
-  if (!name || !dessert_id || cost === undefined || cost === null) {
-    return res.status(400).json({ error: 'Name, dessert_id, and cost are required' });
+  const { name, bulk_cost, bulk_qty, unit } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Ingredient name is required' });
   }
 
   try {
-    const result = await db.addIngredient(name, dessert_id, Number(cost), is_topping, topping_value);
+    const result = await db.addIngredient(name, Number(bulk_cost || 0), Number(bulk_qty || 1), unit || 'g');
     const newId = result.insertId || result[0]?.id;
-    res.status(201).json({ id: newId, message: 'Ingredient added successfully' });
+    res.status(201).json({ id: newId, message: 'Ingredient added to inventory' });
   } catch (err) {
     console.error('Failed to add ingredient:', err);
     res.status(500).json({ error: 'Database insert failed' });
   }
 });
 
-// Admin: Update ingredient (cost/name/etc)
+// Admin: Update ingredient bulk pricing in inventory
 app.put('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { name, dessert_id, cost, is_topping, topping_value } = req.body;
-  if (!name || !dessert_id || cost === undefined || cost === null) {
-    return res.status(400).json({ error: 'Name, dessert_id, and cost are required' });
+  const { bulk_cost, bulk_qty, unit } = req.body;
+  if (bulk_cost === undefined || bulk_cost === null || bulk_qty === undefined || bulk_qty === null || !unit) {
+    return res.status(400).json({ error: 'Bulk cost, bulk quantity, and unit are required' });
   }
 
   try {
-    await db.updateIngredient(id, name, dessert_id, Number(cost), is_topping, topping_value);
-    res.json({ message: 'Ingredient updated successfully' });
+    await db.updateIngredient(id, Number(bulk_cost), Number(bulk_qty), unit);
+    res.json({ message: 'Ingredient bulk pricing updated successfully' });
   } catch (err) {
     console.error('Failed to update ingredient:', err);
     res.status(500).json({ error: 'Database update failed' });
   }
 });
 
-// Admin: Delete ingredient
+// Admin: Delete ingredient from inventory
 app.delete('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -406,6 +406,46 @@ app.delete('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res
     res.json({ message: 'Ingredient deleted successfully' });
   } catch (err) {
     console.error('Failed to delete ingredient:', err);
+    res.status(500).json({ error: 'Database deletion failed' });
+  }
+});
+
+// Admin: Get all recipe ingredients (Recipe formulation)
+app.get('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
+  try {
+    const recipes = await db.getRecipeIngredients();
+    res.json(recipes);
+  } catch (err) {
+    console.error('Failed to get recipe ingredients:', err);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+// Admin: Add ingredient to a recipe (Auto-adds to inventory if name is new)
+app.post('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
+  const { dessert_id, ingredient_name, amount, unit, is_topping, topping_value } = req.body;
+  if (!dessert_id || !ingredient_name || amount === undefined || amount === null || !unit) {
+    return res.status(400).json({ error: 'Dessert ID, ingredient name, amount, and unit are required' });
+  }
+
+  try {
+    const result = await db.addRecipeIngredient(dessert_id, ingredient_name, Number(amount), unit, is_topping, topping_value);
+    const newId = result.insertId || result[0]?.id;
+    res.status(201).json({ id: newId, message: 'Ingredient added to recipe successfully' });
+  } catch (err) {
+    console.error('Failed to add recipe ingredient:', err);
+    res.status(500).json({ error: 'Database insert failed' });
+  }
+});
+
+// Admin: Remove ingredient from a recipe
+app.delete('/api/admin/recipes/:id', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.deleteRecipeIngredient(id);
+    res.json({ message: 'Ingredient removed from recipe successfully' });
+  } catch (err) {
+    console.error('Failed to remove recipe ingredient:', err);
     res.status(500).json({ error: 'Database deletion failed' });
   }
 });

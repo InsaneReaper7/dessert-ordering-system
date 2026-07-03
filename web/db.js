@@ -99,13 +99,33 @@ async function createTables() {
     )
   `);
 
-  // Create ingredients table
+  // Migrate ingredients table if old schema exists
+  try {
+    await query('SELECT bulk_cost FROM ingredients LIMIT 1');
+  } catch (e) {
+    console.log('Migrating ingredients table to include bulk cost columns...');
+    await query('DROP TABLE IF EXISTS ingredients');
+  }
+
+  // Create ingredients table (Inventory pricing)
   await query(`
     CREATE TABLE IF NOT EXISTS ingredients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name VARCHAR(100) NOT NULL,
+      name VARCHAR(100) UNIQUE NOT NULL,
+      bulk_cost REAL NOT NULL DEFAULT 0.0,
+      bulk_qty REAL NOT NULL DEFAULT 1.0,
+      unit VARCHAR(10) NOT NULL DEFAULT 'g'
+    )
+  `);
+
+  // Create recipe_ingredients table (Recipe formulation)
+  await query(`
+    CREATE TABLE IF NOT EXISTS recipe_ingredients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       dessert_id VARCHAR(50) NOT NULL,
-      cost REAL NOT NULL,
+      ingredient_name VARCHAR(100) NOT NULL,
+      amount REAL NOT NULL,
+      unit VARCHAR(10) NOT NULL,
       is_topping INTEGER DEFAULT 0,
       topping_value VARCHAR(50)
     )
@@ -265,21 +285,56 @@ module.exports = {
   updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),
   deleteOrder: (id) => query('DELETE FROM orders WHERE id = ?', [id]),
 
-  // Ingredients CRUD
-  getIngredients: () => query('SELECT * FROM ingredients ORDER BY dessert_id ASC, name ASC'),
-  addIngredient: (name, dessert_id, cost, is_topping, topping_value) => 
-    query('INSERT INTO ingredients (name, dessert_id, cost, is_topping, topping_value) VALUES (?, ?, ?, ?, ?)', 
-      [name, dessert_id, cost, is_topping || 0, topping_value || null]),
-  updateIngredient: (id, name, dessert_id, cost, is_topping, topping_value) => 
-    query('UPDATE ingredients SET name = ?, dessert_id = ?, cost = ?, is_topping = ?, topping_value = ? WHERE id = ?', 
-      [name, dessert_id, cost, is_topping || 0, topping_value || null, id]),
+  // Ingredients CRUD (Inventory pricing)
+  getIngredients: () => query('SELECT * FROM ingredients ORDER BY name ASC'),
+  addIngredient: async (name, bulk_cost, bulk_qty, unit) => {
+    const exists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [name.trim()]);
+    if (Number(exists[0].count) === 0) {
+      return query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, ?, ?, ?)', 
+        [name.trim(), bulk_cost || 0.0, bulk_qty || 1.0, unit || 'g']);
+    }
+    return { changes: 0 };
+  },
+  updateIngredient: (id, bulk_cost, bulk_qty, unit) => 
+    query('UPDATE ingredients SET bulk_cost = ?, bulk_qty = ?, unit = ? WHERE id = ?', 
+      [bulk_cost, bulk_qty, unit, id]),
   deleteIngredient: (id) => query('DELETE FROM ingredients WHERE id = ?', [id]),
+
+  // Recipe Ingredients CRUD (Recipe formulation)
+  getRecipeIngredients: () => query('SELECT * FROM recipe_ingredients ORDER BY dessert_id ASC, ingredient_name ASC'),
+  getRecipeIngredientsByDessert: (dessert_id) => 
+    query('SELECT * FROM recipe_ingredients WHERE dessert_id = ? ORDER BY ingredient_name ASC', [dessert_id]),
+  addRecipeIngredient: async (dessert_id, ingredient_name, amount, unit, is_topping, topping_value) => {
+    // 1. Insert/ensure ingredient exists in inventory
+    const nameTrim = ingredient_name.trim();
+    const exists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [nameTrim]);
+    if (Number(exists[0].count) === 0) {
+      await query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, 0.0, 1.0, ?)', [nameTrim, unit || 'g']);
+    }
+    // 2. Insert recipe ingredient usage
+    return query(
+      `INSERT INTO recipe_ingredients (dessert_id, ingredient_name, amount, unit, is_topping, topping_value) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [dessert_id, nameTrim, amount, unit, is_topping || 0, topping_value || null]
+    );
+  },
+  deleteRecipeIngredient: (id) => query('DELETE FROM recipe_ingredients WHERE id = ?', [id]),
 
   // Cost of making calculations
   calculateOrderCost: async (order) => {
     if (!order || !order.dessert_id) return 0;
-    const ingredients = await query('SELECT * FROM ingredients WHERE dessert_id = ?', [order.dessert_id]);
     
+    // Fetch recipe ingredients used in this recipe
+    const recipeIngredients = await query('SELECT * FROM recipe_ingredients WHERE dessert_id = ?', [order.dessert_id]);
+    
+    // Fetch bulk inventory prices
+    const inventory = await query('SELECT name, bulk_cost, bulk_qty FROM ingredients');
+    const costMap = {};
+    inventory.forEach(item => {
+      const qty = item.bulk_qty || 1.0;
+      costMap[item.name.toLowerCase().trim()] = (item.bulk_cost || 0.0) / qty;
+    });
+
     let toppingsArr = [];
     if (Array.isArray(order.toppings)) {
       toppingsArr = order.toppings;
@@ -306,18 +361,22 @@ module.exports = {
     let baseCost = 0;
     let toppingsCost = 0;
     
-    for (const ing of ingredients) {
+    recipeIngredients.forEach(ing => {
+      const nameKey = ing.ingredient_name.toLowerCase().trim();
+      const unitCost = costMap[nameKey] || 0.0;
+      const ingredientCost = ing.amount * unitCost;
+
       if (ing.is_topping) {
         const hasTopping = toppingsArr.some(t => {
           return t.toLowerCase().trim() === (ing.topping_value || '').toLowerCase().trim();
         });
         if (hasTopping) {
-          toppingsCost += ing.cost;
+          toppingsCost += ingredientCost;
         }
       } else {
-        baseCost += ing.cost;
+        baseCost += ingredientCost;
       }
-    }
+    });
     
     return Number(((baseCost + toppingsCost) * multiplier).toFixed(2));
   }
