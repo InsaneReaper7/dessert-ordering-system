@@ -103,6 +103,10 @@ async function createTables() {
       
       // Update initial values (brownies/blondies recipes are formulated for 11x7 pan)
       await query("UPDATE desserts SET base_mold = '11x7' WHERE id IN ('brownies', 'blondies', 'marshmallow_swirl_brownies', 'butterscotch_blondies', 'caramel_butterscotch_crunch_blondies')");
+      await query("UPDATE desserts SET base_mold = '1 Batch' WHERE id = 'cinnamon_rolls'");
+    } else {
+      // Make sure existing database updates cinnamon_rolls to 1 Batch
+      await query("UPDATE desserts SET base_mold = '1 Batch' WHERE id = 'cinnamon_rolls' AND base_mold = '9x9'");
     }
   } catch (e) {
     console.error('Error during desserts schema migration for base_mold, skipping:', e);

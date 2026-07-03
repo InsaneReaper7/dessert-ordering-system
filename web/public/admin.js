@@ -909,32 +909,60 @@ function renderRecipes(recipeIngredients, inventory) {
     baseCosts[d.id] = totalRecipeBaseCost;
     
     const baseMold = d.base_mold || '9x9';
+    const isBatchBased = baseMold.toLowerCase().includes('batch');
+    
+    let baseMoldHtml = '';
+    let scaleSelectHtml = '';
+    
+    if (isBatchBased) {
+      baseMoldHtml = `
+        <span style="font-weight: 600; color: var(--primary); font-size: 12px; background: #f3f4f6; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">1 Batch (12 rolls)</span>
+      `;
+      scaleSelectHtml = `
+        <select id="scale-target-${d.id}" onchange="handleScaleDisplay('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: #10b981; cursor: pointer;">
+          <option value="original">Original (1 Batch)</option>
+          <option value="2_batches">2 Batches</option>
+          <option value="3_batches">3 Batches</option>
+          <option value="4_batches">4 Batches</option>
+          <option value="5_batches">5 Batches</option>
+          <option value="6_batches">6 Batches</option>
+        </select>
+      `;
+    } else {
+      baseMoldHtml = `
+        <select onchange="updateRecipeBaseMold('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: var(--primary); cursor: pointer;">
+          <option value="8x5" ${baseMold === '8x5' ? 'selected' : ''}>8x5</option>
+          <option value="8x8" ${baseMold === '8x8' ? 'selected' : ''}>8x8</option>
+          <option value="9x9" ${baseMold === '9x9' ? 'selected' : ''}>9x9</option>
+          <option value="11x7" ${baseMold === '11x7' ? 'selected' : ''}>11x7</option>
+        </select>
+      `;
+      scaleSelectHtml = `
+        <select id="scale-target-${d.id}" onchange="handleScaleDisplay('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: #10b981; cursor: pointer;">
+          <option value="original">Original</option>
+          <option value="8x5">8x5 (Selling)</option>
+          <option value="8x8">8x8 (Sellable)</option>
+          <option value="9x9">9x9</option>
+          <option value="11x7">11x7</option>
+        </select>
+      `;
+    }
+
     sectionCard.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
         <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${d.name}</h4>
         
         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-          <!-- Permanent Base Mold Selector -->
+          <!-- Permanent Base Mold/Yield Selector -->
           <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-            <span style="font-weight: 500;">Base Mold:</span>
-            <select onchange="updateRecipeBaseMold('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: var(--primary); cursor: pointer;">
-              <option value="8x5" ${baseMold === '8x5' ? 'selected' : ''}>8x5</option>
-              <option value="8x8" ${baseMold === '8x8' ? 'selected' : ''}>8x8</option>
-              <option value="9x9" ${baseMold === '9x9' ? 'selected' : ''}>9x9</option>
-              <option value="11x7" ${baseMold === '11x7' ? 'selected' : ''}>11x7</option>
-            </select>
+            <span style="font-weight: 500;">${isBatchBased ? 'Yield:' : 'Base Mold:'}</span>
+            ${baseMoldHtml}
           </div>
           
           <!-- Dynamic Display Scaler -->
           <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
             <span style="font-weight: 500;">Scale To:</span>
-            <select id="scale-target-${d.id}" onchange="handleScaleDisplay('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: #10b981; cursor: pointer;">
-              <option value="original">Original</option>
-              <option value="8x5">8x5 (Selling)</option>
-              <option value="8x8">8x8 (Sellable)</option>
-              <option value="9x9">9x9</option>
-              <option value="11x7">11x7</option>
-            </select>
+            ${scaleSelectHtml}
             <span id="scale-badge-${d.id}" class="status-badge completed hidden" style="font-size: 11px; font-weight: 600; padding: 2px 6px;">1.0x</span>
           </div>
           
@@ -1394,7 +1422,15 @@ function handleScaleDisplay(dessertId, targetMold) {
   if (!dessert) return;
 
   const baseMold = dessert.base_mold || '9x9';
-  const multiplier = targetMold === 'original' ? 1.0 : getScalingMultiplier(baseMold, targetMold);
+  let multiplier = 1.0;
+  
+  if (targetMold !== 'original') {
+    if (targetMold.endsWith('_batches')) {
+      multiplier = parseFloat(targetMold.split('_')[0]) || 1.0;
+    } else {
+      multiplier = getScalingMultiplier(baseMold, targetMold);
+    }
+  }
 
   // Update multiplier status badge
   const badge = document.getElementById(`scale-badge-${dessertId}`);
