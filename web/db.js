@@ -99,12 +99,37 @@ async function createTables() {
     )
   `);
 
-  // Migrate ingredients table if old schema exists
+  // Migrate ingredients table ONLY if it exists and is missing the bulk_cost column
   try {
-    await query('SELECT bulk_cost FROM ingredients LIMIT 1');
+    let hasTable = false;
+    let hasBulkCost = false;
+    
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'ingredients' AND column_name = 'bulk_cost'
+      `);
+      const tableCheck = await query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'ingredients'
+      `);
+      hasTable = tableCheck.length > 0;
+      hasBulkCost = res.length > 0;
+    } else {
+      const tableCheck = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='ingredients'");
+      const columnCheck = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='ingredients' AND sql LIKE '%bulk_cost%'");
+      hasTable = tableCheck.length > 0;
+      hasBulkCost = columnCheck.length > 0;
+    }
+
+    if (hasTable && !hasBulkCost) {
+      console.log('Migrating ingredients table to include bulk cost columns...');
+      await query('DROP TABLE IF EXISTS ingredients');
+    }
   } catch (e) {
-    console.log('Migrating ingredients table to include bulk cost columns...');
-    await query('DROP TABLE IF EXISTS ingredients');
+    console.error('Error during schema check, skipping migration drop:', e);
   }
 
   // Create ingredients table (Inventory pricing)
