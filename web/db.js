@@ -152,9 +152,33 @@ async function createTables() {
       amount REAL NOT NULL,
       unit VARCHAR(10) NOT NULL,
       is_topping INTEGER DEFAULT 0,
-      topping_value VARCHAR(50)
+      topping_value VARCHAR(50),
+      recipe_part VARCHAR(100) DEFAULT 'Main'
     )
   `);
+
+  // Migrate recipe_ingredients table to include recipe_part column if missing in existing database
+  try {
+    let hasRecipePart = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'recipe_ingredients' AND column_name = 'recipe_part'
+      `);
+      hasRecipePart = res.length > 0;
+    } else {
+      const info = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='recipe_ingredients' AND sql LIKE '%recipe_part%'");
+      hasRecipePart = info.length > 0;
+    }
+
+    if (!hasRecipePart) {
+      console.log('Adding column recipe_part to recipe_ingredients table...');
+      await query("ALTER TABLE recipe_ingredients ADD COLUMN recipe_part VARCHAR(100) DEFAULT 'Main'");
+    }
+  } catch (e) {
+    console.error('Error during recipe_ingredients schema migration, skipping:', e);
+  }
 }
 
 async function seedData() {
@@ -329,7 +353,7 @@ module.exports = {
   getRecipeIngredients: () => query('SELECT * FROM recipe_ingredients ORDER BY dessert_id ASC, ingredient_name ASC'),
   getRecipeIngredientsByDessert: (dessert_id) => 
     query('SELECT * FROM recipe_ingredients WHERE dessert_id = ? ORDER BY ingredient_name ASC', [dessert_id]),
-  addRecipeIngredient: async (dessert_id, ingredient_name, amount, unit, is_topping, topping_value) => {
+  addRecipeIngredient: async (dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part) => {
     // 1. Insert/ensure ingredient exists in inventory
     const nameTrim = ingredient_name.trim();
     const exists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [nameTrim]);
@@ -338,9 +362,9 @@ module.exports = {
     }
     // 2. Insert recipe ingredient usage
     return query(
-      `INSERT INTO recipe_ingredients (dessert_id, ingredient_name, amount, unit, is_topping, topping_value) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [dessert_id, nameTrim, amount, unit, is_topping || 0, topping_value || null]
+      `INSERT INTO recipe_ingredients (dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [dessert_id, nameTrim, amount, unit, is_topping || 0, topping_value || null, recipe_part ? recipe_part.trim() : 'Main']
     );
   },
   deleteRecipeIngredient: (id) => query('DELETE FROM recipe_ingredients WHERE id = ?', [id]),

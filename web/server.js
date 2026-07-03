@@ -443,13 +443,13 @@ app.get('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
 
 // Admin: Add ingredient to a recipe (Auto-adds to inventory if name is new)
 app.post('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
-  const { dessert_id, ingredient_name, amount, unit, is_topping, topping_value } = req.body;
+  const { dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part } = req.body;
   if (!dessert_id || !ingredient_name || amount === undefined || amount === null || !unit) {
     return res.status(400).json({ error: 'Dessert ID, ingredient name, amount, and unit are required' });
   }
 
   try {
-    const result = await db.addRecipeIngredient(dessert_id, ingredient_name, Number(amount), unit, is_topping, topping_value);
+    const result = await db.addRecipeIngredient(dessert_id, ingredient_name, Number(amount), unit, is_topping, topping_value, recipe_part);
     const newId = result.insertId || result[0]?.id;
     res.status(201).json({ id: newId, message: 'Ingredient added to recipe successfully' });
   } catch (err) {

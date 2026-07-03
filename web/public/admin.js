@@ -691,7 +691,8 @@ async function deleteIngredient(id) {
 
 // ==========================================
 // Tab 3: Current Recipes (Formulation)
-// ==========================================
+// ====================================let recipeIngredientsCache = [];
+let inventoryCache = [];
 
 async function loadRecipes() {
   try {
@@ -710,14 +711,17 @@ async function loadRecipes() {
     if (!response.ok) throw new Error('Failed to fetch recipes');
     
     const recipeIngredients = await response.json();
+    recipeIngredientsCache = recipeIngredients; // Cache it for calculator
     
     // Fetch inventory costs to compute granular costs per ingredient usage
     const ingResponse = await fetch('/api/admin/ingredients', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const inventory = ingResponse.ok ? await ingResponse.json() : [];
+    inventoryCache = inventory; // Cache it for calculator
     
     renderRecipes(recipeIngredients, inventory);
+    renderStockCalculatorInputs(); // Refresh batch input counters
   } catch (err) {
     console.error(err);
     document.getElementById('recipes-formulation-list').innerHTML = 
@@ -761,6 +765,14 @@ function renderRecipes(recipeIngredients, inventory) {
     if (list.length === 0) {
       tableHtml = `<div style="padding: 10px; color: var(--text-muted); font-style: italic;">No ingredients added to this recipe yet. Click '+ Add Ingredient to Recipe' above.</div>`;
     } else {
+      // Group recipe ingredients by recipe_part
+      const partsMap = {};
+      list.forEach(ing => {
+        const part = ing.recipe_part || 'Main';
+        if (!partsMap[part]) partsMap[part] = [];
+        partsMap[part].push(ing);
+      });
+      
       tableHtml = `
         <div class="table-responsive">
           <table class="orders-table" style="margin-top: 10px;">
@@ -777,31 +789,43 @@ function renderRecipes(recipeIngredients, inventory) {
             <tbody>
       `;
       
-      list.forEach(ing => {
-        const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
-        const computedCost = ing.amount * unitCost;
+      // Render parts
+      Object.keys(partsMap).forEach(part => {
+        const partIngredients = partsMap[part];
         
-        if (!ing.is_topping) {
-          totalRecipeBaseCost += computedCost;
-        }
-        
-        const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
-        
+        // Output part sub-heading row
         tableHtml += `
-          <tr data-id="${ing.id}" data-name="${ing.ingredient_name}">
-            <td><strong>${ing.ingredient_name}</strong></td>
-            <td>
-              <input type="number" class="cost-input recipe-amount-input" value="${ing.amount}" readonly step="0.01" style="width: 80px; text-align: center;">
-            </td>
-            <td><code>${ing.unit}</code></td>
-            <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
-            <td>$${computedCost.toFixed(2)}</td>
-            <td class="recipe-actions-cell">
-              <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">Edit</button>
-              <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">Remove</button>
-            </td>
+          <tr class="recipe-part-header">
+            <td colspan="6">Section: ${part}</td>
           </tr>
         `;
+        
+        partIngredients.forEach(ing => {
+          const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
+          const computedCost = ing.amount * unitCost;
+          
+          if (!ing.is_topping) {
+            totalRecipeBaseCost += computedCost;
+          }
+          
+          const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
+          
+          tableHtml += `
+            <tr data-id="${ing.id}" data-name="${ing.ingredient_name}">
+              <td><strong>${ing.ingredient_name}</strong></td>
+              <td>
+                <input type="number" class="cost-input recipe-amount-input" value="${ing.amount}" readonly step="0.01" style="width: 80px; text-align: center;">
+              </td>
+              <td><code>${ing.unit}</code></td>
+              <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
+              <td>$${computedCost.toFixed(2)}</td>
+              <td class="recipe-actions-cell">
+                <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">Edit</button>
+                <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">Remove</button>
+              </td>
+            </tr>
+          `;
+        });
       });
       
       tableHtml += `
@@ -836,7 +860,7 @@ async function populateRecipeDessertsDropdown() {
 
   let html = '<option value="">-- Select Dessert / Recipe --</option>';
   dessertsCache.forEach(d => {
-    html += `<option value="${d.id}">${d.name}</option>`;
+    html += `<option value="${d.id}">${d.name}</option>';
   });
   dropdown.innerHTML = html;
 }
@@ -867,6 +891,7 @@ async function handleAddRecipeIngredient(e) {
   const unit = document.getElementById('recipe-ing-unit').value;
   const is_topping = document.getElementById('recipe-ing-is-topping').checked ? 1 : 0;
   const topping_value = is_topping ? document.getElementById('recipe-ing-topping-value').value : null;
+  const recipe_part = document.getElementById('recipe-ing-part').value || 'Main';
 
   try {
     const response = await fetch('/api/admin/recipes', {
@@ -875,7 +900,7 @@ async function handleAddRecipeIngredient(e) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ dessert_id, ingredient_name, amount, unit, is_topping, topping_value })
+      body: JSON.stringify({ dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part })
     });
 
     if (!response.ok) {
@@ -883,10 +908,11 @@ async function handleAddRecipeIngredient(e) {
       throw new Error(result.error || 'Failed to add recipe ingredient');
     }
 
-    // Reset form
-    document.getElementById('add-recipe-ingredient-form').reset();
+    // Reset form fields but keep selected recipe and part to let user input quickly
+    document.getElementById('recipe-ing-name').value = '';
+    document.getElementById('recipe-ing-amount').value = '';
+    document.getElementById('recipe-ing-is-topping').checked = false;
     toggleRecipeToppingFields(false);
-    toggleAddRecipeIngredientForm();
 
     // Refresh lists
     loadRecipes();
@@ -982,4 +1008,218 @@ async function saveRecipeIngredientAmount(btn, id) {
   } catch (err) {
     alert(err.message);
   }
+}
+
+// ==========================================
+// Stock & Shopping Calculator Logic
+// ==========================================
+
+function toggleStockCalculator() {
+  const container = document.getElementById('stock-calculator-container');
+  if (container) {
+    container.classList.toggle('hidden');
+  }
+}
+
+function renderStockCalculatorInputs() {
+  const container = document.getElementById('stock-calc-inputs');
+  if (!container) return;
+  
+  // Store the current values of inputs so we don't lose them when refreshing
+  const savedValues = {};
+  dessertsCache.forEach(d => {
+    const input = document.getElementById(`calc-qty-${d.id}`);
+    if (input) {
+      savedValues[d.id] = parseInt(input.value) || 0;
+    }
+  });
+
+  container.innerHTML = '';
+  
+  dessertsCache.forEach(d => {
+    const currentVal = savedValues[d.id] !== undefined ? savedValues[d.id] : 0;
+    const div = document.createElement('div');
+    div.style = "display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #f9fafb; border: 1px solid var(--border); border-radius: var(--radius-sm);";
+    div.innerHTML = `
+      <label style="font-weight: 500; font-size: 13px; color: var(--text-main);">${d.name}</label>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn" onclick="adjustCalcQty('${d.id}', -1)" style="padding: 4px 10px; font-size: 14px; border-radius: 4px; background: #e5e7eb; border: none; cursor: pointer; font-weight: bold;">-</button>
+        <input type="number" id="calc-qty-${d.id}" value="${currentVal}" min="0" style="width: 60px; text-align: center; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; box-sizing: border-box;" onchange="validateCalcQty(this)">
+        <button type="button" class="btn" onclick="adjustCalcQty('${d.id}', 1)" style="padding: 4px 10px; font-size: 14px; border-radius: 4px; background: #e5e7eb; border: none; cursor: pointer; font-weight: bold;">+</button>
+        <span style="font-size: 12px; color: var(--text-muted);">batches</span>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function adjustCalcQty(id, delta) {
+  const input = document.getElementById(`calc-qty-${id}`);
+  if (input) {
+    let val = parseInt(input.value) || 0;
+    val = Math.max(0, val + delta);
+    input.value = val;
+  }
+}
+
+function validateCalcQty(input) {
+  let val = parseInt(input.value) || 0;
+  input.value = Math.max(0, val);
+}
+
+function resetStockCalculator() {
+  dessertsCache.forEach(d => {
+    const input = document.getElementById(`calc-qty-${d.id}`);
+    if (input) input.value = 0;
+  });
+  
+  document.getElementById('stock-calc-results').classList.add('hidden');
+  document.getElementById('stock-calc-results-tbody').innerHTML = '';
+}
+
+function calculateRequiredStock() {
+  const tbody = document.getElementById('stock-calc-results-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  const totals = {};
+  let totalBakingBatches = 0;
+  
+  // Build lookup costs map
+  const costMap = {};
+  inventoryCache.forEach(item => {
+    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+  });
+  
+  dessertsCache.forEach(d => {
+    const input = document.getElementById(`calc-qty-${d.id}`);
+    const batches = parseInt(input ? input.value : 0) || 0;
+    if (batches > 0) {
+      totalBakingBatches += batches;
+      
+      // Filter base ingredients (is_topping = 0)
+      const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === d.id && !ing.is_topping);
+      
+      ingredients.forEach(ing => {
+        const nameTrim = ing.ingredient_name.trim();
+        const nameLower = nameTrim.toLowerCase();
+        const amountNeeded = ing.amount * batches;
+        const unitCost = costMap[nameLower] || 0.0;
+        const estimatedCost = amountNeeded * unitCost;
+        
+        if (!totals[nameLower]) {
+          totals[nameLower] = {
+            name: nameTrim,
+            amount: 0,
+            unit: ing.unit,
+            cost: 0
+          };
+        }
+        totals[nameLower].amount += amountNeeded;
+        totals[nameLower].cost += estimatedCost;
+      });
+    }
+  });
+  
+  if (totalBakingBatches === 0) {
+    alert('Please select at least 1 batch to calculate stock requirements!');
+    return;
+  }
+  
+  // Render results
+  const sortedKeys = Object.keys(totals).sort();
+  let grandTotalCost = 0;
+  
+  sortedKeys.forEach(key => {
+    const item = totals[key];
+    grandTotalCost += item.cost;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${item.name}</strong></td>
+      <td>${Number(item.amount.toFixed(2))}</td>
+      <td><span class="status-badge completed" style="font-size: 11px;">${item.unit}</span></td>
+      <td><strong>$${item.cost.toFixed(2)}</strong></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  // Append grand total row
+  const totalTr = document.createElement('tr');
+  totalTr.style = "background-color: #f9fafb; font-weight: bold; border-top: 2px solid var(--border);";
+  totalTr.innerHTML = `
+    <td colspan="3" class="text-right" style="padding: 16px;">Total Raw Materials Cost:</td>
+    <td style="padding: 16px; color: var(--primary); font-size: 15px;">$${grandTotalCost.toFixed(2)}</td>
+  `;
+  tbody.appendChild(totalTr);
+  
+  // Show results pane
+  document.getElementById('stock-calc-results').classList.remove('hidden');
+}
+
+function copyShoppingListToClipboard() {
+  const totals = {};
+  const selectedBatches = [];
+  
+  const costMap = {};
+  inventoryCache.forEach(item => {
+    costMap[item.name.toLowerCase().trim()] = item.bulk_cost / item.bulk_qty;
+  });
+
+  dessertsCache.forEach(d => {
+    const input = document.getElementById(`calc-qty-${d.id}`);
+    const batches = parseInt(input ? input.value : 0) || 0;
+    if (batches > 0) {
+      selectedBatches.push(`- ${batches} batch(es) of ${d.name}`);
+      
+      const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === d.id && !ing.is_topping);
+      ingredients.forEach(ing => {
+        const nameTrim = ing.ingredient_name.trim();
+        const nameLower = nameTrim.toLowerCase();
+        const amountNeeded = ing.amount * batches;
+        const unitCost = costMap[nameLower] || 0.0;
+        const estimatedCost = amountNeeded * unitCost;
+        
+        if (!totals[nameLower]) {
+          totals[nameLower] = {
+            name: nameTrim,
+            amount: 0,
+            unit: ing.unit,
+            cost: 0
+          };
+        }
+        totals[nameLower].amount += amountNeeded;
+        totals[nameLower].cost += estimatedCost;
+      });
+    }
+  });
+
+  if (selectedBatches.length === 0) return;
+
+  let text = `BAKING SHOPPING LIST & STOCK ESTIMATE\n`;
+  text += `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+  text += `------------------------------------------------\n\n`;
+  text += `Planned Bake Batches:\n`;
+  text += selectedBatches.join('\n') + `\n\n`;
+  text += `Consolidated Raw Materials to Stock Up:\n`;
+  
+  const sortedKeys = Object.keys(totals).sort();
+  let grandTotalCost = 0;
+  
+  sortedKeys.forEach(key => {
+    const item = totals[key];
+    grandTotalCost += item.cost;
+    text += `- ${item.name}: ${Number(item.amount.toFixed(2))} ${item.unit} (Est. Cost: $${item.cost.toFixed(2)})\n`;
+  });
+  
+  text += `\nTotal Estimated Raw Materials Cost: $${grandTotalCost.toFixed(2)}\n`;
+  text += `------------------------------------------------\n`;
+
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      alert('Shopping list copied to clipboard successfully!');
+    })
+    .catch(err => {
+      console.error('Could not copy shopping list to clipboard:', err);
+      alert('Failed to copy. Here is the text list:\n\n' + text);
+    });
 }
