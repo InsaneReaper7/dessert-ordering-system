@@ -109,7 +109,8 @@ function broadcast(payloadObj) {
 }
 
 // Broadcast order notifications to all connected WebSockets
-function broadcastNewOrder(order) {
+async function broadcastNewOrder(order) {
+  const cost = await db.calculateOrderCost(order);
   broadcast({
     type: 'new_order',
     order: {
@@ -123,7 +124,8 @@ function broadcastNewOrder(order) {
       total_price: order.total_price,
       status: order.status || 'pending',
       pickup_delivery: order.pickup_delivery,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      cost_of_making: cost
     }
   });
 }
@@ -201,7 +203,7 @@ app.post('/api/orders', async (req, res) => {
     const newOrder = { id: orderId, ...orderObj };
     
     // Broadcast notification to phone & web
-    broadcastNewOrder(newOrder);
+    await broadcastNewOrder(newOrder);
 
     res.status(201).json({
       message: 'Order placed successfully',
@@ -304,7 +306,11 @@ app.get('/api/admin/stats', authenticateAdminToken, async (req, res) => {
 app.get('/api/admin/orders', authenticateAdminToken, async (req, res) => {
   try {
     const orders = await db.getOrders();
-    res.json(orders);
+    const ordersWithCost = await Promise.all(orders.map(async (o) => {
+      const cost = await db.calculateOrderCost(o);
+      return { ...o, cost_of_making: cost };
+    }));
+    res.json(ordersWithCost);
   } catch (err) {
     console.error('Failed to get admin orders:', err);
     res.status(500).json({ error: 'Database query failed' });
@@ -343,6 +349,63 @@ app.delete('/api/admin/orders/:id', authenticateAdminToken, async (req, res) => 
     res.json({ message: 'Order deleted successfully' });
   } catch (err) {
     console.error('Failed to delete order:', err);
+    res.status(500).json({ error: 'Database deletion failed' });
+  }
+});
+
+// Admin: Get all ingredients
+app.get('/api/admin/ingredients', authenticateAdminToken, async (req, res) => {
+  try {
+    const ingredients = await db.getIngredients();
+    res.json(ingredients);
+  } catch (err) {
+    console.error('Failed to get ingredients:', err);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+// Admin: Add new ingredient
+app.post('/api/admin/ingredients', authenticateAdminToken, async (req, res) => {
+  const { name, dessert_id, cost, is_topping, topping_value } = req.body;
+  if (!name || !dessert_id || cost === undefined || cost === null) {
+    return res.status(400).json({ error: 'Name, dessert_id, and cost are required' });
+  }
+
+  try {
+    const result = await db.addIngredient(name, dessert_id, Number(cost), is_topping, topping_value);
+    const newId = result.insertId || result[0]?.id;
+    res.status(201).json({ id: newId, message: 'Ingredient added successfully' });
+  } catch (err) {
+    console.error('Failed to add ingredient:', err);
+    res.status(500).json({ error: 'Database insert failed' });
+  }
+});
+
+// Admin: Update ingredient (cost/name/etc)
+app.put('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, dessert_id, cost, is_topping, topping_value } = req.body;
+  if (!name || !dessert_id || cost === undefined || cost === null) {
+    return res.status(400).json({ error: 'Name, dessert_id, and cost are required' });
+  }
+
+  try {
+    await db.updateIngredient(id, name, dessert_id, Number(cost), is_topping, topping_value);
+    res.json({ message: 'Ingredient updated successfully' });
+  } catch (err) {
+    console.error('Failed to update ingredient:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
+// Admin: Delete ingredient
+app.delete('/api/admin/ingredients/:id', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.deleteIngredient(id);
+    res.json({ message: 'Ingredient deleted successfully' });
+  } catch (err) {
+    console.error('Failed to delete ingredient:', err);
     res.status(500).json({ error: 'Database deletion failed' });
   }
 });

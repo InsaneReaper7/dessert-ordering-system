@@ -59,7 +59,15 @@
       </div>
     </div>
 
-    <!-- Overview Stats Cards -->
+    <!-- Tab Navigation -->
+    <div class="dashboard-tabs">
+      <button id="tab-btn-orders" class="tab-btn active" onclick="switchTab('orders-tab')">Orders & Analytics</button>
+      <button id="tab-btn-ingredients" class="tab-btn" onclick="switchTab('ingredients-tab')">Ingredient Cost Manager</button>
+    </div>
+
+    <!-- Orders & Analytics Tab Content -->
+    <div id="orders-tab" class="tab-content">
+      <!-- Overview Stats Cards -->
     <div class="grid grid-3" style="margin-top: 32px;">
       <div class="stat-card">
         <span class="stat-label">Sales (Today)</span>
@@ -123,6 +131,90 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+    <!-- End Orders & Analytics Tab -->
+
+    <!-- Ingredient Cost Manager Tab Content -->
+    <div id="ingredients-tab" class="tab-content hidden" style="margin-top: 32px;">
+      <div class="grid grid-3-1">
+        <!-- Ingredients Table Card -->
+        <div class="orders-table-card">
+          <div class="card-header">
+            <h3 class="card-title">All Recipe Ingredients</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>Ingredient Name</th>
+                  <th>Recipe / Dessert</th>
+                  <th>Cost per Batch ($)</th>
+                  <th>Type</th>
+                  <th>Topping Value</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ingredients-tbody">
+                <tr>
+                  <td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                    Loading ingredients...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Add Ingredient Card & Recipe Cost Summaries -->
+        <div class="sidebar-cards-container" style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Add Ingredient Form -->
+          <div class="analytics-card">
+            <h3 class="analytics-title" style="margin-bottom: 20px;">Add New Ingredient</h3>
+            <form id="add-ingredient-form" onsubmit="handleAddIngredient(event)">
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label for="ing-name" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Ingredient Name</label>
+                <input type="text" id="ing-name" placeholder="e.g. Butter" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+              </div>
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label for="ing-dessert" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Recipe / Dessert</label>
+                <select id="ing-dessert" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label for="ing-cost" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Cost per Batch ($)</label>
+                <input type="number" id="ing-cost" step="0.01" placeholder="e.g. 1.25" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+              </div>
+              <div class="form-group" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="ing-is-topping" onchange="toggleToppingFields(this.checked)" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+                <label for="ing-is-topping" style="margin-bottom: 0; font-weight: 500; font-size: 13px; cursor: pointer; user-select: none;">Is an Optional Topping</label>
+              </div>
+              <div id="ing-topping-value-group" class="form-group hidden" style="margin-bottom: 20px;">
+                <label for="ing-topping-value" style="display: block; font-weight: 500; font-size: 13px; margin-bottom: 6px;">Topping Checkbox Value</label>
+                <select id="ing-topping-value" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
+                  <option value="walnuts">Walnuts</option>
+                  <option value="pecans">Pecans</option>
+                  <option value="marshmallow dots">Marshmallow Dots</option>
+                  <option value="caramels dots">Caramel Dots</option>
+                  <option value="chocolate chips">Chocolate Chips</option>
+                  <option value="butterscotch chips">Butterscotch Chips</option>
+                  <option value="white chocolate chips">White Chocolate Chips</option>
+                  <option value="vanilla chips">Vanilla Chips</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" style="padding: 10px; cursor: pointer;">Add Ingredient</button>
+            </form>
+          </div>
+
+          <!-- Recipe Cost Summaries -->
+          <div class="analytics-card">
+            <h3 class="analytics-title" style="margin-bottom: 16px;">Base Batch Costs</h3>
+            <div id="recipe-costs-list" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

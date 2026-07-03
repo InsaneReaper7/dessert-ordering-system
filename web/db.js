@@ -98,6 +98,18 @@ async function createTables() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Create ingredients table
+  await query(`
+    CREATE TABLE IF NOT EXISTS ingredients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name VARCHAR(100) NOT NULL,
+      dessert_id VARCHAR(50) NOT NULL,
+      cost REAL NOT NULL,
+      is_topping INTEGER DEFAULT 0,
+      topping_value VARCHAR(50)
+    )
+  `);
 }
 
 async function seedData() {
@@ -251,5 +263,62 @@ module.exports = {
     ]
   ),
   updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),
-  deleteOrder: (id) => query('DELETE FROM orders WHERE id = ?', [id])
+  deleteOrder: (id) => query('DELETE FROM orders WHERE id = ?', [id]),
+
+  // Ingredients CRUD
+  getIngredients: () => query('SELECT * FROM ingredients ORDER BY dessert_id ASC, name ASC'),
+  addIngredient: (name, dessert_id, cost, is_topping, topping_value) => 
+    query('INSERT INTO ingredients (name, dessert_id, cost, is_topping, topping_value) VALUES (?, ?, ?, ?, ?)', 
+      [name, dessert_id, cost, is_topping || 0, topping_value || null]),
+  updateIngredient: (id, name, dessert_id, cost, is_topping, topping_value) => 
+    query('UPDATE ingredients SET name = ?, dessert_id = ?, cost = ?, is_topping = ?, topping_value = ? WHERE id = ?', 
+      [name, dessert_id, cost, is_topping || 0, topping_value || null, id]),
+  deleteIngredient: (id) => query('DELETE FROM ingredients WHERE id = ?', [id]),
+
+  // Cost of making calculations
+  calculateOrderCost: async (order) => {
+    if (!order || !order.dessert_id) return 0;
+    const ingredients = await query('SELECT * FROM ingredients WHERE dessert_id = ?', [order.dessert_id]);
+    
+    let toppingsArr = [];
+    if (Array.isArray(order.toppings)) {
+      toppingsArr = order.toppings;
+    } else {
+      try {
+        toppingsArr = JSON.parse(order.toppings || '[]');
+      } catch (e) {
+        if (typeof order.toppings === 'string') {
+          toppingsArr = order.toppings.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+    }
+    
+    const SIZE_MULTIPLIERS = {
+      '8x5': 1.0,
+      '9x9': 1.8,
+      '1_roll': 1.0,
+      '4_pack': 4.0,
+      '6_pack': 6.0,
+      'full_tray': 12.0
+    };
+    const multiplier = SIZE_MULTIPLIERS[order.size] || 1.0;
+    
+    let baseCost = 0;
+    let toppingsCost = 0;
+    
+    for (const ing of ingredients) {
+      if (ing.is_topping) {
+        const hasTopping = toppingsArr.some(t => {
+          return t.toLowerCase().trim() === (ing.topping_value || '').toLowerCase().trim();
+        });
+        if (hasTopping) {
+          toppingsCost += ing.cost;
+        }
+      } else {
+        baseCost += ing.cost;
+      }
+    }
+    
+    return Number(((baseCost + toppingsCost) * multiplier).toFixed(2));
+  }
 };

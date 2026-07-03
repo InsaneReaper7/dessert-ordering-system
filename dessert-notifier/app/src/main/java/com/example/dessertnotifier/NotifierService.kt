@@ -12,7 +12,9 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.dessertnotifier.data.ConnectionState
@@ -34,6 +36,13 @@ class NotifierService : Service() {
     private var isRunning = false
     private var serverUrl = ""
     private val gson = Gson()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val reconnectRunnable = Runnable {
+        if (isRunning && serverUrl.isNotEmpty()) {
+            Log.d(TAG, "Attempting reconnect...")
+            connectWebSocket(serverUrl)
+        }
+    }
 
     companion object {
         private const val TAG = "NotifierService"
@@ -47,6 +56,11 @@ class NotifierService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+        client = OkHttpClient.Builder()
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .writeTimeout(0, TimeUnit.MILLISECONDS)
+            .pingInterval(25, TimeUnit.SECONDS)
+            .build()
         OrderRepository.loadOrders(this)
         createNotificationChannels()
     }
@@ -78,6 +92,7 @@ class NotifierService : Service() {
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
         isRunning = false
+        mainHandler.removeCallbacks(reconnectRunnable)
         disconnectWebSocket()
         OrderRepository.updateConnectionState(ConnectionState.DISCONNECTED)
         super.onDestroy()
@@ -105,12 +120,6 @@ class NotifierService : Service() {
 
         Log.d(TAG, "Connecting to WebSocket: $wsUrl")
 
-        client = OkHttpClient.Builder()
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .writeTimeout(0, TimeUnit.MILLISECONDS)
-            .pingInterval(25, TimeUnit.SECONDS) // Auto pings to keep connection alive
-            .build()
-
         val sharedPrefs = getSharedPreferences("dessert_notifier_prefs", Context.MODE_PRIVATE)
         val token = sharedPrefs.getString("admin_token", "") ?: ""
 
@@ -123,7 +132,14 @@ class NotifierService : Service() {
             }
             .build()
 
-        webSocket = client?.newWebSocket(request, object : WebSocketListener() {
+        val activeClient = client
+        if (activeClient == null) {
+            Log.e(TAG, "OkHttpClient is not initialized")
+            OrderRepository.updateConnectionState(ConnectionState.DISCONNECTED)
+            return
+        }
+
+        webSocket = activeClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "WebSocket Opened")
                 OrderRepository.updateConnectionState(ConnectionState.CONNECTED)
@@ -150,24 +166,15 @@ class NotifierService : Service() {
     }
 
     private fun disconnectWebSocket() {
+        mainHandler.removeCallbacks(reconnectRunnable)
         webSocket?.close(1000, "Service shutting down")
         webSocket = null
-        client = null
     }
 
     private fun triggerReconnect() {
-        // Retry connection in 5 seconds
-        Thread {
-            try {
-                Thread.sleep(5000)
-                if (isRunning && serverUrl.isNotEmpty()) {
-                    Log.d(TAG, "Attempting reconnect...")
-                    connectWebSocket(serverUrl)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }.start()
+        // Clear any duplicate reconnect requests to guarantee only one runs
+        mainHandler.removeCallbacks(reconnectRunnable)
+        mainHandler.postDelayed(reconnectRunnable, 5000)
     }
 
     private fun handleIncomingMessage(text: String) {

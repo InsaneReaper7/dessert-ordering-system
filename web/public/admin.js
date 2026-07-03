@@ -242,7 +242,10 @@ function renderOrders(orders) {
       <td>
         <span style="font-weight: 500; font-size: 13px; text-transform: capitalize;">${order.pickup_delivery}</span>
       </td>
-      <td><strong>${priceDisplay}</strong></td>
+      <td>
+        <strong>${priceDisplay}</strong>
+        ${order.cost_of_making !== undefined && order.cost_of_making !== null ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Cost: $${order.cost_of_making.toFixed(2)}</div>` : ''}
+      </td>
       <td>
         <span class="status-badge ${order.status}">${order.status}</span>
       </td>
@@ -403,5 +406,303 @@ async function sendTestPing() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="btn-icon">🔊</span> Test Phone Chime';
+  }
+}
+
+// Tab Switching
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  
+  document.getElementById(tabId).classList.remove('hidden');
+  if (tabId === 'orders-tab') {
+    document.getElementById('tab-btn-orders').classList.add('active');
+  } else if (tabId === 'ingredients-tab') {
+    document.getElementById('tab-btn-ingredients').classList.add('active');
+    loadIngredients();
+    populateDessertsDropdown();
+  }
+}
+
+let dessertsCache = [];
+
+async function populateDessertsDropdown() {
+  const dropdown = document.getElementById('ing-dessert');
+  if (!dropdown) return;
+  
+  if (dessertsCache.length === 0) {
+    try {
+      const response = await fetch('/api/desserts');
+      if (response.ok) {
+        dessertsCache = await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to fetch desserts cache:', e);
+    }
+  }
+
+  let html = '<option value="">-- Select Recipe / Dessert --</option>';
+  dessertsCache.forEach(d => {
+    html += `<option value="${d.id}">${d.name}</option>`;
+  });
+  dropdown.innerHTML = html;
+}
+
+function toggleToppingFields(checked) {
+  const group = document.getElementById('ing-topping-value-group');
+  if (group) {
+    if (checked) {
+      group.classList.remove('hidden');
+    } else {
+      group.classList.add('hidden');
+    }
+  }
+}
+
+async function handleAddIngredient(e) {
+  e.preventDefault();
+  const name = document.getElementById('ing-name').value;
+  const dessert_id = document.getElementById('ing-dessert').value;
+  const cost = document.getElementById('ing-cost').value;
+  const is_topping = document.getElementById('ing-is-topping').checked ? 1 : 0;
+  const topping_value = is_topping ? document.getElementById('ing-topping-value').value : null;
+
+  try {
+    const response = await fetch('/api/admin/ingredients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name, dessert_id, cost, is_topping, topping_value })
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to add ingredient');
+    }
+
+    // Reset form
+    document.getElementById('add-ingredient-form').reset();
+    toggleToppingFields(false);
+
+    // Refresh lists
+    loadIngredients();
+    loadOrders(); // Also reload orders to update cost display
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function loadIngredients() {
+  try {
+    const response = await fetch('/api/admin/ingredients', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.status === 401 || response.status === 403) {
+      handleLogout();
+      return;
+    }
+    
+    if (!response.ok) throw new Error('Failed to fetch ingredients');
+    
+    const ingredients = await response.json();
+    renderIngredients(ingredients);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('ingredients-tbody').innerHTML = 
+      `<tr><td colspan="6" class="text-center" style="color: red;">Error: ${err.message}</td></tr>`;
+  }
+}
+
+function renderIngredients(ingredients) {
+  const tbody = document.getElementById('ingredients-tbody');
+  tbody.innerHTML = '';
+  
+  if (ingredients.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">No ingredients registered. Add some using the form!</td></tr>`;
+    renderRecipeCosts([]);
+    return;
+  }
+  
+  ingredients.forEach(ing => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = ing.id;
+    tr.dataset.name = ing.name;
+    tr.dataset.dessertId = ing.dessert_id;
+    tr.dataset.isTopping = ing.is_topping;
+    tr.dataset.toppingValue = ing.topping_value || '';
+    
+    // Format recipe name nicely
+    let dessertName = ing.dessert_id.replace('_', ' ');
+    dessertName = dessertName.charAt(0).toUpperCase() + dessertName.slice(1);
+    
+    const typeLabel = ing.is_topping ? 'Topping' : 'Base Ingredient';
+    const toppingVal = ing.is_topping ? ing.topping_value : '-';
+    
+    tr.innerHTML = `
+      <td><strong>${ing.name}</strong></td>
+      <td>${dessertName}</td>
+      <td>
+        $ <input type="number" class="cost-input" value="${ing.cost.toFixed(2)}" readonly step="0.01">
+      </td>
+      <td>
+        <span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span>
+      </td>
+      <td><code>${toppingVal}</code></td>
+      <td>
+        <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${ing.id})">Edit</button>
+        <button class="btn-action btn-delete" onclick="deleteIngredient(${ing.id})">Delete</button>
+      </td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
+  
+  renderRecipeCosts(ingredients);
+}
+
+function renderRecipeCosts(ingredients) {
+  const listContainer = document.getElementById('recipe-costs-list');
+  if (!listContainer) return;
+  
+  // Group ingredients by dessert
+  const baseCosts = {};
+  
+  // Make sure we have entries for all known desserts in cache
+  dessertsCache.forEach(d => {
+    baseCosts[d.id] = 0;
+  });
+  
+  ingredients.forEach(ing => {
+    // Sum only base ingredients for recipe base cost
+    if (!ing.is_topping) {
+      if (baseCosts[ing.dessert_id] === undefined) {
+        baseCosts[ing.dessert_id] = 0;
+      }
+      baseCosts[ing.dessert_id] += ing.cost;
+    }
+  });
+  
+  listContainer.innerHTML = '';
+  
+  dessertsCache.forEach(d => {
+    const cost = baseCosts[d.id] || 0;
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'recipe-cost-item';
+    itemDiv.innerHTML = `
+      <span class="recipe-cost-name">${d.name}</span>
+      <span class="recipe-cost-val">$${cost.toFixed(2)}</span>
+    `;
+    listContainer.appendChild(itemDiv);
+  });
+}
+
+function editIngredientRow(btn, id) {
+  const tr = btn.closest('tr');
+  const input = tr.querySelector('.cost-input');
+  const originalValue = input.value;
+  
+  // Make it editable
+  input.removeAttribute('readonly');
+  input.focus();
+  input.select();
+  
+  // Store original value
+  input.dataset.original = originalValue;
+  
+  // Replace buttons
+  const actionsCell = btn.parentNode;
+  actionsCell.innerHTML = `
+    <button class="btn-action btn-complete" onclick="saveIngredientCost(this, ${id})">Save</button>
+    <button class="btn-action btn-cancel" onclick="cancelEditIngredientRow(this)">Cancel</button>
+  `;
+}
+
+function cancelEditIngredientRow(btn) {
+  const tr = btn.closest('tr');
+  const input = tr.querySelector('.cost-input');
+  
+  // Restore original cost
+  input.value = input.dataset.original;
+  input.setAttribute('readonly', 'true');
+  
+  // Restore action buttons
+  const actionsCell = btn.parentNode;
+  const id = tr.dataset.id;
+  actionsCell.innerHTML = `
+    <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${id})">Edit</button>
+    <button class="btn-action btn-delete" onclick="deleteIngredient(${id})">Delete</button>
+  `;
+}
+
+async function saveIngredientCost(btn, id) {
+  const tr = btn.closest('tr');
+  const input = tr.querySelector('.cost-input');
+  const newCost = parseFloat(input.value);
+  
+  if (isNaN(newCost) || newCost < 0) {
+    alert('Please enter a valid cost of 0 or greater');
+    return;
+  }
+  
+  const confirmChange = confirm("Are you sure you want to change the cost of this ingredient?");
+  if (!confirmChange) {
+    return;
+  }
+  
+  const name = tr.dataset.name;
+  const dessert_id = tr.dataset.dessertId;
+  const is_topping = parseInt(tr.dataset.isTopping);
+  const topping_value = tr.dataset.toppingValue || null;
+  
+  try {
+    const response = await fetch(`/api/admin/ingredients/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name,
+        dessert_id,
+        cost: newCost,
+        is_topping,
+        topping_value
+      })
+    });
+    
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to update ingredient cost');
+    }
+    
+    // Refresh and lock
+    loadIngredients();
+    loadOrders();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function deleteIngredient(id) {
+  if (!confirm('Are you sure you want to delete this ingredient?')) return;
+
+  try {
+    const response = await fetch(`/api/admin/ingredients/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to delete ingredient');
+    }
+
+    loadIngredients();
+    loadOrders();
+  } catch (err) {
+    alert(err.message);
   }
 }

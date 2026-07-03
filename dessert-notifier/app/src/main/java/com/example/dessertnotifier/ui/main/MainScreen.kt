@@ -3,6 +3,7 @@ package com.example.dessertnotifier.ui.main
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -244,6 +245,7 @@ fun OrderLogCard(order: Order) {
     var isPendingAction by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showCost by remember { mutableStateOf(false) }
 
     // Alert dialogs for verification
     if (showCancelDialog) {
@@ -389,12 +391,31 @@ fun OrderLogCard(order: Order) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = if (order.total_price == null) "Price: TBD" else "Total: $${String.format("%.2f", order.total_price)}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = if (order.total_price == null) "Price: TBD" else "Total: $${String.format("%.2f", order.total_price)}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (showCost) "[Hide Cost]" else "[Show Cost]",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clickable { showCost = !showCost }
+                        )
+                    }
+                    if (showCost) {
+                        Text(
+                            text = "Cost to make: " + (if (order.cost_of_making == null) "TBD" else "$${String.format("%.2f", order.cost_of_making)}"),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF10B981),
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                     Text(
                         text = "Status: ${order.safeStatus.uppercase()}",
                         fontSize = 11.sp,
