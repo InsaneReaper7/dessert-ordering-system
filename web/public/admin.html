@@ -18,12 +18,17 @@
   <header class="header">
     <div class="container header-container">
       <div class="logo">
-        <span class="logo-serif">Admin Portal</span>
-        <span class="logo-subtitle">Sugar & Crumb Bakery</span>
+        <span class="logo-serif" data-translate="logo_title">Admin Portal</span>
+        <span class="logo-subtitle" data-translate="logo_subtitle">Sugar & Crumb Bakery</span>
       </div>
-      <div class="header-actions">
-        <button id="logout-btn" class="btn hidden" onclick="handleLogout()" style="padding: 6px 14px; font-size: 13px; border-radius: 6px; background-color: var(--primary); color: #fff;">Logout</button>
-        <a href="index.html" class="nav-link" style="font-size: 14px;">View Menu</a>
+      <div class="header-actions" style="display: flex; align-items: center; gap: 16px;">
+        <div class="lang-selector" style="margin-left: 0;">
+          <button id="lang-btn-en" class="lang-btn active" onclick="setLanguage('en')">EN</button>
+          <span class="lang-divider">|</span>
+          <button id="lang-btn-es" class="lang-btn" onclick="setLanguage('es')">ES</button>
+        </div>
+        <button id="logout-btn" class="btn hidden" onclick="handleLogout()" style="padding: 6px 14px; font-size: 13px; border-radius: 6px; background-color: var(--primary); color: #fff;" data-translate="logout">Logout</button>
+        <a href="index.html" class="nav-link" style="font-size: 14px;" data-translate="view_menu">View Menu</a>
       </div>
     </div>
   </header>
@@ -31,15 +36,15 @@
   <!-- Login Card container (Centered) -->
   <div id="login-container" class="container container-narrow" style="padding-top: 80px; padding-bottom: 80px;">
     <div class="login-card">
-      <h2 class="section-title">Admin Login</h2>
-      <p class="section-subtitle">Enter the password to access the sales tracker and manage customer orders.</p>
+      <h2 class="section-title" data-translate="admin_login">Admin Login</h2>
+      <p class="section-subtitle" data-translate="admin_login_subtitle">Enter the password to access the sales tracker and manage customer orders.</p>
       
       <form id="login-form">
         <div class="form-group">
-          <label for="admin-password">Dashboard Password</label>
+          <label for="admin-password" data-translate="password_label">Dashboard Password</label>
           <input type="password" id="admin-password" placeholder="••••••••" required style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 16px;">
         </div>
-        <button type="submit" class="btn btn-primary btn-block">Enter Dashboard</button>
+        <button type="submit" class="btn btn-primary btn-block" data-translate="enter_dashboard">Enter Dashboard</button>
       </form>
     </div>
   </div>
@@ -50,20 +55,20 @@
     <div class="connection-banner">
       <div class="connection-status">
         <span class="status-indicator offline" id="connection-indicator"></span>
-        <span id="connection-text">WebSocket: Disconnected</span>
+        <span id="connection-text" data-translate="ws_disconnected">WebSocket: Disconnected</span>
       </div>
       <div class="connection-actions">
         <button class="btn btn-test-ping" id="test-ping-btn" onclick="sendTestPing()">
-          <span class="btn-icon">🔊</span> Test Phone Chime
+          <span class="btn-icon">🔊</span> <span data-translate="test_phone_chime">Test Phone Chime</span>
         </button>
       </div>
     </div>
 
     <!-- Tab Navigation -->
     <div class="dashboard-tabs">
-      <button id="tab-btn-orders" class="tab-btn active" onclick="switchTab('orders-tab')">Orders & Analytics</button>
-      <button id="tab-btn-ingredients" class="tab-btn" onclick="switchTab('ingredients-tab')">Ingredient Cost Manager</button>
-      <button id="tab-btn-recipes" class="tab-btn" onclick="switchTab('recipes-tab')">Current Recipes</button>
+      <button id="tab-btn-orders" class="tab-btn active" onclick="switchTab('orders-tab')" data-translate="tab_orders">Orders & Analytics</button>
+      <button id="tab-btn-ingredients" class="tab-btn" onclick="switchTab('ingredients-tab')" data-translate="tab_inventory">Ingredient Cost Manager</button>
+      <button id="tab-btn-recipes" class="tab-btn" onclick="switchTab('recipes-tab')" data-translate="tab_recipes">Current Recipes</button>
     </div>
 
     <!-- Orders & Analytics Tab Content -->
@@ -71,32 +76,32 @@
       <!-- Overview Stats Cards -->
     <div class="grid grid-3" style="margin-top: 32px;">
       <div class="stat-card">
-        <span class="stat-label">Sales (Today)</span>
+        <span class="stat-label" data-translate="sales_today">Sales (Today)</span>
         <h2 class="stat-value" id="stats-sales-today">$0.00</h2>
-        <span class="stat-subtext">*Excluding TBD orders</span>
+        <span class="stat-subtext" data-translate="excluding_tbd">*Excluding TBD orders</span>
       </div>
       <div class="stat-card">
-        <span class="stat-label">Sales (This Month)</span>
+        <span class="stat-label" data-translate="sales_month">Sales (This Month)</span>
         <h2 class="stat-value" id="stats-sales-month">$0.00</h2>
-        <span class="stat-subtext">*Excluding TBD orders</span>
+        <span class="stat-subtext" data-translate="excluding_tbd">*Excluding TBD orders</span>
       </div>
       <div class="stat-card">
-        <span class="stat-label">Sales (This Year)</span>
+        <span class="stat-label" data-translate="sales_year">Sales (This Year)</span>
         <h2 class="stat-value" id="stats-sales-year">$0.00</h2>
-        <span class="stat-subtext">*Excluding TBD orders</span>
+        <span class="stat-subtext" data-translate="excluding_tbd">*Excluding TBD orders</span>
       </div>
     </div>
 
     <!-- Analytics Charts (Horizontal Progress Bars) -->
     <div class="grid grid-2" style="margin-top: 32px;">
       <div class="analytics-card">
-        <h3 class="analytics-title">Dessert Item Quantities Sold</h3>
+        <h3 class="analytics-title" data-translate="dessert_qtys_sold">Dessert Item Quantities Sold</h3>
         <div id="item-sales-bars" class="bar-chart-container">
           <!-- Populated dynamically -->
         </div>
       </div>
       <div class="analytics-card">
-        <h3 class="analytics-title">Top Toppings Popularity</h3>
+        <h3 class="analytics-title" data-translate="top_toppings_popularity">Top Toppings Popularity</h3>
         <div id="topping-popularity-bars" class="bar-chart-container">
           <!-- Populated dynamically -->
         </div>
@@ -106,7 +111,7 @@
     <!-- Orders Section -->
     <div class="orders-table-card" style="margin-top: 40px;">
       <div class="card-header">
-        <h3 class="card-title">Customer Orders Log</h3>
+        <h3 class="card-title" data-translate="customer_orders_log">Customer Orders Log</h3>
         <span class="order-count-badge" id="order-count">0 Orders</span>
       </div>
       
@@ -114,14 +119,14 @@
         <table class="orders-table">
           <thead>
             <tr>
-              <th>Order ID</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Item Details</th>
-              <th>Fulfillment</th>
-              <th>Total Price</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th data-translate="th_order_id">Order ID</th>
+              <th data-translate="th_date">Date</th>
+              <th data-translate="th_customer">Customer</th>
+              <th data-translate="th_details">Item Details</th>
+              <th data-translate="th_fulfillment">Fulfillment</th>
+              <th data-translate="th_total_price">Total Price</th>
+              <th data-translate="th_status">Status</th>
+              <th data-translate="th_actions">Actions</th>
             </tr>
           </thead>
           <tbody id="orders-tbody">
@@ -143,24 +148,24 @@
         <!-- Ingredients Table Card -->
         <div class="orders-table-card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="card-title">Ingredient Inventory Pricing</h3>
+            <h3 class="card-title" data-translate="pricing_title">Ingredient Inventory Pricing</h3>
           </div>
           
           <div class="table-responsive">
             <table class="orders-table">
               <thead>
                 <tr>
-                  <th>Ingredient Name</th>
-                  <th>Bulk Cost ($)</th>
-                  <th>Bulk Quantity</th>
-                  <th>Tax %</th>
-                  <th>Unit</th>
-                  <th>Actions</th>
+                  <th data-translate="th_ing_name">Ingredient Name</th>
+                  <th data-translate="th_bulk_cost">Bulk Cost ($)</th>
+                  <th data-translate="th_bulk_qty">Bulk Quantity</th>
+                  <th data-translate="th_tax">Tax %</th>
+                  <th data-translate="th_unit">Unit</th>
+                  <th data-translate="th_actions">Actions</th>
                 </tr>
               </thead>
               <tbody id="ingredients-tbody">
                 <tr>
-                  <td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                  <td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);" data-translate="loading_ingredients">
                     Loading ingredients...
                   </td>
                 </tr>
@@ -172,7 +177,7 @@
         <!-- Sidebar card: Recipe Cost Summaries -->
         <div class="sidebar-cards-container" style="display: flex; flex-direction: column; gap: 24px;">
           <div class="analytics-card">
-            <h3 class="analytics-title" style="margin-bottom: 16px;">Base Batch Costs</h3>
+            <h3 class="analytics-title" style="margin-bottom: 16px;" data-translate="base_batch_costs">Base Batch Costs</h3>
             <div id="recipe-costs-list" style="display: flex; flex-direction: column; gap: 12px;">
               <!-- Populated dynamically -->
             </div>
@@ -187,12 +192,12 @@
       <!-- Baking Stock & Shopping Calculator Card -->
       <div class="analytics-card" style="margin-bottom: 32px;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px;">
-          <h3 class="analytics-title" style="margin: 0; border: none; padding: 0;">Baking Stock & Shopping Calculator</h3>
-          <button class="btn btn-primary" onclick="toggleStockCalculator()" style="padding: 6px 12px; font-size: 13px; border-radius: 6px; cursor: pointer;">Show/Hide Calculator</button>
+          <h3 class="analytics-title" style="margin: 0; border: none; padding: 0;" data-translate="stock_calc_title">Baking Stock & Shopping Calculator</h3>
+          <button class="btn btn-primary" id="toggle-stock-calc-btn" onclick="toggleStockCalculator()" style="padding: 6px 12px; font-size: 13px; border-radius: 6px; cursor: pointer;" data-translate="stock_calc_btn">Show/Hide Calculator</button>
         </div>
         
         <div id="stock-calculator-container" class="hidden">
-          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Select the number of batches you plan to bake for each recipe, and the calculator will aggregate your shopping list.</p>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;" data-translate="stock_calc_desc">Select the number of batches you plan to bake for each recipe, and the calculator will aggregate your shopping list.</p>
           
           <!-- Desserts Batch Inputs Grid -->
           <div id="stock-calc-inputs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
@@ -200,25 +205,25 @@
           </div>
           
           <div style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
-            <button class="btn btn-primary" onclick="calculateRequiredStock()" style="padding: 10px 20px; font-size: 13px; border-radius: 6px;">Calculate Stock Needed</button>
-            <button class="btn" onclick="resetStockCalculator()" style="padding: 10px 20px; background-color: #e5e7eb; color: var(--text-main); font-weight: 500; font-size: 13px; border-radius: 6px;">Reset</button>
+            <button class="btn btn-primary" onclick="calculateRequiredStock()" style="padding: 10px 20px; font-size: 13px; border-radius: 6px;" data-translate="calculate_stock_btn">Calculate Stock Needed</button>
+            <button class="btn" onclick="resetStockCalculator()" style="padding: 10px 20px; background-color: #e5e7eb; color: var(--text-main); font-weight: 500; font-size: 13px; border-radius: 6px;" data-translate="action_reset">Reset</button>
           </div>
           
           <!-- Results Container -->
           <div id="stock-calc-results" class="hidden" style="margin-top: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4 style="margin: 0; font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--primary);">Required Stocking List</h4>
-              <button class="btn btn-primary" onclick="copyShoppingListToClipboard()" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; background-color: #10b981; border-color: #10b981; cursor: pointer;">📋 Copy Shopping List</button>
+              <h4 style="margin: 0; font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--primary);" data-translate="stocking_list_title">Required Stocking List</h4>
+              <button class="btn btn-primary" onclick="copyShoppingListToClipboard()" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; background-color: #10b981; border-color: #10b981; cursor: pointer;" data-translate="copy_shopping_list">📋 Copy Shopping List</button>
             </div>
             
             <div class="table-responsive">
               <table class="orders-table">
                 <thead>
                   <tr>
-                    <th>Ingredient</th>
-                    <th>Total Quantity Needed</th>
-                    <th>Unit</th>
-                    <th>Estimated Cost ($)</th>
+                    <th data-translate="label_ing_name">Ingredient</th>
+                    <th data-translate="total_qty_needed">Total Quantity Needed</th>
+                    <th data-translate="th_unit">Unit</th>
+                    <th data-translate="est_cost_header">Estimated Cost ($)</th>
                   </tr>
                 </thead>
                 <tbody id="stock-calc-results-tbody">
@@ -234,64 +239,64 @@
         <!-- Recipe Formulation Card -->
         <div class="orders-table-card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <h3 class="card-title">Recipe Formulations</h3>
-            <button class="btn btn-primary" onclick="toggleAddRecipeIngredientForm()" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer;">+ Add Ingredient to Recipe</button>
+            <h3 class="card-title" data-translate="recipes_title">Recipe Formulations</h3>
+            <button class="btn btn-primary" onclick="toggleAddRecipeIngredientForm()" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer;" data-translate="add_ingredient_btn">+ Add Ingredient to Recipe</button>
           </div>
 
           <!-- Collapsible Add Recipe Ingredient Form (hidden by default) -->
           <div id="add-recipe-ingredient-card" class="analytics-card hidden" style="margin: 16px; padding: 20px; border-bottom: 1px solid var(--border);">
-            <h4 class="analytics-title" style="font-size: 16px; margin-bottom: 16px; border-bottom: none; padding-bottom: 0;">Add Ingredient to Recipe</h4>
+            <h4 class="analytics-title" style="font-size: 16px; margin-bottom: 16px; border-bottom: none; padding-bottom: 0;" data-translate="add_ing_form_title">Add Ingredient to Recipe</h4>
             <form id="add-recipe-ingredient-form" onsubmit="handleAddRecipeIngredient(event)">
               <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 0;">
                 <div class="form-group">
-                  <label for="recipe-dessert-select" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Select Dessert / Recipe</label>
+                  <label for="recipe-dessert-select" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_select_dessert">Select Dessert / Recipe</label>
                   <select id="recipe-dessert-select" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
                     <!-- Populated dynamically -->
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="recipe-ing-name" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Ingredient Name</label>
-                  <input type="text" id="recipe-ing-name" placeholder="e.g. Butter" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+                  <label for="recipe-ing-name" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_ing_name">Ingredient Name</label>
+                  <input type="text" id="recipe-ing-name" placeholder="e.g. Butter" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;" data-translate-placeholder="placeholder_butter">
                 </div>
                 <div class="form-group">
-                  <label for="recipe-ing-amount" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Amount Needed</label>
-                  <input type="number" id="recipe-ing-amount" step="0.01" placeholder="e.g. 150" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+                  <label for="recipe-ing-amount" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_amount">Amount Needed</label>
+                  <input type="number" id="recipe-ing-amount" step="0.01" placeholder="e.g. 150" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;" data-translate-placeholder="placeholder_amount">
                 </div>
                 <div class="form-group">
-                  <label for="recipe-ing-part" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;">Recipe Part / Section</label>
-                  <input type="text" id="recipe-ing-part" placeholder="e.g. Dough, Filling" value="Main" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+                  <label for="recipe-ing-part" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_part">Recipe Part / Section</label>
+                  <input type="text" id="recipe-ing-part" placeholder="e.g. Dough, Filling" value="Main" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;" data-translate-placeholder="placeholder_section">
                 </div>
               </div>
               <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
                 <div style="display: flex; align-items: center; gap: 16px;">
                   <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
-                    <label for="recipe-ing-unit" style="font-weight: 500; font-size: 13px; margin-bottom: 0;">Unit:</label>
+                    <label for="recipe-ing-unit" style="font-weight: 500; font-size: 13px; margin-bottom: 0;" data-translate="label_unit">Unit:</label>
                     <select id="recipe-ing-unit" style="padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
-                      <option value="g">Grams (g)</option>
-                      <option value="unit">Whole Item (e.g. eggs)</option>
+                      <option value="g" data-translate="option_grams">Grams (g)</option>
+                      <option value="unit" data-translate="option_whole">Whole Item (e.g. eggs)</option>
                     </select>
                   </div>
                   <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
                     <input type="checkbox" id="recipe-ing-is-topping" onchange="toggleRecipeToppingFields(this.checked)" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-                    <label for="recipe-ing-is-topping" style="margin-bottom: 0; font-weight: 500; font-size: 13px; cursor: pointer; user-select: none;">Is an Optional Topping</label>
+                    <label for="recipe-ing-is-topping" style="margin-bottom: 0; font-weight: 500; font-size: 13px; cursor: pointer; user-select: none;" data-translate="label_topping">Is an Optional Topping</label>
                   </div>
                   <div id="recipe-ing-topping-value-group" class="form-group hidden" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
-                    <label for="recipe-ing-topping-value" style="font-weight: 500; font-size: 13px; margin-bottom: 0;">Topping Value:</label>
+                    <label for="recipe-ing-topping-value" style="font-weight: 500; font-size: 13px; margin-bottom: 0;" data-translate="label_topping_val">Topping Value:</label>
                     <select id="recipe-ing-topping-value" style="padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
-                      <option value="walnuts">Walnuts</option>
-                      <option value="pecans">Pecans</option>
-                      <option value="marshmallow dots">Marshmallow Dots</option>
-                      <option value="caramels dots">Caramel Dots</option>
-                      <option value="chocolate chips">Chocolate Chips</option>
-                      <option value="butterscotch chips">Butterscotch Chips</option>
-                      <option value="white chocolate chips">White Chocolate Chips</option>
-                      <option value="vanilla chips">Vanilla Chips</option>
+                      <option value="walnuts" data-translate="walnuts">Walnuts</option>
+                      <option value="pecans" data-translate="pecans">Pecans</option>
+                      <option value="marshmallow dots" data-translate="marshmallow_dots">Marshmallow Dots</option>
+                      <option value="caramels dots" data-translate="caramel_dots">Caramel Dots</option>
+                      <option value="chocolate chips" data-translate="chocolate_chips">Chocolate Chips</option>
+                      <option value="butterscotch chips" data-translate="butterscotch_chips">Butterscotch Chips</option>
+                      <option value="white chocolate chips" data-translate="white_chocolate_chips">White Chocolate Chips</option>
+                      <option value="vanilla chips" data-translate="vanilla_chips">Vanilla Chips</option>
                     </select>
                   </div>
                 </div>
                 <div style="display: flex; gap: 12px;">
-                  <button type="button" class="btn" onclick="toggleAddRecipeIngredientForm()" style="padding: 8px 16px; background-color: #e5e7eb; color: var(--text-main); font-weight: 500; font-size: 13px; border-radius: 6px; cursor: pointer;">Cancel</button>
-                  <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer;">Save Ingredient</button>
+                  <button type="button" class="btn" onclick="toggleAddRecipeIngredientForm()" style="padding: 8px 16px; background-color: #e5e7eb; color: var(--text-main); font-weight: 500; font-size: 13px; border-radius: 6px; cursor: pointer;" data-translate="btn_cancel">Cancel</button>
+                  <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer;" data-translate="btn_save_ing">Save Ingredient</button>
                 </div>
               </div>
             </form>
@@ -299,9 +304,9 @@
 
           <!-- Expand/Collapse all controls -->
           <div style="margin: 0 24px; display: flex; justify-content: flex-end; gap: 12px; font-size: 13px;">
-            <a href="#" onclick="toggleAllRecipeCards(true); return false;" style="color: var(--primary); font-weight: 500; text-decoration: none;">📂 Expand All</a>
+            <a href="#" onclick="toggleAllRecipeCards(true); return false;" style="color: var(--primary); font-weight: 500; text-decoration: none;" data-translate="expand_all">📂 Expand All</a>
             <span style="color: var(--border);">|</span>
-            <a href="#" onclick="toggleAllRecipeCards(false); return false;" style="color: var(--primary); font-weight: 500; text-decoration: none;">📁 Collapse All</a>
+            <a href="#" onclick="toggleAllRecipeCards(false); return false;" style="color: var(--primary); font-weight: 500; text-decoration: none;" data-translate="collapse_all">📁 Collapse All</a>
           </div>
 
           <!-- Recipe Ingredients Display Container -->

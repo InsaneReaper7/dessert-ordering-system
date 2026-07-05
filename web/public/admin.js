@@ -1,7 +1,356 @@
 let token = localStorage.getItem('adminToken');
 let socket = null;
 
+// ==========================================
+// Multi-lingual Translation System (EN / ES)
+// ==========================================
+
+const TRANSLATIONS = {
+  en: {
+    logo_title: "Admin Portal",
+    logo_subtitle: "Sugar & Crumb Bakery",
+    logout: "Logout",
+    view_menu: "View Menu",
+    admin_login: "Admin Login",
+    admin_login_subtitle: "Enter the password to access the sales tracker and manage customer orders.",
+    password_label: "Dashboard Password",
+    enter_dashboard: "Enter Dashboard",
+    ws_connected: "WebSocket: Connected",
+    ws_disconnected: "WebSocket: Disconnected",
+    test_phone_chime: "Test Phone Chime",
+    tab_orders: "Orders & Analytics",
+    tab_inventory: "Ingredient Cost Manager",
+    tab_recipes: "Current Recipes",
+    sales_today: "Sales (Today)",
+    sales_month: "Sales (This Month)",
+    sales_year: "Sales (This Year)",
+    excluding_tbd: "*Excluding TBD orders",
+    dessert_qtys_sold: "Dessert Item Quantities Sold",
+    top_toppings_popularity: "Top Toppings Popularity",
+    customer_orders_log: "Customer Orders Log",
+    th_order_id: "Order ID",
+    th_date: "Date",
+    th_customer: "Customer",
+    th_details: "Item Details",
+    th_fulfillment: "Fulfillment",
+    th_total_price: "Total Price",
+    th_status: "Status",
+    th_actions: "Actions",
+    pricing_title: "Ingredient Inventory Pricing",
+    th_ing_name: "Ingredient Name",
+    th_bulk_cost: "Bulk Cost ($)",
+    th_bulk_qty: "Bulk Quantity",
+    th_tax: "Tax %",
+    th_unit: "Unit",
+    base_batch_costs: "Base Batch Costs",
+    stock_calc_title: "Baking Stock & Shopping Calculator",
+    stock_calc_btn: "Show/Hide Calculator",
+    stock_calc_desc: "Select the number of batches you plan to bake for each recipe, and the calculator will aggregate your shopping list.",
+    calculate_stock_btn: "Calculate Stock Needed",
+    stocking_list_title: "Required Stocking List",
+    copy_shopping_list: "📋 Copy Shopping List",
+    recipes_title: "Recipe Formulations",
+    add_ingredient_btn: "+ Add Ingredient to Recipe",
+    add_ing_form_title: "Add Ingredient to Recipe",
+    label_select_dessert: "Select Dessert / Recipe",
+    label_ing_name: "Ingredient Name",
+    label_amount: "Amount Needed",
+    label_part: "Recipe Part / Section",
+    label_unit: "Unit:",
+    option_grams: "Grams (g)",
+    option_whole: "Whole Item (e.g. eggs)",
+    label_topping: "Is an Optional Topping",
+    label_topping_val: "Topping Value:",
+    btn_cancel: "Cancel",
+    btn_save_ing: "Save Ingredient",
+    expand_all: "📂 Expand All",
+    collapse_all: "📁 Collapse All",
+    
+    // Form Placeholders & Unit Values
+    placeholder_butter: "e.g. Butter",
+    placeholder_amount: "e.g. 150",
+    placeholder_section: "e.g. Dough, Filling",
+    walnuts: "Walnuts",
+    pecans: "Pecans",
+    marshmallow_dots: "Marshmallow Dots",
+    caramel_dots: "Caramel Dots",
+    chocolate_chips: "Chocolate Chips",
+    butterscotch_chips: "Butterscotch Chips",
+    white_chocolate_chips: "White Chocolate Chips",
+    vanilla_chips: "Vanilla Chips",
+
+    // Dynamic strings / mappings
+    no_orders_yet: "No orders recorded yet.",
+    no_ingredients: "No ingredients registered. Build recipes on the 'Current Recipes' tab first!",
+    no_recipes_yet: "No ingredients added to this recipe yet. Click '+ Add Ingredient to Recipe' above.",
+    original_batch: "Original (1 Batch)",
+    original: "Original",
+    batches: "Batches",
+    yield: "Yield:",
+    base_mold: "Base Mold:",
+    scale_to: "Scale To:",
+    base_cost: "Base Cost",
+    section_label: "Section:",
+    type_topping: "Topping",
+    type_base: "Base Ingredient",
+    pending: "Pending",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    pickup: "Pickup",
+    delivery: "Delivery",
+    tbd: "TBD",
+    none: "None",
+    of: "of",
+    cost_label: "Cost:",
+    action_edit: "Edit",
+    action_reset: "Reset",
+    action_delete: "Delete",
+    action_remove: "Remove",
+    action_complete: "Complete",
+    action_cancel: "Cancel",
+    action_save: "Save",
+    action_delete_log: "Delete Log",
+    
+    // Dessert Names Mapping
+    brownies: "Fudge Brownies",
+    blondies: "Classic Blondies",
+    lemon_bars: "Tangy Lemon Bars",
+    mango_bars: "Tangy Mango Bars",
+    pineapple_bars: "Sweet Pineapple Bars",
+    butterscotch_blondies: "Golden Butterscotch Blondies",
+    caramel_butterscotch_crunch_blondies: "Caramel Butterscotch Crunch Blondies",
+    marshmallow_swirl_brownies: "Marshmallow Swirl Brownies",
+    pina_colada_bars: "Piña Colada Bars",
+    coconut_cream_bars: "Coconut Cream Bars",
+    cinnamon_rolls: "Artisan Cinnamon Rolls",
+
+    // Sizes Mapping
+    "8x5": "8x5",
+    "9x9": "9x9",
+    "1_roll": "1 Roll",
+    "4_pack": "4 Pack",
+    "6_pack": "6 Pack",
+    "full_tray": "Full Tray",
+
+    // Alerts/Prompts
+    confirm_reset_ing: "Are you sure you want to reset the bulk cost, quantity, and tax of this ingredient?",
+    confirm_change_ing: "Are you sure you want to change the bulk cost, quantity, and tax of this ingredient?",
+    confirm_delete_ing: "Are you sure you want to delete this ingredient from inventory?",
+    confirm_remove_recipe_ing: "Are you sure you want to remove this ingredient from the recipe?",
+    confirm_delete_order: "Are you sure you want to permanently delete this order log?",
+    confirm_cancel_order: "Are you sure you want to cancel this order?",
+    error_update_status: "Failed to update order status",
+    error_delete_order: "Failed to delete order",
+    error_remove_ing: "Failed to remove ingredient",
+    alert_valid_cost_qty: "Please enter a valid cost (0 or greater) and quantity (greater than 0)",
+    alert_copied_list: "Shopping list copied to clipboard successfully!",
+    alert_copied_failed: "Failed to copy. Here is the text list:\n\n",
+    shopping_list_header: "BAKING SHOPPING LIST & STOCK ESTIMATE",
+    shopping_list_generated: "Generated:",
+    planned_batches: "Planned Bake Batches:",
+    consolidated_materials: "Consolidated Raw Materials to Stock Up:",
+    total_est_cost: "Total Estimated Raw Materials Cost:",
+  },
+  es: {
+    logo_title: "Portal de Administración",
+    logo_subtitle: "Pastelería Sugar & Crumb",
+    logout: "Cerrar Sesión",
+    view_menu: "Ver Menú",
+    admin_login: "Inicio de Sesión de Administrador",
+    admin_login_subtitle: "Ingrese la contraseña para acceder al rastreador de ventas y gestionar los pedidos.",
+    password_label: "Contraseña del Panel",
+    enter_dashboard: "Entrar al Panel",
+    ws_connected: "WebSocket: Conectado",
+    ws_disconnected: "WebSocket: Desconectado",
+    test_phone_chime: "Probar Timbre de Teléfono",
+    tab_orders: "Pedidos y Analíticas",
+    tab_inventory: "Gestor de Costos de Ingredientes",
+    tab_recipes: "Recetas Actuales",
+    sales_today: "Ventas (Hoy)",
+    sales_month: "Ventas (Este Mes)",
+    sales_year: "Ventas (Este Año)",
+    excluding_tbd: "*Excluyendo pedidos TBD",
+    dessert_qtys_sold: "Cantidades de Postres Vendidos",
+    top_toppings_popularity: "Popularidad de Toppings",
+    customer_orders_log: "Registro de Pedidos de Clientes",
+    th_order_id: "ID de Pedido",
+    th_date: "Fecha",
+    th_customer: "Cliente",
+    th_details: "Detalles del Artículo",
+    th_fulfillment: "Fulfillment",
+    th_total_price: "Precio Total",
+    th_status: "Estado",
+    th_actions: "Acciones",
+    pricing_title: "Precios de Inventario de Ingredientes",
+    th_ing_name: "Nombre del Ingrediente",
+    th_bulk_cost: "Costo a Granel ($)",
+    th_bulk_qty: "Cantidad a Granel",
+    th_tax: "Impuesto %",
+    th_unit: "Unidad",
+    base_batch_costs: "Costos de Lote Base",
+    stock_calc_title: "Calculadora de Lotes y Lista de Compras",
+    stock_calc_btn: "Mostrar/Ocultar Calculadora",
+    stock_calc_desc: "Seleccione el número de lotes que planea hornear para cada receta, y la calculadora generará su lista de compras.",
+    calculate_stock_btn: "Calcular Material Necesario",
+    stocking_list_title: "Lista de Material Requerido",
+    copy_shopping_list: "📋 Copiar Lista de Compras",
+    recipes_title: "Formulación de Recetas",
+    add_ingredient_btn: "+ Agregar Ingrediente a Receta",
+    add_ing_form_title: "Agregar Ingrediente a Receta",
+    label_select_dessert: "Seleccionar Postre / Receta",
+    label_ing_name: "Nombre del Ingrediente",
+    label_amount: "Cantidad Necesaria",
+    label_part: "Sección de la Receta",
+    label_unit: "Unidad:",
+    option_grams: "Gramos (g)",
+    option_whole: "Artículo Entero (ej. huevos)",
+    label_topping: "Es un Topping Opcional",
+    label_topping_val: "Valor del Topping:",
+    btn_cancel: "Cancelar",
+    btn_save_ing: "Guardar Ingrediente",
+    expand_all: "📂 Expandir Todo",
+    collapse_all: "📁 Colapsar Todo",
+    
+    // Form Placeholders & Unit Values
+    placeholder_butter: "ej. Mantequilla",
+    placeholder_amount: "ej. 150",
+    placeholder_section: "ej. Masa, Relleno",
+    walnuts: "Nueces",
+    pecans: "Pacanas",
+    marshmallow_dots: "Malvaviscos",
+    caramel_dots: "Dulce de Leche",
+    chocolate_chips: "Chispas de Chocolate",
+    butterscotch_chips: "Chispas de Butterscotch",
+    white_chocolate_chips: "Chispas de Chocolate Blanco",
+    vanilla_chips: "Chispas de Vainilla",
+
+    // Dynamic strings / mappings
+    no_orders_yet: "Aún no hay pedidos registrados.",
+    no_ingredients: "¡No hay ingredientes registrados. Cree recetas en la pestaña 'Recetas Actuales' primero!",
+    no_recipes_yet: "Aún no se han añadido ingredientes a esta receta. Haga clic en '+ Agregar Ingrediente a Receta' arriba.",
+    original_batch: "Original (1 Lote)",
+    original: "Original",
+    batches: "Lotes",
+    yield: "Rendimiento:",
+    base_mold: "Molde Base:",
+    scale_to: "Escalar A:",
+    base_cost: "Costo Base",
+    section_label: "Sección:",
+    type_topping: "Topping",
+    type_base: "Ingrediente Base",
+    pending: "Pendiente",
+    completed: "Completado",
+    cancelled: "Cancelado",
+    pickup: "Recogida",
+    delivery: "Entrega a domicilio",
+    tbd: "TBD",
+    none: "Ninguno",
+    of: "de",
+    cost_label: "Costo:",
+    action_edit: "Editar",
+    action_reset: "Restablecer",
+    action_delete: "Eliminar",
+    action_remove: "Quitar",
+    action_complete: "Completar",
+    action_cancel: "Cancelar",
+    action_save: "Guardar",
+    action_delete_log: "Eliminar Registro",
+
+    // Dessert Names Mapping
+    brownies: "Brownies de Fudge",
+    blondies: "Blondies Clásicos",
+    lemon_bars: "Barras de Limón",
+    mango_bars: "Barras de Mango",
+    pineapple_bars: "Barras de Piña",
+    butterscotch_blondies: "Blondies de Butterscotch Dorado",
+    caramel_butterscotch_crunch_blondies: "Blondies Crujientes de Caramelo y Butterscotch",
+    marshmallow_swirl_brownies: "Brownies con Remolino de Malvavisco",
+    pina_colada_bars: "Barras de Piña Colada",
+    coconut_cream_bars: "Barras de Crema de Coco",
+    cinnamon_rolls: "Rollos de Canela Artesanales",
+
+    // Sizes Mapping
+    "8x5": "8x5",
+    "9x9": "9x9",
+    "1_roll": "1 Rollo",
+    "4_pack": "Paquete de 4",
+    "6_pack": "Paquete de 6",
+    "full_tray": "Bandeja Completa",
+
+    // Alerts/Prompts
+    confirm_reset_ing: "¿Está seguro de que desea restablecer el costo, la cantidad y el impuesto de este ingrediente?",
+    confirm_change_ing: "¿Está seguro de que desea cambiar el costo, la cantidad y el impuesto de este ingrediente?",
+    confirm_delete_ing: "¿Está seguro de que desea eliminar este ingrediente del inventario?",
+    confirm_remove_recipe_ing: "¿Está seguro de que desea eliminar este ingrediente de la receta?",
+    confirm_delete_order: "¿Está seguro de que desea eliminar este registro de pedido de forma permanente?",
+    confirm_cancel_order: "¿Está seguro de que desea cancelar este pedido?",
+    error_update_status: "Error al actualizar el estado del pedido",
+    error_delete_order: "Error al eliminar el pedido",
+    error_remove_ing: "Error al quitar el ingrediente",
+    alert_valid_cost_qty: "Por favor ingrese un costo válido (0 o mayor) y cantidad (mayor a 0)",
+    alert_copied_list: "¡Lista de compras copiada al portapapeles con éxito!",
+    alert_copied_failed: "Error al copiar. Aquí está la lista de texto:\n\n",
+    shopping_list_header: "LISTA DE COMPRAS Y ESTIMACIÓN DE MATERIALES",
+    shopping_list_generated: "Generada:",
+    planned_batches: "Lotes de Horneado Planificados:",
+    consolidated_materials: "Materiales Consolidados para Abastecerse:",
+    total_est_cost: "Costo Total Estimado de Materiales:",
+  }
+};
+
+let currentLanguage = localStorage.getItem('admin_lang') || 'en';
+
+function t(key, defaultValue = '') {
+  const dict = TRANSLATIONS[currentLanguage];
+  if (dict && dict[key] !== undefined) {
+    return dict[key];
+  }
+  return defaultValue || key;
+}
+
+function applyTranslations() {
+  // Translate static text elements
+  document.querySelectorAll('[data-translate]').forEach(el => {
+    const key = el.getAttribute('data-translate');
+    el.textContent = t(key);
+  });
+
+  // Translate placeholders
+  document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-translate-placeholder');
+    el.placeholder = t(key);
+  });
+
+  // Update language selector active buttons
+  const btnEn = document.getElementById('lang-btn-en');
+  const btnEs = document.getElementById('lang-btn-es');
+  if (btnEn && btnEs) {
+    if (currentLanguage === 'en') {
+      btnEn.classList.add('active');
+      btnEs.classList.remove('active');
+    } else {
+      btnEs.classList.add('active');
+      btnEn.classList.remove('active');
+    }
+  }
+
+  // Update dynamic elements currently rendered by triggering re-render if active
+  if (token) {
+    loadStats();
+    loadOrders();
+    loadIngredients();
+    loadRecipes();
+  }
+}
+
+function setLanguage(lang) {
+  currentLanguage = lang;
+  localStorage.setItem('admin_lang', currentLanguage);
+  applyTranslations();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  applyTranslations();
   if (token) {
     showDashboard();
   } else {
@@ -103,7 +452,7 @@ function renderStats(stats) {
   const maxItemCount = Math.max(...itemSalesArray.map(item => item.count), 1);
 
   if (itemSalesArray.length === 0) {
-    itemsContainer.innerHTML = '<div class="text-center" style="font-size: 13px; color: var(--text-muted);">No sales data yet</div>';
+    itemsContainer.innerHTML = `<div class="text-center" style="font-size: 13px; color: var(--text-muted);">${t('no_sales_data', 'No sales data yet')}</div>`;
   } else {
     // Sort descending
     itemSalesArray.sort((a, b) => b.count - a.count).forEach(item => {
@@ -112,8 +461,8 @@ function renderStats(stats) {
       row.className = 'chart-bar-row';
       row.innerHTML = `
         <div class="chart-bar-label-container">
-          <span class="chart-bar-name">${item.name}</span>
-          <span class="chart-bar-value">${item.count} sold</span>
+          <span class="chart-bar-name">${t(item.id, item.name)}</span>
+          <span class="chart-bar-value">${item.count} ${currentLanguage === 'es' ? 'vendidos' : 'sold'}</span>
         </div>
         <div class="chart-bar-outer">
           <div class="chart-bar-inner" style="width: ${pct}%"></div>
@@ -130,7 +479,7 @@ function renderStats(stats) {
   const maxToppingCount = Math.max(...toppingsArray.map(t => t.count), 1);
 
   if (toppingsArray.length === 0) {
-    toppingsContainer.innerHTML = '<div class="text-center" style="font-size: 13px; color: var(--text-muted);">No toppings sold yet</div>';
+    toppingsContainer.innerHTML = `<div class="text-center" style="font-size: 13px; color: var(--text-muted);">${t('no_toppings_sold', 'No toppings sold yet')}</div>`;
   } else {
     // Sort descending
     toppingsArray.sort((a, b) => b.count - a.count).forEach(topping => {
@@ -139,11 +488,12 @@ function renderStats(stats) {
       row.className = 'chart-bar-row';
       
       // Capitalize topping name
-      const formattedName = topping.name.charAt(0).toUpperCase() + topping.name.slice(1);
+      const transTopping = t(topping.name.toLowerCase(), topping.name);
+      const formattedName = transTopping.charAt(0).toUpperCase() + transTopping.slice(1);
       row.innerHTML = `
         <div class="chart-bar-label-container">
           <span class="chart-bar-name">${formattedName}</span>
-          <span class="chart-bar-value">${topping.count} times</span>
+          <span class="chart-bar-value">${topping.count} ${currentLanguage === 'es' ? 'veces' : 'times'}</span>
         </div>
         <div class="chart-bar-outer">
           <div class="chart-bar-inner" style="width: ${pct}%"></div>
@@ -179,11 +529,13 @@ async function loadOrders() {
 
 function renderOrders(orders) {
   const tbody = document.getElementById('orders-tbody');
-  document.getElementById('order-count').textContent = `${orders.length} Order${orders.length !== 1 ? 's' : ''}`;
+  const ordersLabel = currentLanguage === 'es' ? 'Pedido' : 'Order';
+  const ordersSuffix = orders.length !== 1 ? (currentLanguage === 'es' ? 's' : 's') : '';
+  document.getElementById('order-count').textContent = `${orders.length} ${ordersLabel}${ordersSuffix}`;
   tbody.innerHTML = '';
 
   if (orders.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 40px; color: var(--text-muted);">No orders recorded yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding: 40px; color: var(--text-muted);">${t('no_orders_yet', 'No orders recorded yet.')}</td></tr>`;
     return;
   }
 
@@ -199,28 +551,38 @@ function renderOrders(orders) {
 
     const parsedToppings = order.toppings ? JSON.parse(order.toppings) : [];
     const toppingsFormatted = parsedToppings.length > 0 
-      ? parsedToppings.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') 
-      : 'None';
+      ? parsedToppings.map(tKey => {
+          const trans = t(tKey.toLowerCase());
+          return trans.charAt(0).toUpperCase() + trans.slice(1);
+        }).join(', ') 
+      : t('none', 'None');
       
-    // Format dessert title nicely
-    let dessertTitle = order.dessert_id.replace('_', ' ');
-    dessertTitle = dessertTitle.charAt(0).toUpperCase() + dessertTitle.slice(1);
+    // Format dessert title nicely with translations lookup
+    let dessertTitle = t(order.dessert_id);
+    if (dessertTitle === order.dessert_id) {
+      // Fallback formatting if key is not translated
+      dessertTitle = order.dessert_id.replace('_', ' ');
+      dessertTitle = dessertTitle.charAt(0).toUpperCase() + dessertTitle.slice(1);
+    }
+
+    // Format size
+    const sizeFormatted = t(order.size, order.size);
 
     // Pricing display
     const priceDisplay = order.total_price === null 
-      ? '<span style="color: var(--text-muted); font-style: italic;">TBD</span>' 
+      ? `<span style="color: var(--text-muted); font-style: italic;">${t('tbd', 'TBD')}</span>` 
       : `$${order.total_price.toFixed(2)}`;
 
     // Status action buttons
     let actionButtons = '';
     if (order.status === 'pending') {
       actionButtons = `
-        <button class="btn-action btn-complete" onclick="updateStatus(${order.id}, 'completed')">Complete</button>
-        <button class="btn-action btn-cancel" onclick="updateStatus(${order.id}, 'cancelled')">Cancel</button>
+        <button class="btn-action btn-complete" onclick="updateStatus(${order.id}, 'completed')">${t('action_complete', 'Complete')}</button>
+        <button class="btn-action btn-cancel" onclick="updateStatus(${order.id}, 'cancelled')">${t('action_cancel', 'Cancel')}</button>
       `;
     } else {
       actionButtons = `
-        <button class="btn-action btn-delete" onclick="deleteOrder(${order.id})">Delete Log</button>
+        <button class="btn-action btn-delete" onclick="deleteOrder(${order.id})">${t('action_delete_log', 'Delete Log')}</button>
       `;
     }
 
@@ -235,19 +597,19 @@ function renderOrders(orders) {
         </div>
       </td>
       <td>
-        <div class="order-details-title">${dessertTitle} (${order.size})</div>
+        <div class="order-details-title">${dessertTitle} (${sizeFormatted})</div>
         <div class="order-details-sub"><strong>Toppings:</strong> ${toppingsFormatted}</div>
         ${order.notes ? `<div class="order-details-sub" style="margin-top: 4px; font-style: italic;">"${order.notes}"</div>` : ''}
       </td>
       <td>
-        <span style="font-weight: 500; font-size: 13px; text-transform: capitalize;">${order.pickup_delivery}</span>
+        <span style="font-weight: 500; font-size: 13px; text-transform: capitalize;">${t(order.pickup_delivery.toLowerCase(), order.pickup_delivery)}</span>
       </td>
       <td>
         <strong>${priceDisplay}</strong>
-        ${order.cost_of_making !== undefined && order.cost_of_making !== null ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: normal;">Cost: $${order.cost_of_making.toFixed(2)}</div>` : ''}
+        ${order.cost_of_making !== undefined && order.cost_of_making !== null ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: normal;">${t('cost_label', 'Cost:')} $${order.cost_of_making.toFixed(2)}</div>` : ''}
       </td>
       <td>
-        <span class="status-badge ${order.status}">${order.status}</span>
+        <span class="status-badge ${order.status}">${t(order.status.toLowerCase(), order.status)}</span>
       </td>
       <td>
         <div class="order-actions">
@@ -260,13 +622,12 @@ function renderOrders(orders) {
 }
 
 async function updateStatus(orderId, status) {
-  if (status === 'cancelled' && !confirm('Are you sure you want to cancel this order?')) {
+  if (status === 'cancelled' && !confirm(t('confirm_cancel_order', 'Are you sure you want to cancel this order?'))) {
     return;
   }
 
   try {
     const response = await fetch(`/api/admin/orders/${orderId}`, {
-
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -275,7 +636,7 @@ async function updateStatus(orderId, status) {
       body: JSON.stringify({ status })
     });
 
-    if (!response.ok) throw new Error('Failed to update order status');
+    if (!response.ok) throw new Error(t('error_update_status', 'Failed to update order status'));
     
     loadOrders();
     loadStats();
@@ -285,7 +646,7 @@ async function updateStatus(orderId, status) {
 }
 
 async function deleteOrder(orderId) {
-  if (!confirm('Are you sure you want to permanently delete this order log?')) return;
+  if (!confirm(t('confirm_delete_order', 'Are you sure you want to permanently delete this order log?'))) return;
 
   try {
     const response = await fetch(`/api/admin/orders/${orderId}`, {
@@ -293,7 +654,7 @@ async function deleteOrder(orderId) {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
-    if (!response.ok) throw new Error('Failed to delete order');
+    if (!response.ok) throw new Error(t('error_delete_order', 'Failed to delete order'));
     
     loadOrders();
     loadStats();
@@ -482,7 +843,7 @@ function renderIngredients(ingredients, recipeIngredients) {
   tbody.innerHTML = '';
   
   if (ingredients.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">No ingredients registered. Build recipes on the 'Current Recipes' tab first!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--text-muted);">${t('no_ingredients')}</td></tr>`;
     renderRecipeCostsList({}, 'recipe-costs-list');
     return;
   }
@@ -511,9 +872,9 @@ function renderIngredients(ingredients, recipeIngredients) {
         <span class="status-badge completed" style="font-size: 11px;">${ing.unit}</span>
       </td>
       <td>
-        <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${ing.id})">Edit</button>
-        <button class="btn-action btn-reset" onclick="resetIngredientCost(${ing.id})">Reset</button>
-        <button class="btn-action btn-delete" onclick="deleteIngredient(${ing.id})">Delete</button>
+        <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${ing.id})">${t('action_edit')}</button>
+        <button class="btn-action btn-reset" onclick="resetIngredientCost(${ing.id})">${t('action_reset')}</button>
+        <button class="btn-action btn-delete" onclick="deleteIngredient(${ing.id})">${t('action_delete')}</button>
       </td>
     `;
     
@@ -600,8 +961,8 @@ function editIngredientRow(btn, id) {
   // Replace buttons
   const actionsCell = btn.parentNode;
   actionsCell.innerHTML = `
-    <button class="btn-action btn-complete" onclick="saveIngredientCost(this, ${id})">Save</button>
-    <button class="btn-action btn-cancel" onclick="cancelEditIngredientRow(this)">Cancel</button>
+    <button class="btn-action btn-complete" onclick="saveIngredientCost(this, ${id})">${t('action_save')}</button>
+    <button class="btn-action btn-cancel" onclick="cancelEditIngredientRow(this)">${t('btn_cancel')}</button>
   `;
 }
 
@@ -631,9 +992,9 @@ function cancelEditIngredientRow(btn) {
   const actionsCell = btn.parentNode;
   const id = tr.dataset.id;
   actionsCell.innerHTML = `
-    <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${id})">Edit</button>
-    <button class="btn-action btn-reset" onclick="resetIngredientCost(${id})">Reset</button>
-    <button class="btn-action btn-delete" onclick="deleteIngredient(${id})">Delete</button>
+    <button class="btn-action btn-complete" onclick="editIngredientRow(this, ${id})">${t('action_edit')}</button>
+    <button class="btn-action btn-reset" onclick="resetIngredientCost(${id})">${t('action_reset')}</button>
+    <button class="btn-action btn-delete" onclick="deleteIngredient(${id})">${t('action_delete')}</button>
   `;
 }
 
@@ -646,11 +1007,11 @@ async function saveIngredientCost(btn, id) {
   const selectedUnit = tr.querySelector('.unit-select').value;
   
   if (isNaN(newCost) || newCost < 0 || isNaN(newQty) || newQty <= 0) {
-    alert('Please enter a valid cost (0 or greater) and quantity (greater than 0)');
+    alert(t('alert_valid_cost_qty'));
     return;
   }
   
-  const confirmChange = confirm("Are you sure you want to change the bulk cost, quantity, and tax of this ingredient?");
+  const confirmChange = confirm(t('confirm_change_ing'));
   if (!confirmChange) {
     return;
   }
@@ -703,7 +1064,7 @@ async function saveIngredientCost(btn, id) {
 }
 
 async function deleteIngredient(id) {
-  if (!confirm('Are you sure you want to delete this ingredient from inventory?')) return;
+  if (!confirm(t('confirm_delete_ing'))) return;
 
   try {
     const response = await fetch(`/api/admin/ingredients/${id}`, {
@@ -727,7 +1088,7 @@ async function resetIngredientCost(id) {
   const tr = document.querySelector(`tr[data-id="${id}"]`);
   const unit = tr ? tr.dataset.unit : 'g';
   
-  const confirmChange = confirm("Are you sure you want to reset the bulk cost, quantity, and tax of this ingredient?");
+  const confirmChange = confirm(t('confirm_reset_ing'));
   if (!confirmChange) {
     return;
   }
@@ -834,7 +1195,7 @@ function renderRecipes(recipeIngredients, inventory) {
     let totalRecipeBaseCost = 0;
     
     if (list.length === 0) {
-      tableHtml = `<div style="padding: 10px; color: var(--text-muted); font-style: italic;">No ingredients added to this recipe yet. Click '+ Add Ingredient to Recipe' above.</div>`;
+      tableHtml = `<div style="padding: 10px; color: var(--text-muted); font-style: italic;">${t('no_recipes_yet')}</div>`;
     } else {
       // Group recipe ingredients by recipe_part
       const partsMap = {};
@@ -849,12 +1210,12 @@ function renderRecipes(recipeIngredients, inventory) {
           <table class="orders-table" id="recipe-table-${d.id}" style="margin-top: 10px;">
             <thead>
               <tr>
-                <th>Ingredient</th>
-                <th>Amount Needed</th>
-                <th>Unit</th>
-                <th>Type</th>
-                <th>Cost in Batch ($)</th>
-                <th>Actions</th>
+                <th>${t('label_ing_name')}</th>
+                <th>${t('label_amount')}</th>
+                <th>${t('th_unit')}</th>
+                <th>${t('th_type', 'Type')}</th>
+                <th>${t('cost_in_batch', 'Cost in Batch ($)')}</th>
+                <th>${t('th_actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -867,7 +1228,7 @@ function renderRecipes(recipeIngredients, inventory) {
         // Output part sub-heading row
         tableHtml += `
           <tr class="recipe-part-header">
-            <td colspan="6">Section: ${part}</td>
+            <td colspan="6">${t('section_label')} ${part}</td>
           </tr>
         `;
         
@@ -879,7 +1240,9 @@ function renderRecipes(recipeIngredients, inventory) {
             totalRecipeBaseCost += computedCost;
           }
           
-          const typeLabel = ing.is_topping ? `Topping (${ing.topping_value})` : 'Base Ingredient';
+          const typeLabel = ing.is_topping 
+            ? `${t('type_topping')} (${t(ing.topping_value.toLowerCase(), ing.topping_value)})` 
+            : t('type_base');
           
           tableHtml += `
             <tr data-id="${ing.id}" data-name="${ing.ingredient_name}" data-unit="${ing.unit}" data-original-amount="${ing.amount}" data-unit-cost="${unitCost}">
@@ -891,8 +1254,8 @@ function renderRecipes(recipeIngredients, inventory) {
               <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
               <td class="recipe-cost-cell">$${computedCost.toFixed(2)}</td>
               <td class="recipe-actions-cell">
-                <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">Edit</button>
-                <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">Remove</button>
+                <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">${t('action_edit')}</button>
+                <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">${t('action_remove')}</button>
               </td>
             </tr>
           `;
@@ -916,16 +1279,16 @@ function renderRecipes(recipeIngredients, inventory) {
     
     if (isBatchBased) {
       baseMoldHtml = `
-        <span style="font-weight: 600; color: var(--primary); font-size: 12px; background: #f3f4f6; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">1 Batch (12 rolls)</span>
+        <span style="font-weight: 600; color: var(--primary); font-size: 12px; background: #f3f4f6; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">${t('original_batch')}</span>
       `;
       scaleSelectHtml = `
         <select id="scale-target-${d.id}" onchange="handleScaleDisplay('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: #10b981; cursor: pointer;">
-          <option value="original">Original (1 Batch)</option>
-          <option value="2_batches">2 Batches</option>
-          <option value="3_batches">3 Batches</option>
-          <option value="4_batches">4 Batches</option>
-          <option value="5_batches">5 Batches</option>
-          <option value="6_batches">6 Batches</option>
+          <option value="original">${t('original_batch')}</option>
+          <option value="2_batches">2 ${t('batches')}</option>
+          <option value="3_batches">3 ${t('batches')}</option>
+          <option value="4_batches">4 ${t('batches')}</option>
+          <option value="5_batches">5 ${t('batches')}</option>
+          <option value="6_batches">6 ${t('batches')}</option>
         </select>
       `;
     } else {
@@ -939,7 +1302,7 @@ function renderRecipes(recipeIngredients, inventory) {
       `;
       scaleSelectHtml = `
         <select id="scale-target-${d.id}" onchange="handleScaleDisplay('${d.id}', this.value)" style="padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; background: white; font-weight: 600; color: #10b981; cursor: pointer;">
-          <option value="original">Original</option>
+          <option value="original">${t('original')}</option>
           <option value="8x5">8x5 (Selling)</option>
           <option value="8x8">8x8 (Sellable)</option>
           <option value="9x9">9x9</option>
@@ -953,24 +1316,24 @@ function renderRecipes(recipeIngredients, inventory) {
         <!-- Clickable Title & Caret for Collapse/Expand -->
         <div onclick="toggleRecipeCardCollapse('${d.id}')" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
           <span id="collapse-icon-${d.id}" style="font-size: 14px; color: var(--text-muted); font-weight: bold; width: 14px; display: inline-block;">▶</span>
-          <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${d.name}</h4>
+          <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${t(d.id, d.name)}</h4>
         </div>
         
         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
           <!-- Permanent Base Mold/Yield Selector -->
           <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-            <span style="font-weight: 500;">${isBatchBased ? 'Yield:' : 'Base Mold:'}</span>
+            <span style="font-weight: 500;">${isBatchBased ? t('yield') : t('base_mold')}</span>
             ${baseMoldHtml}
           </div>
           
           <!-- Dynamic Display Scaler -->
           <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-            <span style="font-weight: 500;">Scale To:</span>
+            <span style="font-weight: 500;">${t('scale_to')}</span>
             ${scaleSelectHtml}
             <span id="scale-badge-${d.id}" class="status-badge completed hidden" style="font-size: 11px; font-weight: 600; padding: 2px 6px;">1.0x</span>
           </div>
           
-          <span id="base-cost-display-${d.id}" data-original-cost="${totalRecipeBaseCost}" style="font-weight: bold; color: var(--primary); font-size: 14px;">Base Cost: $${totalRecipeBaseCost.toFixed(2)}</span>
+          <span id="base-cost-display-${d.id}" data-original-cost="${totalRecipeBaseCost}" style="font-weight: bold; color: var(--primary); font-size: 14px;">${t('base_cost')}: $${totalRecipeBaseCost.toFixed(2)}</span>
         </div>
       </div>
       
@@ -1058,7 +1421,7 @@ async function handleAddRecipeIngredient(e) {
 }
 
 async function deleteRecipeIngredient(id) {
-  if (!confirm('Are you sure you want to remove this ingredient from the recipe?')) return;
+  if (!confirm(t('confirm_remove_recipe_ing'))) return;
 
   try {
     const response = await fetch(`/api/admin/recipes/${id}`, {
@@ -1068,7 +1431,7 @@ async function deleteRecipeIngredient(id) {
 
     if (!response.ok) {
       const result = await response.json();
-      throw new Error(result.error || 'Failed to remove ingredient');
+      throw new Error(result.error || t('error_remove_ing'));
     }
 
     loadRecipes();
@@ -1322,7 +1685,7 @@ function copyShoppingListToClipboard() {
     const input = document.getElementById(`calc-qty-${d.id}`);
     const batches = parseInt(input ? input.value : 0) || 0;
     if (batches > 0) {
-      selectedBatches.push(`- ${batches} batch(es) of ${d.name}`);
+      selectedBatches.push(`- ${batches} ${currentLanguage === 'es' ? 'lote(s)' : 'batch(es)'} de ${t(d.id, d.name)}`);
       
       const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === d.id && !ing.is_topping);
       ingredients.forEach(ing => {
@@ -1348,12 +1711,12 @@ function copyShoppingListToClipboard() {
 
   if (selectedBatches.length === 0) return;
 
-  let text = `BAKING SHOPPING LIST & STOCK ESTIMATE\n`;
-  text += `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+  let text = `${t('shopping_list_header')}\n`;
+  text += `${t('shopping_list_generated')} ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
   text += `------------------------------------------------\n\n`;
-  text += `Planned Bake Batches:\n`;
+  text += `${t('planned_batches')}\n`;
   text += selectedBatches.join('\n') + `\n\n`;
-  text += `Consolidated Raw Materials to Stock Up:\n`;
+  text += `${t('consolidated_materials')}\n`;
   
   const sortedKeys = Object.keys(totals).sort();
   let grandTotalCost = 0;
@@ -1364,16 +1727,16 @@ function copyShoppingListToClipboard() {
     text += `- ${item.name}: ${Number(item.amount.toFixed(2))} ${item.unit} (Est. Cost: $${item.cost.toFixed(2)})\n`;
   });
   
-  text += `\nTotal Estimated Raw Materials Cost: $${grandTotalCost.toFixed(2)}\n`;
+  text += `\n${t('total_est_cost')} $${grandTotalCost.toFixed(2)}\n`;
   text += `------------------------------------------------\n`;
 
   navigator.clipboard.writeText(text)
     .then(() => {
-      alert('Shopping list copied to clipboard successfully!');
+      alert(t('alert_copied_list'));
     })
     .catch(err => {
       console.error('Could not copy shopping list to clipboard:', err);
-      alert('Failed to copy. Here is the text list:\n\n' + text);
+      alert(t('alert_copied_failed') + text);
     });
 }
 
