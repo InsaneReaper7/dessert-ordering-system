@@ -975,8 +975,11 @@ function renderIngredients(ingredients, recipeIngredients) {
   
   recipeIngredients.forEach(ing => {
     if (!ing.is_topping) {
-      const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
-      const convertedAmount = convertRecipeAmountToInventoryGrams(ing.ingredient_name, ing.amount, ing.unit);
+      const nameLower = ing.ingredient_name.toLowerCase().trim();
+      const unitCost = costMap[nameLower] || 0.0;
+      const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
+      const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
+      const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
       baseCosts[ing.dessert_id] += convertedAmount * unitCost;
     }
   });
@@ -1314,8 +1317,11 @@ function renderRecipes(recipeIngredients, inventory) {
         `;
         
         partIngredients.forEach(ing => {
-          const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
-          const convertedAmount = convertRecipeAmountToInventoryGrams(ing.ingredient_name, ing.amount, ing.unit);
+          const nameLower = ing.ingredient_name.toLowerCase().trim();
+          const unitCost = costMap[nameLower] || 0.0;
+          const inventoryItem = inventory.find(item => item.name.toLowerCase().trim() === nameLower);
+          const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
+          const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
           const computedCost = convertedAmount * unitCost;
           
           if (!ing.is_topping) {
@@ -1882,7 +1888,12 @@ function copyShoppingListToClipboard() {
       ingredients.forEach(ing => {
         const nameTrim = ing.ingredient_name.trim();
         const nameLower = nameTrim.toLowerCase();
-        const amountNeeded = ing.amount * batches;
+        
+        const inventoryItem = inventoryCache.find(item => item.name.toLowerCase().trim() === nameLower);
+        const inventoryUnit = inventoryItem ? inventoryItem.unit : (ing.unit === 'tsp' || ing.unit === 'tbsp' ? 'g' : ing.unit);
+
+        const convertedAmountSingle = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+        const amountNeeded = convertedAmountSingle * batches;
         const unitCost = costMap[nameLower] || 0.0;
         const estimatedCost = amountNeeded * unitCost;
         
@@ -1890,7 +1901,7 @@ function copyShoppingListToClipboard() {
           totals[nameLower] = {
             name: nameTrim,
             amount: 0,
-            unit: ing.unit,
+            unit: inventoryUnit,
             cost: 0
           };
         }
@@ -2021,8 +2032,16 @@ function handleScaleDisplay(dessertId, targetMold) {
       if (row.dataset.originalAmount) {
         const originalAmount = parseFloat(row.dataset.originalAmount);
         const unitCost = parseFloat(row.dataset.unitCost || 0.0);
+        const unit = row.dataset.unit || 'g';
+        const name = row.dataset.name || '';
+        
         const newAmount = originalAmount * multiplier;
-        const newCost = newAmount * unitCost;
+        
+        const inventoryItem = inventoryCache.find(item => item.name.toLowerCase().trim() === name.toLowerCase().trim());
+        const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
+        
+        const convertedNewAmount = convertRecipeAmountToInventoryUnit(name, newAmount, unit, inventoryUnit);
+        const newCost = convertedNewAmount * unitCost;
 
         // Update amount input box value
         const amtInput = row.querySelector('.recipe-amount-input');
@@ -2355,4 +2374,51 @@ function toggleNewRecipePartField() {
     inputNew.removeAttribute('required');
     inputNew.value = '';
   }
+}
+
+function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, inventoryUnit) {
+  const name = ingredientName.toLowerCase().trim();
+  
+  // 1. First, convert recipe amount to grams (if it is tsp, tbsp or g)
+  let amountInGrams = amount;
+  if (recipeUnit === 'tsp' || recipeUnit === 'tbsp') {
+    amountInGrams = convertRecipeAmountToInventoryGrams(ingredientName, amount, recipeUnit);
+  }
+  
+  // 2. Determine grams per unit for this ingredient
+  let gramsPerUnit = 50.0; // Default fallback (e.g. eggs)
+  if (name.includes('orange') && name.includes('zest')) {
+    gramsPerUnit = 6.0; // 1 orange yields 6g of zest
+  } else if (name.includes('orange')) {
+    gramsPerUnit = 150.0; // 1 whole orange fruit is 150g
+  } else if (name.includes('lemon') && name.includes('zest')) {
+    gramsPerUnit = 4.0;
+  } else if (name.includes('lemon')) {
+    gramsPerUnit = 100.0;
+  } else if (name.includes('lime') && name.includes('zest')) {
+    gramsPerUnit = 3.0;
+  } else if (name.includes('lime')) {
+    gramsPerUnit = 80.0;
+  } else if (name.includes('egg')) {
+    gramsPerUnit = 50.0;
+  }
+  
+  // 3. Convert based on inventory unit
+  if (inventoryUnit === 'g' || inventoryUnit === 'ml') {
+    // If inventory is in grams, and recipe is in units, convert recipe units to grams
+    if (recipeUnit === 'unit') {
+      return amount * gramsPerUnit;
+    }
+    // If recipe is already in grams/tsp/tbsp, it's already converted to grams in amountInGrams
+    return amountInGrams;
+  } else if (inventoryUnit === 'unit') {
+    // If inventory is in units, and recipe is in grams/tsp/tbsp, convert grams to units
+    if (recipeUnit !== 'unit') {
+      return amountInGrams / gramsPerUnit;
+    }
+    // If both are units, return amount as-is
+    return amount;
+  }
+  
+  return amount; // Fallback
 }

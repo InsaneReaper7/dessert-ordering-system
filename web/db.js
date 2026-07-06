@@ -493,20 +493,21 @@ module.exports = {
   },
   deleteRecipeIngredient: (id) => query('DELETE FROM recipe_ingredients WHERE id = ?', [id]),
 
-  // Cost of making calculations
   calculateOrderCost: async (order) => {
     if (!order || !order.dessert_id) return 0;
     
     // Fetch recipe ingredients used in this recipe
     const recipeIngredients = await query('SELECT * FROM recipe_ingredients WHERE dessert_id = ?', [order.dessert_id]);
     
-    // Fetch bulk inventory prices (including tax_rate)
-    const inventory = await query('SELECT name, bulk_cost, bulk_qty, tax_rate FROM ingredients');
+    // Fetch bulk inventory prices (including tax_rate and unit)
+    const inventory = await query('SELECT name, bulk_cost, bulk_qty, tax_rate, unit FROM ingredients');
     const costMap = {};
+    const unitMap = {};
     inventory.forEach(item => {
       const qty = item.bulk_qty || 1.0;
       const costWithTax = (item.bulk_cost || 0.0) * (1 + (item.tax_rate || 0.0));
       costMap[item.name.toLowerCase().trim()] = costWithTax / qty;
+      unitMap[item.name.toLowerCase().trim()] = item.unit || 'g';
     });
 
     let toppingsArr = [];
@@ -538,7 +539,10 @@ module.exports = {
     recipeIngredients.forEach(ing => {
       const nameKey = ing.ingredient_name.toLowerCase().trim();
       const unitCost = costMap[nameKey] || 0.0;
-      const ingredientCost = ing.amount * unitCost;
+      const inventoryUnit = unitMap[nameKey] || 'g';
+      
+      const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+      const ingredientCost = convertedAmount * unitCost;
 
       if (ing.is_topping) {
         const hasTopping = toppingsArr.some(t => {
@@ -555,3 +559,59 @@ module.exports = {
     return Number(((baseCost + toppingsCost) * multiplier).toFixed(2));
   }
 };
+
+function convertTspTbspToGrams(ingredientName, amount, unit) {
+  if (unit !== 'tsp' && unit !== 'tbsp') return amount;
+  const name = ingredientName.toLowerCase().trim();
+  let tspToGrams = 4.0;
+  if (name.includes('flour')) tspToGrams = 2.6;
+  else if (name.includes('sugar')) tspToGrams = 4.2;
+  else if (name.includes('salt')) tspToGrams = 5.7;
+  else if (name.includes('baking powder') || name.includes('baking soda') || name.includes('yeast')) tspToGrams = 4.8;
+  else if (name.includes('butter') || name.includes('oil') || name.includes('milk') || name.includes('water') || name.includes('honey') || name.includes('syrup') || name.includes('cream')) tspToGrams = 4.8;
+  else if (name.includes('cocoa')) tspToGrams = 2.5;
+  else if (name.includes('cinnamon') || name.includes('spice') || name.includes('nutmeg') || name.includes('vanilla')) tspToGrams = 2.6;
+  
+  const multiplier = unit === 'tbsp' ? 3 : 1;
+  return amount * tspToGrams * multiplier;
+}
+
+function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, inventoryUnit) {
+  const name = ingredientName.toLowerCase().trim();
+  
+  let amountInGrams = amount;
+  if (recipeUnit === 'tsp' || recipeUnit === 'tbsp') {
+    amountInGrams = convertTspTbspToGrams(ingredientName, amount, recipeUnit);
+  }
+  
+  let gramsPerUnit = 50.0;
+  if (name.includes('orange') && name.includes('zest')) {
+    gramsPerUnit = 6.0;
+  } else if (name.includes('orange')) {
+    gramsPerUnit = 150.0;
+  } else if (name.includes('lemon') && name.includes('zest')) {
+    gramsPerUnit = 4.0;
+  } else if (name.includes('lemon')) {
+    gramsPerUnit = 100.0;
+  } else if (name.includes('lime') && name.includes('zest')) {
+    gramsPerUnit = 3.0;
+  } else if (name.includes('lime')) {
+    gramsPerUnit = 80.0;
+  } else if (name.includes('egg')) {
+    gramsPerUnit = 50.0;
+  }
+  
+  if (inventoryUnit === 'g' || inventoryUnit === 'ml') {
+    if (recipeUnit === 'unit') {
+      return amount * gramsPerUnit;
+    }
+    return amountInGrams;
+  } else if (inventoryUnit === 'unit') {
+    if (recipeUnit !== 'unit') {
+      return amountInGrams / gramsPerUnit;
+    }
+    return amount;
+  }
+  
+  return amount;
+}
