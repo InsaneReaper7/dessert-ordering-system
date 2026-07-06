@@ -74,6 +74,8 @@ const TRANSLATIONS = {
     label_unit: "Unit:",
     option_grams: "Grams (g)",
     option_whole: "Whole Item (e.g. eggs)",
+    option_teaspoon: "Teaspoon (tsp)",
+    option_tablespoon: "Tablespoon (tbsp)",
     label_topping: "Is an Optional Topping",
     label_topping_val: "Topping Value:",
     btn_cancel: "Cancel",
@@ -236,6 +238,8 @@ const TRANSLATIONS = {
     label_unit: "Unidad:",
     option_grams: "Gramos (g)",
     option_whole: "Artículo Entero (ej. huevos)",
+    option_teaspoon: "Cucharadita (tsp)",
+    option_tablespoon: "Cucharada (tbsp)",
     label_topping: "Es un Topping Opcional",
     label_topping_val: "Valor del Topping:",
     btn_cancel: "Cancelar",
@@ -394,6 +398,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup login form submission
   document.getElementById('login-form').addEventListener('submit', handleLogin);
+  
+  // Toggle recipe amount input based on unit
+  const recipeUnitSelect = document.getElementById('recipe-ing-unit');
+  if (recipeUnitSelect) {
+    recipeUnitSelect.addEventListener('change', (e) => {
+      const unit = e.target.value;
+      const numInput = document.getElementById('recipe-ing-amount');
+      const selectAmount = document.getElementById('recipe-ing-amount-select');
+      
+      if (unit === 'tsp' || unit === 'tbsp') {
+        numInput.classList.add('hidden');
+        numInput.removeAttribute('required');
+        
+        selectAmount.classList.remove('hidden');
+        selectAmount.setAttribute('required', 'true');
+      } else {
+        numInput.classList.remove('hidden');
+        numInput.setAttribute('required', 'true');
+        
+        selectAmount.classList.add('hidden');
+        selectAmount.removeAttribute('required');
+      }
+    });
+  }
   
   // Request notification permissions
   if ('Notification' in window && Notification.permission === 'default') {
@@ -934,7 +962,8 @@ function renderIngredients(ingredients, recipeIngredients) {
   recipeIngredients.forEach(ing => {
     if (!ing.is_topping) {
       const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
-      baseCosts[ing.dessert_id] += ing.amount * unitCost;
+      const convertedAmount = convertRecipeAmountToInventoryGrams(ing.ingredient_name, ing.amount, ing.unit);
+      baseCosts[ing.dessert_id] += convertedAmount * unitCost;
     }
   });
   
@@ -1272,7 +1301,8 @@ function renderRecipes(recipeIngredients, inventory) {
         
         partIngredients.forEach(ing => {
           const unitCost = costMap[ing.ingredient_name.toLowerCase().trim()] || 0.0;
-          const computedCost = ing.amount * unitCost;
+          const convertedAmount = convertRecipeAmountToInventoryGrams(ing.ingredient_name, ing.amount, ing.unit);
+          const computedCost = convertedAmount * unitCost;
           
           if (!ing.is_topping) {
             totalRecipeBaseCost += computedCost;
@@ -1282,11 +1312,26 @@ function renderRecipes(recipeIngredients, inventory) {
             ? `${t('type_topping')} (${t(ing.topping_value.toLowerCase(), ing.topping_value)})` 
             : t('type_base');
           
+          const formattedAmount = formatIngredientAmount(ing.amount, ing.unit);
+          
           tableHtml += `
             <tr data-id="${ing.id}" data-name="${ing.ingredient_name}" data-unit="${ing.unit}" data-original-amount="${ing.amount}" data-unit-cost="${unitCost}">
               <td><strong>${ing.ingredient_name}</strong></td>
               <td>
-                <input type="number" class="cost-input recipe-amount-input" value="${ing.amount}" readonly step="0.01" style="width: 80px; text-align: center;">
+                <span class="recipe-amount-text">${formattedAmount}</span>
+                <input type="number" class="cost-input recipe-amount-input hidden" value="${ing.amount}" step="0.01" style="width: 80px; text-align: center;">
+                <select class="recipe-amount-select hidden" style="width: 80px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
+                  <option value="0.125">1/8</option>
+                  <option value="0.25">1/4</option>
+                  <option value="0.33">1/3</option>
+                  <option value="0.375">3/8</option>
+                  <option value="0.5">1/2</option>
+                  <option value="0.625">5/8</option>
+                  <option value="0.67">2/3</option>
+                  <option value="0.75">3/4</option>
+                  <option value="0.875">7/8</option>
+                  <option value="1">1</option>
+                </select>
               </td>
               <td><code>${ing.unit}</code></td>
               <td><span class="status-badge ${ing.is_topping ? 'cancelled' : 'completed'}" style="font-size: 11px;">${typeLabel}</span></td>
@@ -1423,8 +1468,15 @@ async function handleAddRecipeIngredient(e) {
   e.preventDefault();
   const dessert_id = document.getElementById('recipe-dessert-select').value;
   const ingredient_name = document.getElementById('recipe-ing-name').value;
-  const amount = document.getElementById('recipe-ing-amount').value;
   const unit = document.getElementById('recipe-ing-unit').value;
+  
+  let amount = 0;
+  if (unit === 'tsp' || unit === 'tbsp') {
+    amount = parseFloat(document.getElementById('recipe-ing-amount-select').value);
+  } else {
+    amount = parseFloat(document.getElementById('recipe-ing-amount').value);
+  }
+  
   const is_topping = document.getElementById('recipe-ing-is-topping').checked ? 1 : 0;
   const topping_value = is_topping ? document.getElementById('recipe-ing-topping-value').value : null;
   const recipe_part = document.getElementById('recipe-ing-part').value || 'Main';
@@ -1481,23 +1533,49 @@ async function deleteRecipeIngredient(id) {
 
 function editRecipeRow(btn, id) {
   const tr = btn.closest('tr');
-  const input = tr.querySelector('.recipe-amount-input');
+  const textSpan = tr.querySelector('.recipe-amount-text');
+  const numInput = tr.querySelector('.recipe-amount-input');
+  const selectAmount = tr.querySelector('.recipe-amount-select');
   
-  input.removeAttribute('readonly');
-  input.dataset.original = input.value;
+  if (textSpan) textSpan.classList.add('hidden');
+  
+  const currentUnit = tr.dataset.unit;
   
   // Replace the unit column with a select dropdown
   const unitCell = tr.cells[2];
-  const currentUnit = tr.dataset.unit;
   unitCell.innerHTML = `
-    <select class="recipe-unit-select" style="padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
+    <select class="recipe-unit-select" onchange="handleInlineUnitChange(this)" style="padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
       <option value="g" ${currentUnit === 'g' ? 'selected' : ''}>g</option>
       <option value="unit" ${currentUnit === 'unit' ? 'selected' : ''}>unit</option>
+      <option value="tsp" ${currentUnit === 'tsp' ? 'selected' : ''}>tsp</option>
+      <option value="tbsp" ${currentUnit === 'tbsp' ? 'selected' : ''}>tbsp</option>
     </select>
   `;
   
-  input.focus();
-  input.select();
+  numInput.dataset.original = numInput.value;
+  selectAmount.dataset.original = selectAmount.value;
+  
+  if (currentUnit === 'tsp' || currentUnit === 'tbsp') {
+    selectAmount.classList.remove('hidden');
+    // Set current select value to match closest original amount
+    const origVal = parseFloat(numInput.value) || 0.5;
+    let closestVal = "0.5";
+    let minDiff = Infinity;
+    Array.from(selectAmount.options).forEach(opt => {
+      const optVal = parseFloat(opt.value);
+      const diff = Math.abs(origVal - optVal);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestVal = opt.value;
+      }
+    });
+    selectAmount.value = closestVal;
+    selectAmount.focus();
+  } else {
+    numInput.classList.remove('hidden');
+    numInput.focus();
+    numInput.select();
+  }
   
   const cell = tr.querySelector('.recipe-actions-cell');
   cell.innerHTML = `
@@ -1506,12 +1584,46 @@ function editRecipeRow(btn, id) {
   `;
 }
 
+function handleInlineUnitChange(selectElement) {
+  const tr = selectElement.closest('tr');
+  const unit = selectElement.value;
+  const numInput = tr.querySelector('.recipe-amount-input');
+  const selectAmount = tr.querySelector('.recipe-amount-select');
+
+  if (unit === 'tsp' || unit === 'tbsp') {
+    numInput.classList.add('hidden');
+    selectAmount.classList.remove('hidden');
+    
+    const currentVal = parseFloat(numInput.value) || 0.5;
+    let closestVal = "0.5";
+    let minDiff = Infinity;
+    Array.from(selectAmount.options).forEach(opt => {
+      const optVal = parseFloat(opt.value);
+      const diff = Math.abs(currentVal - optVal);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestVal = opt.value;
+      }
+    });
+    selectAmount.value = closestVal;
+  } else {
+    numInput.classList.remove('hidden');
+    selectAmount.classList.add('hidden');
+  }
+}
+
 function cancelEditRecipeRow(btn) {
   const tr = btn.closest('tr');
-  const input = tr.querySelector('.recipe-amount-input');
+  const textSpan = tr.querySelector('.recipe-amount-text');
+  const numInput = tr.querySelector('.recipe-amount-input');
+  const selectAmount = tr.querySelector('.recipe-amount-select');
   
-  input.value = input.dataset.original;
-  input.setAttribute('readonly', 'true');
+  numInput.value = numInput.dataset.original;
+  selectAmount.value = selectAmount.dataset.original;
+  
+  numInput.classList.add('hidden');
+  selectAmount.classList.add('hidden');
+  if (textSpan) textSpan.classList.remove('hidden');
   
   // Restore unit badge
   const unitCell = tr.cells[2];
@@ -1520,17 +1632,24 @@ function cancelEditRecipeRow(btn) {
   const cell = tr.querySelector('.recipe-actions-cell');
   const id = tr.dataset.id;
   cell.innerHTML = `
-    <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${id})">Edit</button>
-    <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${id})">Remove</button>
+    <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${id})">${t('action_edit')}</button>
+    <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${id})">${t('action_remove')}</button>
   `;
 }
 
 async function saveRecipeIngredientAmount(btn, id) {
   const tr = btn.closest('tr');
-  const input = tr.querySelector('.recipe-amount-input');
-  const newAmount = parseFloat(input.value);
+  const numInput = tr.querySelector('.recipe-amount-input');
+  const selectAmount = tr.querySelector('.recipe-amount-select');
   const selectedUnit = tr.querySelector('.recipe-unit-select').value;
   const ingredientName = tr.dataset.name;
+  
+  let newAmount = 0;
+  if (selectedUnit === 'tsp' || selectedUnit === 'tbsp') {
+    newAmount = parseFloat(selectAmount.value);
+  } else {
+    newAmount = parseFloat(numInput.value);
+  }
   
   if (isNaN(newAmount) || newAmount <= 0) {
     alert('Please enter a valid amount greater than 0');
@@ -1656,15 +1775,22 @@ function calculateRequiredStock() {
       ingredients.forEach(ing => {
         const nameTrim = ing.ingredient_name.trim();
         const nameLower = nameTrim.toLowerCase();
-        const amountNeeded = ing.amount * batches;
+        
+        // Convert tsp/tbsp to grams for required stock aggregation
+        const convertedAmountSingle = convertRecipeAmountToInventoryGrams(ing.ingredient_name, ing.amount, ing.unit);
+        const amountNeeded = convertedAmountSingle * batches;
         const unitCost = costMap[nameLower] || 0.0;
         const estimatedCost = amountNeeded * unitCost;
         
+        // Find matching inventory item to get target stock unit (e.g. g, ml, unit)
+        const inventoryItem = inventoryCache.find(item => item.name.toLowerCase().trim() === nameLower);
+        const targetUnit = inventoryItem ? inventoryItem.unit : (ing.unit === 'tsp' || ing.unit === 'tbsp' ? 'g' : ing.unit);
+
         if (!totals[nameLower]) {
           totals[nameLower] = {
             name: nameTrim,
             amount: 0,
-            unit: ing.unit,
+            unit: targetUnit,
             cost: 0
           };
         }
@@ -2097,4 +2223,58 @@ async function saveCinnamonRollsPrices() {
   } catch (err) {
     alert(err.message);
   }
+}
+
+function convertRecipeAmountToInventoryGrams(ingredientName, amount, recipeUnit) {
+  if (recipeUnit !== 'tsp' && recipeUnit !== 'tbsp') {
+    return amount;
+  }
+  const name = ingredientName.toLowerCase().trim();
+  let tspToGrams = 4.0; // Default fallback
+  
+  if (name.includes('flour')) {
+    tspToGrams = 2.6;
+  } else if (name.includes('sugar')) {
+    tspToGrams = 4.2;
+  } else if (name.includes('salt')) {
+    tspToGrams = 5.7;
+  } else if (name.includes('baking powder') || name.includes('baking soda') || name.includes('yeast')) {
+    tspToGrams = 4.8;
+  } else if (name.includes('butter') || name.includes('oil') || name.includes('milk') || name.includes('water') || name.includes('honey') || name.includes('syrup') || name.includes('cream')) {
+    tspToGrams = 4.8; // Liquids / fats
+  } else if (name.includes('cocoa')) {
+    tspToGrams = 2.5;
+  } else if (name.includes('cinnamon') || name.includes('spice') || name.includes('nutmeg') || name.includes('vanilla')) {
+    tspToGrams = 2.6; // Spices/extracts
+  }
+
+  const multiplier = recipeUnit === 'tbsp' ? 3 : 1;
+  return amount * tspToGrams * multiplier;
+}
+
+function formatIngredientAmount(amount, unit) {
+  if (unit === 'tsp' || unit === 'tbsp') {
+    const rounded = Math.round(amount * 1000) / 1000;
+    const fractionMap = {
+      0.125: '1/8',
+      0.25: '1/4',
+      0.33: '1/3',
+      0.333: '1/3',
+      0.375: '3/8',
+      0.5: '1/2',
+      0.625: '5/8',
+      0.67: '2/3',
+      0.667: '2/3',
+      0.75: '3/4',
+      0.875: '7/8',
+      1: '1',
+      1.5: '1 1/2',
+      2: '2',
+      3: '3'
+    };
+    if (fractionMap[rounded] !== undefined) {
+      return fractionMap[rounded];
+    }
+  }
+  return amount;
 }
