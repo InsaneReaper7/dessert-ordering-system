@@ -126,7 +126,9 @@ const TRANSLATIONS = {
     action_complete: "Complete",
     action_cancel: "Cancel",
     action_save: "Save",
+    action_close: "Close",
     action_delete_log: "Delete Log",
+    grand_total_batch: "Total Batch Cost:",
     
     // Dessert Names Mapping
     brownies: "Fudge Brownies",
@@ -290,7 +292,9 @@ const TRANSLATIONS = {
     action_complete: "Completar",
     action_cancel: "Cancelar",
     action_save: "Guardar",
+    action_close: "Cerrar",
     action_delete_log: "Eliminar Registro",
+    grand_total_batch: "Costo Total del Lote:",
 
     // Dessert Names Mapping
     brownies: "Brownies de Fudge",
@@ -441,6 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeCostBreakdownModal();
+  });
 });
 
 function showLogin() {
@@ -996,13 +1005,111 @@ function renderRecipeCostsList(baseCosts, containerId) {
     const cost = baseCosts[d.id] || 0;
     const itemDiv = document.createElement('div');
     itemDiv.className = 'recipe-cost-item';
+    itemDiv.title = currentLanguage === 'es' ? 'Haz clic para ver desglose' : 'Click to view breakdown';
     itemDiv.innerHTML = `
       <span class="recipe-cost-name">${d.name}</span>
-      <span class="recipe-cost-val">$${cost.toFixed(2)}</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="recipe-cost-val">$${cost.toFixed(2)}</span>
+        <span style="font-size: 11px; color: var(--text-muted);">🔍</span>
+      </div>
     `;
+    itemDiv.addEventListener('click', () => openCostBreakdownModal(d));
     listContainer.appendChild(itemDiv);
   });
 }
+
+function openCostBreakdownModal(dessert) {
+  const modal = document.getElementById('cost-breakdown-modal');
+  const title = document.getElementById('cb-modal-title');
+  const tbody = document.getElementById('cb-modal-tbody');
+  const totalEl = document.getElementById('cb-modal-total');
+
+  if (!modal) return;
+
+  title.textContent = dessert.name;
+  tbody.innerHTML = '';
+
+  // Fetch inventory cost map
+  const costMap = {};
+  const unitMap = {};
+  inventoryCache.forEach(item => {
+    const nameLower = item.name.toLowerCase().trim();
+    const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+    costMap[nameLower] = costWithTax / item.bulk_qty;
+    unitMap[nameLower] = item.unit || 'g';
+  });
+
+  // Get all ingredients for this dessert
+  const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === dessert.id && !ing.is_topping);
+
+  let grandTotal = 0;
+
+  if (ingredients.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 24px; color: var(--text-muted); font-style: italic;">${currentLanguage === 'es' ? 'Sin ingredientes aún' : 'No ingredients yet'}</td></tr>`;
+  } else {
+    // Group by recipe part
+    const parts = {};
+    ingredients.forEach(ing => {
+      const part = ing.recipe_part || 'Main';
+      if (!parts[part]) parts[part] = [];
+      parts[part].push(ing);
+    });
+
+    Object.keys(parts).forEach(part => {
+      // Part header row
+      const headerRow = document.createElement('tr');
+      headerRow.innerHTML = `<td colspan="3" style="font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 10px 8px 4px; background: #f9fafb;">${part}</td>`;
+      tbody.appendChild(headerRow);
+
+      parts[part].forEach(ing => {
+        const nameLower = ing.ingredient_name.toLowerCase().trim();
+        const unitCost = costMap[nameLower] || 0.0;
+        const inventoryUnit = unitMap[nameLower] || 'g';
+        const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+        const cost = convertedAmount * unitCost;
+        grandTotal += cost;
+
+        const displayAmount = formatIngredientAmount(ing.amount, ing.unit);
+        const hasPrice = unitCost > 0;
+
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.innerHTML = `
+          <td style="padding: 10px 8px;">
+            <span style="font-weight: 500;">${ing.ingredient_name}</span>
+          </td>
+          <td style="padding: 10px 8px; text-align: right; color: var(--text-muted); font-size: 13px;">
+            ${displayAmount} ${ing.unit}
+          </td>
+          <td style="padding: 10px 8px; text-align: right; font-weight: 600; color: ${hasPrice ? 'var(--primary)' : 'var(--text-muted)'};">
+            ${hasPrice ? `$${cost.toFixed(3)}` : '—'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+  }
+
+  totalEl.textContent = `$${grandTotal.toFixed(2)}`;
+
+  // Show modal
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Close on backdrop click
+  modal.onclick = (e) => {
+    if (e.target === modal) closeCostBreakdownModal();
+  };
+}
+
+function closeCostBreakdownModal() {
+  const modal = document.getElementById('cost-breakdown-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
 
 function editIngredientRow(btn, id) {
   const tr = btn.closest('tr');
