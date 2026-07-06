@@ -24,9 +24,15 @@ const i18n = {
     form_placeholder_dessert: "Choose a dessert...",
     form_label_size: "Choose Pan Size",
     form_size_8x5: "8\" x 5\" Baking Pan",
-    form_size_9x9: "9\" x 9\" Baking Pan",
+    form_size_8x8: "8\" x 8\" Baking Pan",
     form_size_pricing_tbd: "Pricing: TBD",
     form_size_lemon_8x5: "Lemon Bars: $12.00 | Others: TBD",
+    form_label_icing: "Icing Selection",
+    form_icing_help: "Choose how you'd like your carrot cake bars iced:",
+    option_with_icing: "With Icing (Default)",
+    option_no_icing: "No Icing",
+    option_icing_side: "Icing on the Side",
+    summary_label_icing: "Icing Option:",
     form_label_toppings: "Choose Toppings / Extra Ingredients",
     form_label_toppings_optional: "(Toppings pricing: TBD)",
     form_toppings_help: "Customize your brownie or blondie! Select all the ingredients you would like mixed in or sprinkled on top.",
@@ -102,9 +108,15 @@ const i18n = {
     form_placeholder_dessert: "Elige un postre...",
     form_label_size: "Elige el Tamaño del Molde",
     form_size_8x5: "Molde de 8\" x 5\"",
-    form_size_9x9: "Molde de 9\" x 9\"",
+    form_size_8x8: "Molde de 8\" x 8\"",
     form_size_pricing_tbd: "Precio: TBD (Por definir)",
     form_size_lemon_8x5: "Barras de Limón: $12.00 | Otros: TBD",
+    form_label_icing: "Selección de Glaseado",
+    form_icing_help: "Elige cómo te gustaría el glaseado de tus barras de pastel de zanahoria:",
+    option_with_icing: "Con Glaseado (Predeterminado)",
+    option_no_icing: "Sin Glaseado",
+    option_icing_side: "Glaseado Aparte",
+    summary_label_icing: "Opción de Glaseado:",
     form_label_toppings: "Elige los Ingredientes Adicionales",
     form_label_toppings_optional: "(Precio de ingredientes: TBD)",
     form_toppings_help: "¡Personaliza tu brownie o blondie! Selecciona todos los ingredientes que te gustaría mezclar o espolvorear por encima.",
@@ -239,6 +251,13 @@ const itemTranslations = {
       en: "Soft, fluffy sweet rolls swirled with buttery cinnamon sugar, topped with rich cream cheese icing.", 
       es: "Rollos dulces, suaves y esponjosos con un remolino de azúcar y canela con mantequilla, cubiertos con glaseado de queso crema." 
     }
+  },
+  carrot_cake_bars: {
+    name: { en: "Carrot Cake Bars", es: "Barras de Pastel de Zanahoria" },
+    desc: { 
+      en: "Artisan carrot cake bars topped with smooth icing and toasted pecans, cut into perfect squares.", 
+      es: "Barras artesanales de pastel de zanahoria cubiertas con glaseado suave y nueces pecana tostadas, cortadas en cuadrados perfectos." 
+    }
   }
 };
 
@@ -329,7 +348,8 @@ function updateAdditionsCheckboxes() {
   const preIncludedMap = {
     'marshmallow_swirl_brownies': ['marshmallow dots'],
     'butterscotch_blondies': ['butterscotch chips'],
-    'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts']
+    'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
+    'carrot_cake_bars': ['pecans']
   };
   
   const includedToppings = preIncludedMap[dessertId] || [];
@@ -398,13 +418,24 @@ function renderSizeOptions(dessertId) {
   } else {
     sectionLabel.textContent = currentLang === 'es' ? 'Elige el Tamaño del Molde' : 'Choose Pan Size';
     
-    const isLemon = dessertId === 'lemon_bars';
-    const price8x5Text = isLemon 
-      ? (currentLang === 'es' ? 'Barras de Limón: $12.00' : 'Lemon Bars: $12.00')
-      : (currentLang === 'es' ? 'Precio: TBD' : 'Pricing: TBD');
+    const selectedDessert = dessertsData.find(d => d.id === dessertId);
+    let price8x5Text = '';
+    let price8x8Text = '';
+
+    if (selectedDessert) {
+      price8x5Text = selectedDessert.price_8x5 !== null 
+        ? `$${selectedDessert.price_8x5.toFixed(2)}` 
+        : i18n[currentLang].form_size_pricing_tbd;
+      price8x8Text = selectedDessert.price_8x8 !== null 
+        ? `$${selectedDessert.price_8x8.toFixed(2)}` 
+        : i18n[currentLang].form_size_pricing_tbd;
+    } else {
+      price8x5Text = i18n[currentLang].form_size_pricing_tbd;
+      price8x8Text = i18n[currentLang].form_size_pricing_tbd;
+    }
       
-    const is8x5Checked = prevSelected === '8x5' || !prevSelected || (prevSelected !== '8x5' && prevSelected !== '9x9');
-    const is9x9Checked = prevSelected === '9x9';
+    const is8x5Checked = prevSelected === '8x5' || !prevSelected || (prevSelected !== '8x5' && prevSelected !== '8x8');
+    const is8x8Checked = prevSelected === '8x8';
 
     html += `
       <label class="radio-label">
@@ -415,10 +446,10 @@ function renderSizeOptions(dessertId) {
         </div>
       </label>
       <label class="radio-label">
-        <input type="radio" name="size" value="9x9" ${is9x9Checked ? 'checked' : ''} required>
+        <input type="radio" name="size" value="8x8" ${is8x8Checked ? 'checked' : ''} required>
         <div class="radio-design">
-          <span class="size-title">${i18n[currentLang].form_size_9x9}</span>
-          <span class="size-desc">${i18n[currentLang].form_size_pricing_tbd}</span>
+          <span class="size-title">${i18n[currentLang].form_size_8x8}</span>
+          <span class="size-desc">${price8x8Text}</span>
         </div>
       </label>
     `;
@@ -465,13 +496,13 @@ function renderMenuGrid(desserts) {
 
     // Check pricing labels
     let priceLabel = '';
-    if (item.price_8x5 === null && item.price_9x9 === null) {
+    if (item.price_8x5 === null && item.price_8x8 === null) {
       priceLabel = `<span class="menu-card-price tbd">${currentLang === 'es' ? 'Precio: TBD' : 'Pricing: TBD'}</span>`;
     } else {
       const prices = [];
       if (item.price_8x5 !== null) prices.push(`8x5: $${item.price_8x5.toFixed(2)}`);
-      if (item.price_9x9 !== null) prices.push(`9x9: $${item.price_9x9.toFixed(2)}`);
-      else prices.push(`9x9: ${currentLang === 'es' ? 'TBD' : 'TBD'}`);
+      if (item.price_8x8 !== null) prices.push(`8x8: $${item.price_8x8.toFixed(2)}`);
+      else prices.push(`8x8: ${currentLang === 'es' ? 'TBD' : 'TBD'}`);
       
       priceLabel = `<span class="menu-card-price tbd" style="font-size: 13px;">${prices.join(' | ')}</span>`;
     }
@@ -553,6 +584,11 @@ function setupEventListeners() {
     cb.addEventListener('change', updateOrderSummary);
   });
 
+  const icingRadios = document.getElementsByName('icing_option');
+  icingRadios.forEach(radio => {
+    radio.addEventListener('change', updateOrderSummary);
+  });
+
   if (form) {
     form.addEventListener('submit', handleFormSubmit);
   }
@@ -571,8 +607,22 @@ window.selectDessertForOrder = function(dessertId) {
 // Handle toppings container display when dessert type changes
 function handleDessertChange(dessertId) {
   const toppingsContainer = document.getElementById('toppings-container');
+  const icingContainer = document.getElementById('icing-container');
+  const summaryIcingRow = document.getElementById('summary-icing-row');
   const selectedDessert = dessertsData.find(d => d.id === dessertId);
+  
   if (!toppingsContainer) return;
+  
+  // Update icing selection visibility
+  if (icingContainer) {
+    if (dessertId === 'carrot_cake_bars') {
+      icingContainer.classList.remove('hidden');
+      if (summaryIcingRow) summaryIcingRow.classList.remove('hidden');
+    } else {
+      icingContainer.classList.add('hidden');
+      if (summaryIcingRow) summaryIcingRow.classList.add('hidden');
+    }
+  }
   
   // Update helper description for 8x5 radio price depending on language
   const price8x5Desc = document.getElementById('price-8x5-desc');
@@ -595,6 +645,7 @@ function handleDessertChange(dessertId) {
 
   renderSizeOptions(dessertId);
   updateAdditionsCheckboxes();
+  updateOrderSummary();
 }
 
 // Calculate cost and refresh summary box
@@ -631,7 +682,7 @@ function updateOrderSummary() {
   const translatedName = itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name;
   
   let sizeText = size;
-  if (size === '8x5' || size === '9x9') {
+  if (size === '8x5' || size === '8x8' || size === '9x9') {
     sizeText = size;
   } else {
     const sizeKeys = {
@@ -649,6 +700,8 @@ function updateOrderSummary() {
   let basePrice = null;
   if (size === '8x5') {
     basePrice = selectedDessert.price_8x5;
+  } else if (size === '8x8') {
+    basePrice = selectedDessert.price_8x8;
   } else if (size === '9x9') {
     basePrice = selectedDessert.price_9x9;
   }
@@ -670,6 +723,23 @@ function updateOrderSummary() {
       summaryToppingsList.textContent = `${formatted} (+${i18n[currentLang].summary_total_tbd})`;
     } else {
       summaryToppingsList.textContent = i18n[currentLang].summary_no_toppings;
+    }
+  }
+
+  // Update icing option text in summary if selected
+  const summaryIcingValue = document.getElementById('summary-icing-value');
+  if (summaryIcingValue) {
+    const checkedIcing = document.querySelector('input[name="icing_option"]:checked');
+    if (checkedIcing) {
+      const icingVal = checkedIcing.value;
+      const icingMap = {
+        'with_icing': i18n[currentLang].option_with_icing,
+        'no_icing': i18n[currentLang].option_no_icing,
+        'icing_side': i18n[currentLang].option_icing_side
+      };
+      summaryIcingValue.textContent = icingMap[icingVal] || icingVal;
+    } else {
+      summaryIcingValue.textContent = i18n[currentLang].summary_no_toppings;
     }
   }
 
@@ -704,6 +774,24 @@ async function handleFormSubmit(e) {
   const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
     .map(cb => cb.value);
 
+  // Prepend icing selection to notes for Carrot Cake Bars
+  let finalNotes = notes;
+  if (selectedDessert.id === 'carrot_cake_bars') {
+    const icingRadio = document.querySelector('input[name="icing_option"]:checked');
+    const icingValue = icingRadio ? icingRadio.value : 'with_icing';
+    const icingLabels = currentLang === 'es' ? {
+      'with_icing': 'Con Glaseado',
+      'no_icing': 'Sin Glaseado',
+      'icing_side': 'Glaseado Aparte'
+    } : {
+      'with_icing': 'With Icing',
+      'no_icing': 'No Icing',
+      'icing_side': 'Icing on the Side'
+    };
+    const icingText = icingLabels[icingValue] || icingValue;
+    finalNotes = `[${currentLang === 'es' ? 'Glaseado' : 'Icing'}: ${icingText}]` + (notes ? ` ${notes}` : '');
+  }
+
   const orderData = {
     customer_name: customerName,
     customer_phone: customerPhone,
@@ -711,7 +799,7 @@ async function handleFormSubmit(e) {
     dessert_id: selectedDessert.id,
     size: size,
     toppings: checkedToppings,
-    notes: notes,
+    notes: finalNotes,
     pickup_delivery: pickupDelivery
   };
 
@@ -748,6 +836,8 @@ async function handleFormSubmit(e) {
     let translatedSize = '';
     if (size === '8x5') {
       translatedSize = i18n[currentLang].form_size_8x5;
+    } else if (size === '8x8') {
+      translatedSize = i18n[currentLang].form_size_8x8;
     } else if (size === '9x9') {
       translatedSize = i18n[currentLang].form_size_9x9;
     } else {

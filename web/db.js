@@ -76,6 +76,7 @@ async function createTables() {
       description TEXT,
       price_8x5 REAL,
       price_9x9 REAL,
+      price_8x8 REAL,
       has_toppings INTEGER DEFAULT 0,
       image_url VARCHAR(255),
       base_mold VARCHAR(50) DEFAULT '9x9'
@@ -110,6 +111,29 @@ async function createTables() {
     }
   } catch (e) {
     console.error('Error during desserts schema migration for base_mold, skipping:', e);
+  }
+
+  // Migrate desserts table to include price_8x8 column if missing in existing database
+  try {
+    let hasPrice8x8 = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'desserts' AND column_name = 'price_8x8'
+      `);
+      hasPrice8x8 = res.length > 0;
+    } else {
+      const info = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='desserts' AND sql LIKE '%price_8x8%'");
+      hasPrice8x8 = info.length > 0;
+    }
+
+    if (!hasPrice8x8) {
+      console.log('Adding column price_8x8 to desserts table...');
+      await query("ALTER TABLE desserts ADD COLUMN price_8x8 REAL");
+    }
+  } catch (e) {
+    console.error('Error during desserts schema migration for price_8x8, skipping:', e);
   }
 
   // Create orders table
@@ -307,6 +331,7 @@ async function seedData() {
       description: 'Rich, fudgy chocolate brownies swirled with sweet, gooey melted marshmallow fluff.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
+      price_8x8: null, // TBD
       has_toppings: 1,
       image_url: '/images/marshmallow_swirl_brownies.png'
     },
@@ -316,6 +341,7 @@ async function seedData() {
       description: 'Tropical coconut and sweet pineapple curd layered on a buttery shortbread crust, topped with toasted coconut flakes.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
+      price_8x8: null, // TBD
       has_toppings: 0,
       image_url: '/images/pina_colada_bars.png'
     },
@@ -325,6 +351,7 @@ async function seedData() {
       description: 'Rich, velvety coconut custard on a buttery shortbread crust, generously dusted with shredded coconut.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
+      price_8x8: null, // TBD
       has_toppings: 0,
       image_url: '/images/coconut_cream_bars.png'
     },
@@ -334,8 +361,20 @@ async function seedData() {
       description: 'Soft, fluffy sweet rolls swirled with buttery cinnamon sugar, topped with rich cream cheese icing.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
+      price_8x8: null, // TBD
       has_toppings: 0,
       image_url: '/images/cinnamon_rolls.png'
+    },
+    {
+      id: 'carrot_cake_bars',
+      name: 'Carrot Cake Bars',
+      description: 'Artisan carrot cake bars topped with smooth icing and toasted pecans, cut into perfect squares.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      price_8x8: null, // TBD
+      has_toppings: 1,
+      image_url: '/images/carrot_cake_bars.png',
+      base_mold: '9x9'
     }
   ];
 
@@ -344,8 +383,8 @@ async function seedData() {
     if (Number(exists[0].count) === 0) {
       console.log(`Seeding new dessert item: ${dessert.name}`);
       await query(
-        'INSERT INTO desserts (id, name, description, price_8x5, price_9x9, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.has_toppings, dessert.image_url]
+        'INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, has_toppings, image_url, base_mold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.price_8x8 || null, dessert.has_toppings, dessert.image_url, dessert.base_mold || '9x9']
       );
     }
   }
@@ -360,11 +399,11 @@ module.exports = {
   // Desserts
   getDesserts: () => query('SELECT * FROM desserts'),
   getDessertById: (id) => query('SELECT * FROM desserts WHERE id = ?', [id]).then(rows => rows[0]),
-  addDessert: (id, name, desc, p8x5, p9x9, toppings, img) => 
-    query('INSERT INTO desserts (id, name, description, price_8x5, price_9x9, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-      [id, name, desc, p8x5, p9x9, toppings, img]),
-  updateDessertPrices: (id, p8x5, p9x9) => 
-    query('UPDATE desserts SET price_8x5 = ?, price_9x9 = ? WHERE id = ?', [p8x5, p9x9, id]),
+  addDessert: (id, name, desc, p8x5, p9x9, p8x8, toppings, img) => 
+    query('INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+      [id, name, desc, p8x5, p9x9, p8x8, toppings, img]),
+  updateDessertPrices: (id, p8x5, p8x8) => 
+    query('UPDATE desserts SET price_8x5 = ?, price_8x8 = ? WHERE id = ?', [p8x5, p8x8, id]),
   
   // Orders
   getOrders: () => query('SELECT * FROM orders ORDER BY created_at DESC'),

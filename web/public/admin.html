@@ -69,6 +69,7 @@
       <button id="tab-btn-orders" class="tab-btn active" onclick="switchTab('orders-tab')" data-translate="tab_orders">Orders & Analytics</button>
       <button id="tab-btn-ingredients" class="tab-btn" onclick="switchTab('ingredients-tab')" data-translate="tab_inventory">Ingredient Cost Manager</button>
       <button id="tab-btn-recipes" class="tab-btn" onclick="switchTab('recipes-tab')" data-translate="tab_recipes">Current Recipes</button>
+      <button id="tab-btn-pricing" class="tab-btn" onclick="switchTab('pricing-tab')" data-translate="tab_pricing">Dessert Pricing Manager</button>
     </div>
 
     <!-- Orders & Analytics Tab Content -->
@@ -323,6 +324,33 @@
               <!-- Populated dynamically -->
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dessert Pricing Manager Tab Content -->
+    <div id="pricing-tab" class="tab-content hidden" style="margin-top: 32px;">
+      <div class="analytics-card">
+        <div style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px;">
+          <h3 class="analytics-title" style="margin: 0; border: none; padding: 0;" data-translate="pricing_manager_title">Dessert Pricing Manager</h3>
+          <p style="color: var(--text-muted); font-size: 14px; margin-top: 6px;" data-translate="pricing_manager_desc">Manage the customer-facing selling prices for your desserts in 8"x5" and 8"x8" molds. Set to blank (TBD) if pricing is not yet finalized.</p>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="inventory-table" id="pricing-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;" data-translate="col_image">Image</th>
+                <th data-translate="col_name">Dessert Name</th>
+                <th style="width: 180px;" data-translate="col_price_8x5">Price (8" x 5")</th>
+                <th style="width: 180px;" data-translate="col_price_8x8">Price (8" x 8")</th>
+                <th style="width: 180px; text-align: center;" data-translate="col_actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pricing-table-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

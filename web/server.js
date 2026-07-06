@@ -174,7 +174,14 @@ app.post('/api/orders', async (req, res) => {
 
     // Determine price. If size price is null, then the total price is null (TBD)
     let total_price = null;
-    const basePrice = size === '9x9' ? dessert.price_9x9 : dessert.price_8x5;
+    let basePrice = null;
+    if (size === '8x8') {
+      basePrice = dessert.price_8x8;
+    } else if (size === '9x9') {
+      basePrice = dessert.price_9x9;
+    } else {
+      basePrice = dessert.price_8x5;
+    }
     
     if (basePrice !== null) {
       // Calculate price (Currently toppings are TBD, so if toppings are selected, total price becomes TBD / null)
@@ -505,6 +512,20 @@ app.put('/api/admin/desserts/:id/base-mold', authenticateAdminToken, async (req,
     res.json({ message: 'Dessert base mold updated successfully' });
   } catch (err) {
     console.error('Failed to update dessert base mold:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
+// Admin: Update dessert prices
+app.put('/api/admin/desserts/:id/prices', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { price_8x5, price_8x8 } = req.body;
+
+  try {
+    await db.updateDessertPrices(id, price_8x5, price_8x8);
+    res.json({ message: 'Dessert prices updated successfully' });
+  } catch (err) {
+    console.error('Failed to update dessert prices:', err);
     res.status(500).json({ error: 'Database update failed' });
   }
 });

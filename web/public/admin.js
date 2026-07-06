@@ -21,6 +21,14 @@ const TRANSLATIONS = {
     tab_orders: "Orders & Analytics",
     tab_inventory: "Ingredient Cost Manager",
     tab_recipes: "Current Recipes",
+    tab_pricing: "Dessert Pricing Manager",
+    pricing_manager_title: "Dessert Pricing Manager",
+    pricing_manager_desc: "Manage the customer-facing selling prices for your desserts in 8\"x5\" and 8\"x8\" molds. Set to blank (TBD) if pricing is not yet finalized.",
+    col_image: "Image",
+    col_name: "Dessert Name",
+    col_price_8x5: "Price (8\" x 5\")",
+    col_price_8x8: "Price (8\" x 8\")",
+    col_actions: "Actions",
     sales_today: "Sales (Today)",
     sales_month: "Sales (This Month)",
     sales_year: "Sales (This Year)",
@@ -123,10 +131,12 @@ const TRANSLATIONS = {
     pina_colada_bars: "Piña Colada Bars",
     coconut_cream_bars: "Coconut Cream Bars",
     cinnamon_rolls: "Artisan Cinnamon Rolls",
+    carrot_cake_bars: "Carrot Cake Bars",
 
     // Sizes Mapping
     "8x5": "8x5",
     "9x9": "9x9",
+    "8x8": "8x8",
     "1_roll": "1 Roll",
     "4_pack": "4 Pack",
     "6_pack": "6 Pack",
@@ -166,6 +176,14 @@ const TRANSLATIONS = {
     tab_orders: "Pedidos y Analíticas",
     tab_inventory: "Gestor de Costos de Ingredientes",
     tab_recipes: "Recetas Actuales",
+    tab_pricing: "Gestor de Precios de Postres",
+    pricing_manager_title: "Gestor de Precios de Postres",
+    pricing_manager_desc: "Administre los precios de venta al público para sus postres en moldes de 8\"x5\" y 8\"x8\". Deje en blanco (TBD) si el precio aún no está finalizado.",
+    col_image: "Imagen",
+    col_name: "Nombre del Postre",
+    col_price_8x5: "Precio (8\" x 5\")",
+    col_price_8x8: "Precio (8\" x 8\")",
+    col_actions: "Acciones",
     sales_today: "Ventas (Hoy)",
     sales_month: "Ventas (Este Mes)",
     sales_year: "Ventas (Este Año)",
@@ -268,10 +286,12 @@ const TRANSLATIONS = {
     pina_colada_bars: "Barras de Piña Colada",
     coconut_cream_bars: "Barras de Crema de Coco",
     cinnamon_rolls: "Rollos de Canela Artesanales",
+    carrot_cake_bars: "Barras de Pastel de Zanahoria",
 
     // Sizes Mapping
     "8x5": "8x5",
     "9x9": "9x9",
+    "8x8": "8x8",
     "1_roll": "1 Rollo",
     "4_pack": "Paquete de 4",
     "6_pack": "Paquete de 6",
@@ -340,6 +360,7 @@ function applyTranslations() {
     loadOrders();
     loadIngredients();
     loadRecipes();
+    loadDessertsPricing();
   }
 }
 
@@ -785,6 +806,9 @@ function switchTab(tabId) {
     document.getElementById('tab-btn-recipes').classList.add('active');
     loadRecipes();
     populateRecipeDessertsDropdown();
+  } else if (tabId === 'pricing-tab') {
+    document.getElementById('tab-btn-pricing').classList.add('active');
+    loadDessertsPricing();
   }
 }
 
@@ -1888,4 +1912,137 @@ function toggleAllRecipeCards(expand) {
       }
     }
   });
+}
+
+// ==========================================
+// Tab 4: Dessert Pricing Manager
+// ==========================================
+
+async function loadDessertsPricing() {
+  await fetchDessertsCache(true);
+  renderDessertsPricing(dessertsCache);
+}
+
+function renderDessertsPricing(desserts) {
+  const tbody = document.getElementById('pricing-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  desserts.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.id = `pricing-row-${item.id}`;
+    
+    const translatedName = t(item.id);
+    
+    // Check if cinnamon rolls (which don't use 8x5 or 8x8 molds)
+    if (item.id === 'cinnamon_rolls') {
+      tr.innerHTML = `
+        <td>
+          <img src="${item.image_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
+        </td>
+        <td style="font-weight: 600; color: var(--text-main);">${translatedName}</td>
+        <td colspan="2" style="color: var(--text-muted); font-style: italic; text-align: center;">
+          ${currentLanguage === 'es' ? 'N/A - Se vende por lote/pieza' : 'N/A - Sold by batch/piece'}
+        </td>
+        <td style="text-align: center;">-</td>
+      `;
+    } else {
+      const p8x5Text = item.price_8x5 !== null ? `$${item.price_8x5.toFixed(2)}` : 'TBD';
+      const p8x8Text = item.price_8x8 !== null ? `$${item.price_8x8.toFixed(2)}` : 'TBD';
+      
+      const p8x5Val = item.price_8x5 !== null ? item.price_8x5 : '';
+      const p8x8Val = item.price_8x8 !== null ? item.price_8x8 : '';
+
+      tr.innerHTML = `
+        <td>
+          <img src="${item.image_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
+        </td>
+        <td style="font-weight: 600; color: var(--text-main);">${translatedName}</td>
+        <td>
+          <span class="price-text price-8x5-text">${p8x5Text}</span>
+          <input type="number" class="price-input price-8x5-input hidden" step="0.01" min="0" value="${p8x5Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+        </td>
+        <td>
+          <span class="price-text price-8x8-text">${p8x8Text}</span>
+          <input type="number" class="price-input price-8x8-input hidden" step="0.01" min="0" value="${p8x8Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+        </td>
+        <td style="text-align: center;">
+          <div class="row-actions">
+            <button class="btn btn-edit-prices btn-primary" onclick="editDessertPricesRow(this, '${item.id}')" style="padding: 6px 12px; font-size: 13px;">${t('action_edit')}</button>
+            <button class="btn btn-save-prices btn-success hidden" onclick="saveDessertPrices(this, '${item.id}')" style="padding: 6px 12px; font-size: 13px; margin-right: 6px;">${t('action_save')}</button>
+            <button class="btn btn-cancel-prices btn-danger hidden" onclick="cancelEditDessertPrices(this)" style="padding: 6px 12px; font-size: 13px; background-color: #ef4444;">${t('action_cancel')}</button>
+          </div>
+        </td>
+      `;
+    }
+    
+    tbody.appendChild(tr);
+  });
+}
+
+function editDessertPricesRow(btn, id) {
+  const row = document.getElementById(`pricing-row-${id}`);
+  if (!row) return;
+
+  // Toggle classes
+  row.querySelectorAll('.price-text').forEach(el => el.classList.add('hidden'));
+  row.querySelectorAll('.price-input').forEach(el => el.classList.remove('hidden'));
+  
+  btn.classList.add('hidden');
+  row.querySelector('.btn-save-prices').classList.remove('hidden');
+  row.querySelector('.btn-cancel-prices').classList.remove('hidden');
+}
+
+function cancelEditDessertPrices(btn) {
+  const row = btn.closest('tr');
+  if (!row) return;
+
+  // Toggle classes back
+  row.querySelectorAll('.price-text').forEach(el => el.classList.remove('hidden'));
+  row.querySelectorAll('.price-input').forEach(el => el.classList.add('hidden'));
+  
+  row.querySelector('.btn-edit-prices').classList.remove('hidden');
+  row.querySelector('.btn-save-prices').classList.add('hidden');
+  row.querySelector('.btn-cancel-prices').classList.add('hidden');
+
+  // Reset inputs to original values
+  row.querySelectorAll('.price-input').forEach(input => {
+    input.value = input.defaultValue;
+  });
+}
+
+async function saveDessertPrices(btn, id) {
+  const row = document.getElementById(`pricing-row-${id}`);
+  if (!row) return;
+
+  const price8x5Input = row.querySelector('.price-8x5-input');
+  const price8x8Input = row.querySelector('.price-8x8-input');
+
+  const p8x5 = price8x5Input.value === '' ? null : parseFloat(price8x5Input.value);
+  const p8x8 = price8x8Input.value === '' ? null : parseFloat(price8x8Input.value);
+
+  if (p8x5 !== null && isNaN(p8x5)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+  if (p8x8 !== null && isNaN(p8x8)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+
+  try {
+    const response = await fetch(`/api/admin/desserts/${id}/prices`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ price_8x5: p8x5, price_8x8: p8x8 })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to update prices');
+    }
+
+    // Success - reload pricing list
+    alert(currentLanguage === 'es' ? 'Precios actualizados con éxito' : 'Prices updated successfully');
+    loadDessertsPricing();
+  } catch (err) {
+    alert(err.message);
+  }
 }

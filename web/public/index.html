@@ -144,6 +144,32 @@
             </div>
           </div>
 
+          <!-- Step 3.5: Icing Selection (Conditional, shown for carrot cake bars) -->
+          <div id="icing-container" class="form-group hidden">
+            <label id="icing-section-label" data-i18n="form_label_icing">Icing Selection</label>
+            <p class="form-help" data-i18n="form_icing_help">Choose how you'd like your carrot cake bars iced:</p>
+            <div class="radio-group" style="display: flex; gap: 16px; margin-top: 8px;">
+              <label class="radio-label" style="padding: 10px 16px; border-radius: var(--radius-md); font-size: 14px;">
+                <input type="radio" name="icing_option" value="with_icing" checked required>
+                <div class="radio-design" style="padding: 0;">
+                  <span class="size-title" data-i18n="option_with_icing">With Icing (Default)</span>
+                </div>
+              </label>
+              <label class="radio-label" style="padding: 10px 16px; border-radius: var(--radius-md); font-size: 14px;">
+                <input type="radio" name="icing_option" value="no_icing" required>
+                <div class="radio-design" style="padding: 0;">
+                  <span class="size-title" data-i18n="option_no_icing">No Icing</span>
+                </div>
+              </label>
+              <label class="radio-label" style="padding: 10px 16px; border-radius: var(--radius-md); font-size: 14px;">
+                <input type="radio" name="icing_option" value="icing_side" required>
+                <div class="radio-design" style="padding: 0;">
+                  <span class="size-title" data-i18n="option_icing_side">Icing on the Side</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Step 4: Special Notes -->
           <div class="form-group">
             <label for="order-notes" data-i18n="form_label_notes">Special Requests / Notes</label>
@@ -189,6 +215,10 @@
             <div class="summary-row" id="summary-toppings-row">
               <span data-i18n="summary_label_toppings">Toppings selected:</span>
               <span id="summary-toppings-list" data-i18n="summary_no_toppings">None</span>
+            </div>
+            <div class="summary-row hidden" id="summary-icing-row">
+              <span data-i18n="summary_label_icing">Icing Option:</span>
+              <span id="summary-icing-value">None</span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-row total-row">
