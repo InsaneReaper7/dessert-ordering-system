@@ -457,6 +457,36 @@ app.get('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
 });
 
 // Admin: Add ingredient to a recipe (Auto-adds to inventory if name is new)
+function convertTspTbspToGrams(ingredientName, amount, unit) {
+  if (unit !== 'tsp' && unit !== 'tbsp') return amount;
+  const name = ingredientName.toLowerCase().trim();
+  let tspToGrams = 4.0;
+  if (name.includes('flour')) tspToGrams = 2.6;
+  else if (name.includes('sugar')) tspToGrams = 4.2;
+  else if (name.includes('salt')) tspToGrams = 5.7;
+  else if (name.includes('baking powder') || name.includes('baking soda') || name.includes('yeast')) tspToGrams = 4.8;
+  else if (name.includes('butter') || name.includes('oil') || name.includes('milk') || name.includes('water') || name.includes('honey') || name.includes('syrup') || name.includes('cream')) tspToGrams = 4.8;
+  else if (name.includes('cocoa')) tspToGrams = 2.5;
+  else if (name.includes('cinnamon') || name.includes('spice') || name.includes('nutmeg') || name.includes('vanilla')) tspToGrams = 2.6;
+  
+  const multiplier = unit === 'tbsp' ? 3 : 1;
+  return amount * tspToGrams * multiplier;
+}
+
+function getAmountInTargetUnit(ingredientName, amount, fromUnit, toUnit) {
+  if (fromUnit === toUnit) return amount;
+  if (fromUnit === 'tsp' && toUnit === 'tbsp') return amount / 3;
+  if (fromUnit === 'tbsp' && toUnit === 'tsp') return amount * 3;
+  if (toUnit === 'g' && (fromUnit === 'tsp' || fromUnit === 'tbsp')) {
+    return convertTspTbspToGrams(ingredientName, amount, fromUnit);
+  }
+  if (fromUnit === 'g' && (toUnit === 'tsp' || toUnit === 'tbsp')) {
+    const gVal = convertTspTbspToGrams(ingredientName, 1, toUnit);
+    return amount / gVal;
+  }
+  return amount;
+}
+
 app.post('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
   const { dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part } = req.body;
   if (!dessert_id || !ingredient_name || amount === undefined || amount === null || !unit) {
@@ -464,7 +494,28 @@ app.post('/api/admin/recipes', authenticateAdminToken, async (req, res) => {
   }
 
   try {
-    const result = await db.addRecipeIngredient(dessert_id, ingredient_name, Number(amount), unit, is_topping, topping_value, recipe_part);
+    const cleanPart = recipe_part || 'Main';
+    
+    // Check if ingredient already exists in this recipe section
+    const existingList = await db.query(
+      `SELECT * FROM recipe_ingredients 
+       WHERE dessert_id = ? AND LOWER(TRIM(ingredient_name)) = LOWER(TRIM(?)) AND is_topping = ? AND recipe_part = ?`,
+      [dessert_id, ingredient_name, is_topping ? 1 : 0, cleanPart]
+    );
+
+    if (existingList.length > 0) {
+      const existing = existingList[0];
+      const amountInExistingUnit = getAmountInTargetUnit(ingredient_name, Number(amount), unit, existing.unit);
+      const newAmount = existing.amount + amountInExistingUnit;
+      
+      await db.query(
+        `UPDATE recipe_ingredients SET amount = ? WHERE id = ?`,
+        [newAmount, existing.id]
+      );
+      return res.json({ id: existing.id, message: 'Ingredient amount updated/stacked in recipe successfully' });
+    }
+
+    const result = await db.addRecipeIngredient(dessert_id, ingredient_name, Number(amount), unit, is_topping, topping_value, cleanPart);
     const newId = result.insertId || result[0]?.id;
     res.status(201).json({ id: newId, message: 'Ingredient added to recipe successfully' });
   } catch (err) {

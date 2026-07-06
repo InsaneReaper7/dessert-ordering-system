@@ -262,18 +262,21 @@
                 <div class="form-group">
                   <label for="recipe-ing-amount" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_amount">Amount Needed</label>
                   <input type="number" id="recipe-ing-amount" step="0.01" placeholder="e.g. 150" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;" data-translate-placeholder="placeholder_amount">
-                  <select id="recipe-ing-amount-select" class="hidden" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box; background: white;">
-                    <option value="0.125">1/8</option>
-                    <option value="0.25">1/4</option>
-                    <option value="0.33">1/3</option>
-                    <option value="0.375">3/8</option>
-                    <option value="0.5" selected>1/2</option>
-                    <option value="0.625">5/8</option>
-                    <option value="0.67">2/3</option>
-                    <option value="0.75">3/4</option>
-                    <option value="0.875">7/8</option>
-                    <option value="1.0">1</option>
-                  </select>
+                  <div id="recipe-ing-amount-fraction-container" class="hidden" style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                    <input type="number" id="recipe-ing-amount-whole" min="0" step="1" value="0" placeholder="Whole" style="width: 50%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box;">
+                    <select id="recipe-ing-amount-fraction" style="width: 50%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box; background: white;">
+                      <option value="0" selected>0 (None)</option>
+                      <option value="0.125">1/8</option>
+                      <option value="0.25">1/4</option>
+                      <option value="0.33">1/3</option>
+                      <option value="0.375">3/8</option>
+                      <option value="0.5">1/2</option>
+                      <option value="0.625">5/8</option>
+                      <option value="0.67">2/3</option>
+                      <option value="0.75">3/4</option>
+                      <option value="0.875">7/8</option>
+                    </select>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label for="recipe-ing-part" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_part">Recipe Part / Section</label>

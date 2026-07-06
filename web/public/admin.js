@@ -405,20 +405,18 @@ document.addEventListener('DOMContentLoaded', () => {
     recipeUnitSelect.addEventListener('change', (e) => {
       const unit = e.target.value;
       const numInput = document.getElementById('recipe-ing-amount');
-      const selectAmount = document.getElementById('recipe-ing-amount-select');
+      const fractionContainer = document.getElementById('recipe-ing-amount-fraction-container');
       
       if (unit === 'tsp' || unit === 'tbsp') {
         numInput.classList.add('hidden');
         numInput.removeAttribute('required');
         
-        selectAmount.classList.remove('hidden');
-        selectAmount.setAttribute('required', 'true');
+        fractionContainer.classList.remove('hidden');
       } else {
         numInput.classList.remove('hidden');
         numInput.setAttribute('required', 'true');
         
-        selectAmount.classList.add('hidden');
-        selectAmount.removeAttribute('required');
+        fractionContainer.classList.add('hidden');
       }
     });
   }
@@ -1472,7 +1470,9 @@ async function handleAddRecipeIngredient(e) {
   
   let amount = 0;
   if (unit === 'tsp' || unit === 'tbsp') {
-    amount = parseFloat(document.getElementById('recipe-ing-amount-select').value);
+    const whole = parseInt(document.getElementById('recipe-ing-amount-whole').value) || 0;
+    const frac = parseFloat(document.getElementById('recipe-ing-amount-fraction').value) || 0;
+    amount = whole + frac;
   } else {
     amount = parseFloat(document.getElementById('recipe-ing-amount').value);
   }
