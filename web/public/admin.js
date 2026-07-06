@@ -420,6 +420,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Populate sections when a dessert is selected
+  const dessertSelect = document.getElementById('recipe-dessert-select');
+  if (dessertSelect) {
+    dessertSelect.addEventListener('change', (e) => {
+      updateRecipePartOptions(e.target.value);
+    });
+  }
+
+  // Toggle new section input field when create new is chosen
+  const partSelect = document.getElementById('recipe-ing-part-select');
+  if (partSelect) {
+    partSelect.addEventListener('change', () => {
+      toggleNewRecipePartField();
+    });
+  }
   
   // Request notification permissions
   if ('Notification' in window && Notification.permission === 'default') {
@@ -1437,11 +1453,12 @@ async function populateRecipeDessertsDropdown() {
   
   await fetchDessertsCache();
 
-  let html = '<option value="">-- Select Dessert / Recipe --</option>';
+  let html = `<option value="">-- ${currentLanguage === 'es' ? 'Seleccionar Postre / Receta' : 'Select Dessert / Recipe'} --</option>`;
   dessertsCache.forEach(d => {
     html += `<option value="${d.id}">${d.name}</option>`;
   });
   dropdown.innerHTML = html;
+  updateRecipePartOptions(dropdown.value);
 }
 
 function toggleAddRecipeIngredientForm() {
@@ -1479,7 +1496,17 @@ async function handleAddRecipeIngredient(e) {
   
   const is_topping = document.getElementById('recipe-ing-is-topping').checked ? 1 : 0;
   const topping_value = is_topping ? document.getElementById('recipe-ing-topping-value').value : null;
-  const recipe_part = document.getElementById('recipe-ing-part').value || 'Main';
+  
+  const selectPart = document.getElementById('recipe-ing-part-select');
+  let recipe_part = selectPart.value;
+  if (recipe_part === '__new__') {
+    recipe_part = document.getElementById('recipe-ing-part-new').value.trim();
+    if (!recipe_part) {
+      alert(currentLanguage === 'es' ? 'Por favor ingrese un nombre para la nueva sección' : 'Please enter a name for the new section');
+      return;
+    }
+  }
+  if (!recipe_part) recipe_part = 'Main';
 
   try {
     const response = await fetch('/api/admin/recipes', {
@@ -2277,4 +2304,55 @@ function formatIngredientAmount(amount, unit) {
     }
   }
   return amount;
+}
+
+function updateRecipePartOptions(dessertId) {
+  const select = document.getElementById('recipe-ing-part-select');
+  if (!select) return;
+  select.innerHTML = '';
+
+  const existingParts = new Set();
+  
+  if (dessertId) {
+    recipeIngredientsCache.forEach(ing => {
+      if (ing.dessert_id === dessertId && ing.recipe_part) {
+        existingParts.add(ing.recipe_part.trim());
+      }
+    });
+  }
+
+  // Always make sure 'Main' is included
+  existingParts.add('Main');
+
+  existingParts.forEach(part => {
+    const opt = document.createElement('option');
+    opt.value = part;
+    opt.textContent = part;
+    select.appendChild(opt);
+  });
+
+  // Add the "Create New" option
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = currentLanguage === 'es' ? '+ Crear Nueva Sección...' : '+ Create New Section...';
+  select.appendChild(newOpt);
+
+  // Trigger toggle
+  toggleNewRecipePartField();
+}
+
+function toggleNewRecipePartField() {
+  const select = document.getElementById('recipe-ing-part-select');
+  const inputNew = document.getElementById('recipe-ing-part-new');
+  if (!select || !inputNew) return;
+
+  if (select.value === '__new__') {
+    inputNew.classList.remove('hidden');
+    inputNew.setAttribute('required', 'true');
+    inputNew.focus();
+  } else {
+    inputNew.classList.add('hidden');
+    inputNew.removeAttribute('required');
+    inputNew.value = '';
+  }
 }
