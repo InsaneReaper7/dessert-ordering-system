@@ -179,8 +179,16 @@ app.post('/api/orders', async (req, res) => {
       basePrice = dessert.price_8x8;
     } else if (size === '9x9') {
       basePrice = dessert.price_9x9;
-    } else {
+    } else if (size === '8x5') {
       basePrice = dessert.price_8x5;
+    } else {
+      const priceMap = {
+        '1_roll': dessert.price_1_roll,
+        '4_pack': dessert.price_4_pack,
+        '6_pack': dessert.price_6_pack,
+        'full_tray': dessert.price_12_pack
+      };
+      basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
     }
     
     if (basePrice !== null) {
@@ -519,10 +527,17 @@ app.put('/api/admin/desserts/:id/base-mold', authenticateAdminToken, async (req,
 // Admin: Update dessert prices
 app.put('/api/admin/desserts/:id/prices', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { price_8x5, price_8x8 } = req.body;
+  const { price_8x5, price_8x8, price_1_roll, price_4_pack, price_6_pack, price_12_pack } = req.body;
+
+  const p8x5 = price_8x5 === undefined ? null : price_8x5;
+  const p8x8 = price_8x8 === undefined ? null : price_8x8;
+  const p1roll = price_1_roll === undefined ? null : price_1_roll;
+  const p4pack = price_4_pack === undefined ? null : price_4_pack;
+  const p6pack = price_6_pack === undefined ? null : price_6_pack;
+  const p12pack = price_12_pack === undefined ? null : price_12_pack;
 
   try {
-    await db.updateDessertPrices(id, price_8x5, price_8x8);
+    await db.updateDessertPrices(id, p8x5, p8x8, p1roll, p4pack, p6pack, p12pack);
     res.json({ message: 'Dessert prices updated successfully' });
   } catch (err) {
     console.error('Failed to update dessert prices:', err);

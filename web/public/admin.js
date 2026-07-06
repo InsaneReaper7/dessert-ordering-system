@@ -29,6 +29,13 @@ const TRANSLATIONS = {
     col_price_8x5: "Price (8\" x 5\")",
     col_price_8x8: "Price (8\" x 8\")",
     col_actions: "Actions",
+    cinnamon_rolls_pricing_title: "Artisan Cinnamon Rolls Pricing",
+    cinnamon_rolls_pricing_desc: "Configure the pricing for individual rolls, and packs of 4, 6, and 12.",
+    price_1_roll_label: "Individual Roll (1 Roll)",
+    price_4_pack_label: "Pack of 4",
+    price_6_pack_label: "Pack of 6",
+    price_12_pack_label: "Pack of 12 (Full Tray)",
+    btn_save_roll_prices: "Save Cinnamon Rolls Prices",
     sales_today: "Sales (Today)",
     sales_month: "Sales (This Month)",
     sales_year: "Sales (This Year)",
@@ -184,6 +191,13 @@ const TRANSLATIONS = {
     col_price_8x5: "Precio (8\" x 5\")",
     col_price_8x8: "Precio (8\" x 8\")",
     col_actions: "Acciones",
+    cinnamon_rolls_pricing_title: "Precios de Rollos de Canela Artesanales",
+    cinnamon_rolls_pricing_desc: "Configure los precios para rollos individuales y paquetes de 4, 6 y 12.",
+    price_1_roll_label: "Rollo Individual (1 Rollo)",
+    price_4_pack_label: "Paquete de 4",
+    price_6_pack_label: "Paquete de 6",
+    price_12_pack_label: "Paquete de 12 (Bandeja Completa)",
+    btn_save_roll_prices: "Guardar Precios de Rollos de Canela",
     sales_today: "Ventas (Hoy)",
     sales_month: "Ventas (Este Mes)",
     sales_year: "Ventas (Este Año)",
@@ -1929,24 +1943,23 @@ function renderDessertsPricing(desserts) {
   tbody.innerHTML = '';
 
   desserts.forEach(item => {
-    const tr = document.createElement('tr');
-    tr.id = `pricing-row-${item.id}`;
-    
     const translatedName = t(item.id);
     
     // Check if cinnamon rolls (which don't use 8x5 or 8x8 molds)
     if (item.id === 'cinnamon_rolls') {
-      tr.innerHTML = `
-        <td>
-          <img src="${item.image_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
-        </td>
-        <td style="font-weight: 600; color: var(--text-main);">${translatedName}</td>
-        <td colspan="2" style="color: var(--text-muted); font-style: italic; text-align: center;">
-          ${currentLanguage === 'es' ? 'N/A - Se vende por lote/pieza' : 'N/A - Sold by batch/piece'}
-        </td>
-        <td style="text-align: center;">-</td>
-      `;
+      const rollsInput1 = document.getElementById('roll-price-1');
+      const rollsInput4 = document.getElementById('roll-price-4');
+      const rollsInput6 = document.getElementById('roll-price-6');
+      const rollsInput12 = document.getElementById('roll-price-12');
+      
+      if (rollsInput1) rollsInput1.value = item.price_1_roll !== null ? item.price_1_roll.toFixed(2) : '';
+      if (rollsInput4) rollsInput4.value = item.price_4_pack !== null ? item.price_4_pack.toFixed(2) : '';
+      if (rollsInput6) rollsInput6.value = item.price_6_pack !== null ? item.price_6_pack.toFixed(2) : '';
+      if (rollsInput12) rollsInput12.value = item.price_12_pack !== null ? item.price_12_pack.toFixed(2) : '';
     } else {
+      const tr = document.createElement('tr');
+      tr.id = `pricing-row-${item.id}`;
+
       const p8x5Text = item.price_8x5 !== null ? `$${item.price_8x5.toFixed(2)}` : 'TBD';
       const p8x8Text = item.price_8x8 !== null ? `$${item.price_8x8.toFixed(2)}` : 'TBD';
       
@@ -1974,9 +1987,8 @@ function renderDessertsPricing(desserts) {
           </div>
         </td>
       `;
+      tbody.appendChild(tr);
     }
-    
-    tbody.appendChild(tr);
   });
 }
 
@@ -2041,6 +2053,46 @@ async function saveDessertPrices(btn, id) {
 
     // Success - reload pricing list
     alert(currentLanguage === 'es' ? 'Precios actualizados con éxito' : 'Prices updated successfully');
+    loadDessertsPricing();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function saveCinnamonRollsPrices() {
+  const p1 = document.getElementById('roll-price-1').value === '' ? null : parseFloat(document.getElementById('roll-price-1').value);
+  const p4 = document.getElementById('roll-price-4').value === '' ? null : parseFloat(document.getElementById('roll-price-4').value);
+  const p6 = document.getElementById('roll-price-6').value === '' ? null : parseFloat(document.getElementById('roll-price-6').value);
+  const p12 = document.getElementById('roll-price-12').value === '' ? null : parseFloat(document.getElementById('roll-price-12').value);
+
+  if (p1 !== null && isNaN(p1)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+  if (p4 !== null && isNaN(p4)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+  if (p6 !== null && isNaN(p6)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+  if (p12 !== null && isNaN(p12)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+
+  try {
+    const response = await fetch(`/api/admin/desserts/cinnamon_rolls/prices`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        price_8x5: null, 
+        price_8x8: null, 
+        price_1_roll: p1, 
+        price_4_pack: p4, 
+        price_6_pack: p6, 
+        price_12_pack: p12 
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to update prices');
+    }
+
+    alert(currentLanguage === 'es' ? 'Precios de rollos de canela actualizados con éxito' : 'Cinnamon rolls prices updated successfully');
     loadDessertsPricing();
   } catch (err) {
     alert(err.message);

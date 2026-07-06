@@ -77,6 +77,10 @@ async function createTables() {
       price_8x5 REAL,
       price_9x9 REAL,
       price_8x8 REAL,
+      price_1_roll REAL,
+      price_4_pack REAL,
+      price_6_pack REAL,
+      price_12_pack REAL,
       has_toppings INTEGER DEFAULT 0,
       image_url VARCHAR(255),
       base_mold VARCHAR(50) DEFAULT '9x9'
@@ -134,6 +138,32 @@ async function createTables() {
     }
   } catch (e) {
     console.error('Error during desserts schema migration for price_8x8, skipping:', e);
+  }
+
+  // Migrate desserts table to include roll pack price columns if missing in existing database
+  try {
+    let hasPrice1Roll = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'desserts' AND column_name = 'price_1_roll'
+      `);
+      hasPrice1Roll = res.length > 0;
+    } else {
+      const info = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='desserts' AND sql LIKE '%price_1_roll%'");
+      hasPrice1Roll = info.length > 0;
+    }
+
+    if (!hasPrice1Roll) {
+      console.log('Adding columns price_1_roll, price_4_pack, price_6_pack, price_12_pack to desserts table...');
+      await query("ALTER TABLE desserts ADD COLUMN price_1_roll REAL");
+      await query("ALTER TABLE desserts ADD COLUMN price_4_pack REAL");
+      await query("ALTER TABLE desserts ADD COLUMN price_6_pack REAL");
+      await query("ALTER TABLE desserts ADD COLUMN price_12_pack REAL");
+    }
+  } catch (e) {
+    console.error('Error during desserts schema migration for roll pack price columns, skipping:', e);
   }
 
   // Create orders table
@@ -383,8 +413,8 @@ async function seedData() {
     if (Number(exists[0].count) === 0) {
       console.log(`Seeding new dessert item: ${dessert.name}`);
       await query(
-        'INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, has_toppings, image_url, base_mold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.price_8x8 || null, dessert.has_toppings, dessert.image_url, dessert.base_mold || '9x9']
+        'INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, price_1_roll, price_4_pack, price_6_pack, price_12_pack, has_toppings, image_url, base_mold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.price_8x8 || null, null, null, null, null, dessert.has_toppings, dessert.image_url, dessert.base_mold || '9x9']
       );
     }
   }
@@ -399,11 +429,11 @@ module.exports = {
   // Desserts
   getDesserts: () => query('SELECT * FROM desserts'),
   getDessertById: (id) => query('SELECT * FROM desserts WHERE id = ?', [id]).then(rows => rows[0]),
-  addDessert: (id, name, desc, p8x5, p9x9, p8x8, toppings, img) => 
-    query('INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
-      [id, name, desc, p8x5, p9x9, p8x8, toppings, img]),
-  updateDessertPrices: (id, p8x5, p8x8) => 
-    query('UPDATE desserts SET price_8x5 = ?, price_8x8 = ? WHERE id = ?', [p8x5, p8x8, id]),
+  addDessert: (id, name, desc, p8x5, p9x9, p8x8, toppings, img, p1roll, p4pack, p6pack, p12pack) => 
+    query('INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, price_1_roll, price_4_pack, price_6_pack, price_12_pack, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+      [id, name, desc, p8x5, p9x9, p8x8, p1roll, p4pack, p6pack, p12pack, toppings, img]),
+  updateDessertPrices: (id, p8x5, p8x8, p1roll, p4pack, p6pack, p12pack) => 
+    query('UPDATE desserts SET price_8x5 = ?, price_8x8 = ?, price_1_roll = ?, price_4_pack = ?, price_6_pack = ?, price_12_pack = ? WHERE id = ?', [p8x5, p8x8, p1roll, p4pack, p6pack, p12pack, id]),
   
   // Orders
   getOrders: () => query('SELECT * FROM orders ORDER BY created_at DESC'),

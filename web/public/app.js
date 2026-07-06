@@ -396,21 +396,30 @@ function renderSizeOptions(dessertId) {
   if (dessertId === 'cinnamon_rolls') {
     sectionLabel.textContent = currentLang === 'es' ? 'Selecciona la Cantidad' : 'Select Quantity';
     
+    const selectedDessert = dessertsData.find(d => d.id === dessertId);
+    const rollsPrices = {
+      '1_roll': selectedDessert ? selectedDessert.price_1_roll : null,
+      '4_pack': selectedDessert ? selectedDessert.price_4_pack : null,
+      '6_pack': selectedDessert ? selectedDessert.price_6_pack : null,
+      'full_tray': selectedDessert ? selectedDessert.price_12_pack : null
+    };
+
     const options = [
-      { value: '1_roll', titleKey: 'size_1_roll_title', descKey: 'size_1_roll_desc' },
-      { value: '4_pack', titleKey: 'size_4_pack_title', descKey: 'size_4_pack_desc' },
-      { value: '6_pack', titleKey: 'size_6_pack_title', descKey: 'size_6_pack_desc' },
-      { value: 'full_tray', titleKey: 'size_full_tray_title', descKey: 'size_full_tray_desc' }
+      { value: '1_roll', titleKey: 'size_1_roll_title', price: rollsPrices['1_roll'] },
+      { value: '4_pack', titleKey: 'size_4_pack_title', price: rollsPrices['4_pack'] },
+      { value: '6_pack', titleKey: 'size_6_pack_title', price: rollsPrices['6_pack'] },
+      { value: 'full_tray', titleKey: 'size_full_tray_title', price: rollsPrices['full_tray'] }
     ];
 
     options.forEach((opt, idx) => {
       const isChecked = prevSelected === opt.value || (!prevSelected && idx === 0);
+      const priceText = opt.price !== null ? `$${opt.price.toFixed(2)}` : i18n[currentLang].form_size_pricing_tbd;
       html += `
         <label class="radio-label">
           <input type="radio" name="size" value="${opt.value}" ${isChecked ? 'checked' : ''} required>
           <div class="radio-design">
             <span class="size-title">${i18n[currentLang][opt.titleKey]}</span>
-            <span class="size-desc">${i18n[currentLang][opt.descKey]}</span>
+            <span class="size-desc">${priceText}</span>
           </div>
         </label>
       `;
@@ -704,6 +713,14 @@ function updateOrderSummary() {
     basePrice = selectedDessert.price_8x8;
   } else if (size === '9x9') {
     basePrice = selectedDessert.price_9x9;
+  } else {
+    const rollPriceMap = {
+      '1_roll': selectedDessert.price_1_roll,
+      '4_pack': selectedDessert.price_4_pack,
+      '6_pack': selectedDessert.price_6_pack,
+      'full_tray': selectedDessert.price_12_pack
+    };
+    basePrice = rollPriceMap[size] !== undefined ? rollPriceMap[size] : null;
   }
   let hasTBD = basePrice === null || extraToppings.length > 0;
 
