@@ -1082,7 +1082,7 @@ function openCostBreakdownModal(dessert) {
             ${displayAmount} ${ing.unit}
           </td>
           <td style="padding: 10px 8px; text-align: right; font-weight: 600; color: ${hasPrice ? 'var(--primary)' : 'var(--text-muted)'};">
-            ${hasPrice ? `$${cost.toFixed(3)}` : '—'}
+            ${hasPrice ? `$${cost.toFixed(2)}` : '—'}
           </td>
         `;
         tbody.appendChild(tr);
