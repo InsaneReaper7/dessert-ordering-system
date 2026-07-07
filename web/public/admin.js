@@ -993,32 +993,102 @@ function renderIngredients(ingredients, recipeIngredients) {
     }
   });
   
-  renderRecipeCostsList(baseCosts, 'recipe-costs-list');
+  renderRecipeCostsList(baseCosts, 'recipe-costs-list', ingredients);
 }
 
-function renderRecipeCostsList(baseCosts, containerId) {
+// Returns the area (sq inches) for a mold string, or null for special batches
+function getMoldArea(moldStr) {
+  if (!moldStr) return null;
+  const m = moldStr.toLowerCase().trim();
+  if (m === '9x9') return 81;
+  if (m === '11x7') return 77;
+  if (m === '8x5') return 40;
+  if (m === '8x8') return 64;
+  if (m === '9x13') return 117;
+  return null; // e.g. '1 Batch', rolls
+}
+
+function renderRecipeCostsList(baseCosts, containerId, inventoryItems) {
   const listContainer = document.getElementById(containerId);
   if (!listContainer) return;
   listContainer.innerHTML = '';
-  
+
+  const inv = inventoryItems || inventoryCache || [];
+
   dessertsCache.forEach(d => {
-    const cost = baseCosts[d.id] || 0;
+    const baseCost = baseCosts[d.id] || 0;
+    const baseMold = d.base_mold || '9x9';
+    const baseArea = getMoldArea(baseMold);
+    const isRolls = (d.id === 'cinnamon_rolls');
+
+    // Compute multipliers relative to the recipe's base
+    const area8x5 = 40;
+    const area8x8 = 64;
+    const mult8x5 = baseArea ? (area8x5 / baseArea) : 1.0;
+    const mult8x8 = baseArea ? (area8x8 / baseArea) : 1.0;
+
+    const cost8x5 = baseCost * mult8x5;
+    const cost8x8 = baseCost * mult8x8;
+
     const itemDiv = document.createElement('div');
     itemDiv.className = 'recipe-cost-item';
-    itemDiv.title = currentLanguage === 'es' ? 'Haz clic para ver desglose' : 'Click to view breakdown';
-    itemDiv.innerHTML = `
-      <span class="recipe-cost-name">${d.name}</span>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span class="recipe-cost-val">$${cost.toFixed(2)}</span>
-        <span style="font-size: 11px; color: var(--text-muted);">🔍</span>
-      </div>
+    itemDiv.style.flexDirection = 'column';
+    itemDiv.style.alignItems = 'stretch';
+    itemDiv.style.gap = '8px';
+
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+    headerRow.innerHTML = `
+      <span class="recipe-cost-name" style="font-size:13px;">${d.name}</span>
+      <span style="font-size:11px; color:var(--text-muted);" title="${currentLanguage === 'es' ? 'Haz clic en un tamaño para ver desglose' : 'Click a size for breakdown'}">🔍</span>
     `;
-    itemDiv.addEventListener('click', () => openCostBreakdownModal(d));
+    itemDiv.appendChild(headerRow);
+
+    if (isRolls) {
+      // For rolls just show base cost with no mold sizing
+      const rollRow = document.createElement('div');
+      rollRow.style.cssText = 'display:flex; justify-content:center;';
+      rollRow.innerHTML = `
+        <button class="recipe-size-pill" style="background:var(--primary); color:#fff;" onclick="openCostBreakdownModal(${JSON.stringify(JSON.stringify(d))}, 1.0, 'Base')">
+          <span>Base (1 Roll)</span>
+          <span>$${baseCost.toFixed(2)}</span>
+        </button>
+      `;
+      itemDiv.appendChild(rollRow);
+    } else {
+      const sizesRow = document.createElement('div');
+      sizesRow.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;';
+
+      const makeBtn = (label, cost, mult, sizeLabel) => {
+        const btn = document.createElement('button');
+        btn.className = 'recipe-size-pill';
+        btn.innerHTML = `<span style="font-size:10px; font-weight:600; opacity:0.85;">${label}</span><span style="font-size:13px; font-weight:700;">$${cost.toFixed(2)}</span>`;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCostBreakdownModal(d, mult, sizeLabel);
+        });
+        return btn;
+      };
+
+      sizesRow.appendChild(makeBtn(`Base (${baseMold})`, baseCost, 1.0, `Base (${baseMold})`));
+      sizesRow.appendChild(makeBtn('8×5', cost8x5, mult8x5, '8×5'));
+      sizesRow.appendChild(makeBtn('8×8', cost8x8, mult8x8, '8×8'));
+      itemDiv.appendChild(sizesRow);
+    }
+
     listContainer.appendChild(itemDiv);
   });
 }
 
-function openCostBreakdownModal(dessert) {
+function openCostBreakdownModal(dessert, sizeMultiplier, sizeLabel) {
+  // dessert may arrive as a double-stringified JSON when called from onclick attr
+  if (typeof dessert === 'string') {
+    try { dessert = JSON.parse(dessert); } catch(e) {}
+  }
+
+  const mult = (sizeMultiplier !== undefined && sizeMultiplier !== null) ? Number(sizeMultiplier) : 1.0;
+  const label = sizeLabel || 'Base';
+
   const modal = document.getElementById('cost-breakdown-modal');
   const title = document.getElementById('cb-modal-title');
   const tbody = document.getElementById('cb-modal-tbody');
@@ -1026,10 +1096,9 @@ function openCostBreakdownModal(dessert) {
 
   if (!modal) return;
 
-  title.textContent = dessert.name;
+  title.innerHTML = `${dessert.name} <span style="font-size:13px; font-weight:500; color:var(--text-muted); background:#f3f4f6; padding:3px 9px; border-radius:999px; margin-left:8px; white-space:nowrap;">${label}</span>`;
   tbody.innerHTML = '';
 
-  // Fetch inventory cost map
   const costMap = {};
   const unitMap = {};
   inventoryCache.forEach(item => {
@@ -1039,15 +1108,12 @@ function openCostBreakdownModal(dessert) {
     unitMap[nameLower] = item.unit || 'g';
   });
 
-  // Get all ingredients for this dessert
   const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === dessert.id && !ing.is_topping);
-
   let grandTotal = 0;
 
   if (ingredients.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 24px; color: var(--text-muted); font-style: italic;">${currentLanguage === 'es' ? 'Sin ingredientes aún' : 'No ingredients yet'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted); font-style:italic;">${currentLanguage === 'es' ? 'Sin ingredientes aún' : 'No ingredients yet'}</td></tr>`;
   } else {
-    // Group by recipe part
     const parts = {};
     ingredients.forEach(ing => {
       const part = ing.recipe_part || 'Main';
@@ -1056,32 +1122,33 @@ function openCostBreakdownModal(dessert) {
     });
 
     Object.keys(parts).forEach(part => {
-      // Part header row
       const headerRow = document.createElement('tr');
-      headerRow.innerHTML = `<td colspan="3" style="font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 10px 8px 4px; background: #f9fafb;">${part}</td>`;
+      headerRow.innerHTML = `<td colspan="3" style="font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); padding:10px 8px 4px; background:#f9fafb;">${part}</td>`;
       tbody.appendChild(headerRow);
 
       parts[part].forEach(ing => {
         const nameLower = ing.ingredient_name.toLowerCase().trim();
         const unitCost = costMap[nameLower] || 0.0;
         const inventoryUnit = unitMap[nameLower] || 'g';
-        const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+        // Scale the ingredient amount by the mold-size multiplier
+        const scaledAmount = ing.amount * mult;
+        const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, scaledAmount, ing.unit, inventoryUnit);
         const cost = convertedAmount * unitCost;
         grandTotal += cost;
 
-        const displayAmount = formatIngredientAmount(ing.amount, ing.unit);
+        const displayAmount = formatIngredientAmount(scaledAmount, ing.unit);
         const hasPrice = unitCost > 0;
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
         tr.innerHTML = `
-          <td style="padding: 10px 8px;">
-            <span style="font-weight: 500;">${ing.ingredient_name}</span>
+          <td style="padding:10px 8px;">
+            <span style="font-weight:500;">${ing.ingredient_name}</span>
           </td>
-          <td style="padding: 10px 8px; text-align: right; color: var(--text-muted); font-size: 13px;">
+          <td style="padding:10px 8px; text-align:right; color:var(--text-muted); font-size:13px;">
             ${displayAmount} ${ing.unit}
           </td>
-          <td style="padding: 10px 8px; text-align: right; font-weight: 600; color: ${hasPrice ? 'var(--primary)' : 'var(--text-muted)'};">
+          <td style="padding:10px 8px; text-align:right; font-weight:600; color:${hasPrice ? 'var(--primary)' : 'var(--text-muted)'};">
             ${hasPrice ? `$${cost.toFixed(2)}` : '—'}
           </td>
         `;
@@ -1091,16 +1158,11 @@ function openCostBreakdownModal(dessert) {
   }
 
   totalEl.textContent = `$${grandTotal.toFixed(2)}`;
-
-  // Show modal
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-
-  // Close on backdrop click
-  modal.onclick = (e) => {
-    if (e.target === modal) closeCostBreakdownModal();
-  };
+  modal.onclick = (e) => { if (e.target === modal) closeCostBreakdownModal(); };
 }
+
 
 function closeCostBreakdownModal() {
   const modal = document.getElementById('cost-breakdown-modal');
@@ -1557,7 +1619,7 @@ function renderRecipes(recipeIngredients, inventory) {
   });
   
   // Render sidebar costs on recipe tab
-  renderRecipeCostsList(baseCosts, 'recipe-costs-list-recipe-tab');
+  renderRecipeCostsList(baseCosts, 'recipe-costs-list-recipe-tab', inventoryCache);
 }
 
 async function populateRecipeDessertsDropdown() {
