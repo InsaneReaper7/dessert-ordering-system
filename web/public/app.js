@@ -34,7 +34,7 @@ const i18n = {
     option_icing_side: "Icing on the Side",
     summary_label_icing: "Icing Option:",
     form_label_toppings: "Choose Toppings / Extra Ingredients",
-    form_label_toppings_optional: "(Toppings pricing: TBD)",
+    form_label_toppings_optional: "(Included — no extra charge)",
     form_toppings_help: "Customize your brownie or blondie! Select all the ingredients you would like mixed in or sprinkled on top.",
     form_label_notes: "Special Requests / Notes",
     form_placeholder_notes: "Any dietary preferences or custom notes? E.g., 'half walnuts, half chocolate chips'",
@@ -118,7 +118,7 @@ const i18n = {
     option_icing_side: "Glaseado Aparte",
     summary_label_icing: "Opción de Glaseado:",
     form_label_toppings: "Elige los Ingredientes Adicionales",
-    form_label_toppings_optional: "(Precio de ingredientes: TBD)",
+    form_label_toppings_optional: "(Incluidos — sin cargo adicional)",
     form_toppings_help: "¡Personaliza tu brownie o blondie! Selecciona todos los ingredientes que te gustaría mezclar o espolvorear por encima.",
     form_label_notes: "Solicitudes Especiales / Notas",
     form_placeholder_notes: "¿Alguna preferencia alimentaria o nota personalizada? Ej: 'mitad nueces, mitad chispas de chocolate'",
@@ -729,7 +729,8 @@ function updateOrderSummary() {
     };
     basePrice = rollPriceMap[size] !== undefined ? rollPriceMap[size] : null;
   }
-  let hasTBD = basePrice === null || extraToppings.length > 0;
+  // Toppings are included in the base price — only TBD if no price is set for the size
+  let hasTBD = basePrice === null;
 
   // Render individual base price
   if (summaryItemPrice) {
@@ -744,7 +745,8 @@ function updateOrderSummary() {
         const translationKey = 'topping_' + t.toLowerCase().replace(' ', '_');
         return i18n[currentLang][translationKey] || t;
       }).join(', ');
-      summaryToppingsList.textContent = `${formatted} (+${i18n[currentLang].summary_total_tbd})`;
+      const incl = currentLang === 'es' ? '(Incluido)' : '(Included)';
+      summaryToppingsList.textContent = `${formatted} ${incl}`;
     } else {
       summaryToppingsList.textContent = i18n[currentLang].summary_no_toppings;
     }
