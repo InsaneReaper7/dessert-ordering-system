@@ -347,6 +347,26 @@ app.patch('/api/admin/orders/:id', authenticateAdminToken, async (req, res) => {
   }
 });
 
+// Admin: Update order price (for TBD orders)
+app.patch('/api/admin/orders/:id/price', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { price } = req.body;
+
+  const parsed = parseFloat(price);
+  if (isNaN(parsed) || parsed < 0) {
+    return res.status(400).json({ error: 'Invalid price value' });
+  }
+
+  try {
+    await db.updateOrderPrice(id, parsed);
+    broadcast({ type: 'order_updated', id: parseInt(id), total_price: parsed });
+    res.json({ message: 'Order price updated', total_price: parsed });
+  } catch (err) {
+    console.error('Failed to update order price:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
 // Admin: Delete order
 app.delete('/api/admin/orders/:id', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;

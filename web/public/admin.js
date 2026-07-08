@@ -656,9 +656,26 @@ function renderOrders(orders) {
     // Format size
     const sizeFormatted = t(order.size, order.size);
 
-    // Pricing display
-    const priceDisplay = order.total_price === null 
-      ? `<span style="color: var(--text-muted); font-style: italic;">${t('tbd', 'TBD')}</span>` 
+    // Pricing display — TBD orders get an inline price setter
+    const priceDisplay = order.total_price === null
+      ? `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+           <span style="color:var(--text-muted); font-style:italic; font-size:12px;">TBD</span>
+           <div style="display:flex; align-items:center; gap:4px;">
+             <span style="font-size:12px; color:var(--text-muted);">$</span>
+             <input
+               id="price-input-${order.id}"
+               type="number"
+               min="0"
+               step="0.01"
+               placeholder="0.00"
+               style="width:72px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit;"
+             />
+             <button
+               onclick="setOrderPrice(${order.id})"
+               style="padding:4px 10px; background:var(--primary); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;"
+             >✓ Set</button>
+           </div>
+         </div>`
       : `$${order.total_price.toFixed(2)}`;
 
     // Status action buttons
@@ -707,6 +724,29 @@ function renderOrders(orders) {
     `;
     tbody.appendChild(tr);
   });
+}
+
+async function setOrderPrice(orderId) {
+  const input = document.getElementById(`price-input-${orderId}`);
+  const val = parseFloat(input ? input.value : '');
+  if (!input || isNaN(val) || val < 0) {
+    alert('Please enter a valid price (e.g. 15.00)');
+    return;
+  }
+
+  try {
+    const resp = await fetch(`/api/admin/orders/${orderId}/price`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ price: val })
+    });
+    if (!resp.ok) throw new Error('Failed');
+    await loadOrders();
+    await loadStats();
+  } catch (err) {
+    alert('Failed to set price. Please try again.');
+    console.error(err);
+  }
 }
 
 async function updateStatus(orderId, status) {

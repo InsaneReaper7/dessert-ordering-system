@@ -467,6 +467,7 @@ module.exports = {
     ]
   ),
   updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),
+  updateOrderPrice: (id, price) => query('UPDATE orders SET total_price = ? WHERE id = ?', [price, id]),
   deleteOrder: (id) => query('DELETE FROM orders WHERE id = ?', [id]),
 
   // Ingredients CRUD (Inventory pricing)
