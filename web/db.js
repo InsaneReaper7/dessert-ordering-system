@@ -443,8 +443,8 @@ module.exports = {
   addDessert: (id, name, desc, p8x5, p9x9, p8x8, toppings, img, p1roll, p4pack, p6pack, p12pack) => 
     query('INSERT INTO desserts (id, name, description, price_8x5, price_9x9, price_8x8, price_1_roll, price_4_pack, price_6_pack, price_12_pack, has_toppings, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
       [id, name, desc, p8x5, p9x9, p8x8, p1roll, p4pack, p6pack, p12pack, toppings, img]),
-  updateDessertPrices: (id, p8x5, p8x8, p1roll, p4pack, p6pack, p12pack) => 
-    query('UPDATE desserts SET price_8x5 = ?, price_8x8 = ?, price_1_roll = ?, price_4_pack = ?, price_6_pack = ?, price_12_pack = ? WHERE id = ?', [p8x5, p8x8, p1roll, p4pack, p6pack, p12pack, id]),
+  updateDessertPrices: (id, p8x5, p9x9, p8x8, p1roll, p4pack, p6pack, p12pack) => 
+    query('UPDATE desserts SET price_8x5 = ?, price_9x9 = ?, price_8x8 = ?, price_1_roll = ?, price_4_pack = ?, price_6_pack = ?, price_12_pack = ? WHERE id = ?', [p8x5, p9x9, p8x8, p1roll, p4pack, p6pack, p12pack, id]),
   
   // Orders
   getOrders: () => query('SELECT * FROM orders ORDER BY created_at DESC'),

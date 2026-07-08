@@ -593,9 +593,10 @@ app.put('/api/admin/desserts/:id/base-mold', authenticateAdminToken, async (req,
 // Admin: Update dessert prices
 app.put('/api/admin/desserts/:id/prices', authenticateAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { price_8x5, price_8x8, price_1_roll, price_4_pack, price_6_pack, price_12_pack } = req.body;
+  const { price_8x5, price_9x9, price_8x8, price_1_roll, price_4_pack, price_6_pack, price_12_pack } = req.body;
 
   const p8x5 = price_8x5 === undefined ? null : price_8x5;
+  const p9x9 = price_9x9 === undefined ? null : price_9x9;
   const p8x8 = price_8x8 === undefined ? null : price_8x8;
   const p1roll = price_1_roll === undefined ? null : price_1_roll;
   const p4pack = price_4_pack === undefined ? null : price_4_pack;
@@ -603,7 +604,7 @@ app.put('/api/admin/desserts/:id/prices', authenticateAdminToken, async (req, re
   const p12pack = price_12_pack === undefined ? null : price_12_pack;
 
   try {
-    await db.updateDessertPrices(id, p8x5, p8x8, p1roll, p4pack, p6pack, p12pack);
+    await db.updateDessertPrices(id, p8x5, p9x9, p8x8, p1roll, p4pack, p6pack, p12pack);
     res.json({ message: 'Dessert prices updated successfully' });
   } catch (err) {
     console.error('Failed to update dessert prices:', err);

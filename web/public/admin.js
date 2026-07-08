@@ -27,6 +27,7 @@ const TRANSLATIONS = {
     col_image: "Image",
     col_name: "Dessert Name",
     col_price_8x5: "Price (8\" x 5\")",
+    col_price_9x9: "Price (9\" x 9\")",
     col_price_8x8: "Price (8\" x 8\")",
     col_actions: "Actions",
     cinnamon_rolls_pricing_title: "Artisan Cinnamon Rolls Pricing",
@@ -194,6 +195,7 @@ const TRANSLATIONS = {
     col_image: "Imagen",
     col_name: "Nombre del Postre",
     col_price_8x5: "Precio (8\" x 5\")",
+    col_price_9x9: "Precio (9\" x 9\")",
     col_price_8x8: "Precio (8\" x 8\")",
     col_actions: "Acciones",
     cinnamon_rolls_pricing_title: "Precios de Rollos de Canela Artesanales",
@@ -2344,9 +2346,11 @@ function renderDessertsPricing(desserts) {
       tr.id = `pricing-row-${item.id}`;
 
       const p8x5Text = item.price_8x5 !== null ? `$${item.price_8x5.toFixed(2)}` : 'TBD';
+      const p9x9Text = item.price_9x9 !== null ? `$${item.price_9x9.toFixed(2)}` : 'TBD';
       const p8x8Text = item.price_8x8 !== null ? `$${item.price_8x8.toFixed(2)}` : 'TBD';
       
       const p8x5Val = item.price_8x5 !== null ? item.price_8x5 : '';
+      const p9x9Val = item.price_9x9 !== null ? item.price_9x9 : '';
       const p8x8Val = item.price_8x8 !== null ? item.price_8x8 : '';
 
       tr.innerHTML = `
@@ -2357,6 +2361,10 @@ function renderDessertsPricing(desserts) {
         <td>
           <span class="price-text price-8x5-text">${p8x5Text}</span>
           <input type="number" class="price-input price-8x5-input hidden" step="0.01" min="0" value="${p8x5Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+        </td>
+        <td>
+          <span class="price-text price-9x9-text">${p9x9Text}</span>
+          <input type="number" class="price-input price-9x9-input hidden" step="0.01" min="0" value="${p9x9Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
         </td>
         <td>
           <span class="price-text price-8x8-text">${p8x8Text}</span>
@@ -2411,12 +2419,15 @@ async function saveDessertPrices(btn, id) {
   if (!row) return;
 
   const price8x5Input = row.querySelector('.price-8x5-input');
+  const price9x9Input = row.querySelector('.price-9x9-input');
   const price8x8Input = row.querySelector('.price-8x8-input');
 
   const p8x5 = price8x5Input.value === '' ? null : parseFloat(price8x5Input.value);
+  const p9x9 = price9x9Input.value === '' ? null : parseFloat(price9x9Input.value);
   const p8x8 = price8x8Input.value === '' ? null : parseFloat(price8x8Input.value);
 
   if (p8x5 !== null && isNaN(p8x5)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+  if (p9x9 !== null && isNaN(p9x9)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
   if (p8x8 !== null && isNaN(p8x8)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
 
   try {
@@ -2426,7 +2437,7 @@ async function saveDessertPrices(btn, id) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ price_8x5: p8x5, price_8x8: p8x8 })
+      body: JSON.stringify({ price_8x5: p8x5, price_9x9: p9x9, price_8x8: p8x8 })
     });
 
     if (!response.ok) {
