@@ -2319,10 +2319,47 @@ function toggleAllRecipeCards(expand) {
 
 async function loadDessertsPricing() {
   await fetchDessertsCache(true);
-  renderDessertsPricing(dessertsCache);
+  
+  let baseCosts = {};
+  try {
+    const recipesResp = await fetch('/api/admin/recipes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const recipeIngredients = recipesResp.ok ? await recipesResp.json() : [];
+
+    const ingResp = await fetch('/api/admin/ingredients', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const ingredients = ingResp.ok ? await ingResp.json() : [];
+
+    const costMap = {};
+    ingredients.forEach(item => {
+      const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+      costMap[item.name.toLowerCase().trim()] = costWithTax / item.bulk_qty;
+    });
+
+    dessertsCache.forEach(d => {
+      baseCosts[d.id] = 0;
+    });
+
+    recipeIngredients.forEach(ing => {
+      if (!ing.is_topping) {
+        const nameLower = ing.ingredient_name.toLowerCase().trim();
+        const unitCost = costMap[nameLower] || 0.0;
+        const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
+        const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
+        const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+        baseCosts[ing.dessert_id] += convertedAmount * unitCost;
+      }
+    });
+  } catch (err) {
+    console.error('Failed to calculate recipe costs for pricing manager:', err);
+  }
+
+  renderDessertsPricing(dessertsCache, baseCosts);
 }
 
-function renderDessertsPricing(desserts) {
+function renderDessertsPricing(desserts, baseCosts = {}) {
   const tbody = document.getElementById('pricing-table-body');
   if (!tbody) return;
   tbody.innerHTML = '';
@@ -2346,12 +2383,39 @@ function renderDessertsPricing(desserts) {
       tr.id = `pricing-row-${item.id}`;
 
       const p8x5Text = item.price_8x5 !== null ? `$${item.price_8x5.toFixed(2)}` : 'TBD';
-      const p9x9Text = item.price_9x9 !== null ? `$${item.price_9x9.toFixed(2)}` : 'TBD';
       const p8x8Text = item.price_8x8 !== null ? `$${item.price_8x8.toFixed(2)}` : 'TBD';
       
       const p8x5Val = item.price_8x5 !== null ? item.price_8x5 : '';
-      const p9x9Val = item.price_9x9 !== null ? item.price_9x9 : '';
       const p8x8Val = item.price_8x8 !== null ? item.price_8x8 : '';
+
+      // Compute dynamic cost scaling suggestions
+      const baseCost = baseCosts[item.id] || 0;
+      const baseMold = item.base_mold || '9x9';
+      const baseArea = getMoldArea(baseMold);
+      const mult8x5 = baseArea ? (40 / baseArea) : 1.0;
+      const mult8x8 = baseArea ? (64 / baseArea) : 1.0;
+      
+      const cost8x5 = baseCost * mult8x5;
+      const cost8x8 = baseCost * mult8x8;
+
+      const sug25_8x5 = cost8x5 * 2.5;
+      const sug3_8x5 = cost8x5 * 3.0;
+      const sug25_8x8 = cost8x8 * 2.5;
+      const sug3_8x8 = cost8x8 * 3.0;
+
+      const sug8x5HTML = `
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; border-top: 1px dashed var(--border); padding-top: 4px;">
+          Cost: <strong>$${cost8x5.toFixed(2)}</strong><br>
+          Sug: <strong>$${sug25_8x5.toFixed(2)}</strong> (2.5x) | <strong>$${sug3_8x5.toFixed(2)}</strong> (3x)
+        </div>
+      `;
+
+      const sug8x8HTML = `
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; border-top: 1px dashed var(--border); padding-top: 4px;">
+          Cost: <strong>$${cost8x8.toFixed(2)}</strong><br>
+          Sug: <strong>$${sug25_8x8.toFixed(2)}</strong> (2.5x) | <strong>$${sug3_8x8.toFixed(2)}</strong> (3x)
+        </div>
+      `;
 
       tr.innerHTML = `
         <td>
@@ -2360,15 +2424,17 @@ function renderDessertsPricing(desserts) {
         <td style="font-weight: 600; color: var(--text-main);">${translatedName}</td>
         <td>
           <span class="price-text price-8x5-text">${p8x5Text}</span>
-          <input type="number" class="price-input price-8x5-input hidden" step="0.01" min="0" value="${p8x5Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
-        </td>
-        <td>
-          <span class="price-text price-9x9-text">${p9x9Text}</span>
-          <input type="number" class="price-input price-9x9-input hidden" step="0.01" min="0" value="${p9x9Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          <div class="price-input price-8x5-input-container hidden">
+            <input type="number" class="price-input price-8x5-input" step="0.01" min="0" value="${p8x5Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          </div>
+          ${sug8x5HTML}
         </td>
         <td>
           <span class="price-text price-8x8-text">${p8x8Text}</span>
-          <input type="number" class="price-input price-8x8-input hidden" step="0.01" min="0" value="${p8x8Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          <div class="price-input price-8x8-input-container hidden">
+            <input type="number" class="price-input price-8x8-input" step="0.01" min="0" value="${p8x8Val}" placeholder="TBD" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          </div>
+          ${sug8x8HTML}
         </td>
         <td style="text-align: center;">
           <div class="row-actions">
@@ -2389,7 +2455,8 @@ function editDessertPricesRow(btn, id) {
 
   // Toggle classes
   row.querySelectorAll('.price-text').forEach(el => el.classList.add('hidden'));
-  row.querySelectorAll('.price-input').forEach(el => el.classList.remove('hidden'));
+  row.querySelectorAll('.price-input-container').forEach(el => el.classList.remove('hidden'));
+  row.querySelectorAll('.price-input:not(.price-input-container)').forEach(el => el.classList.remove('hidden'));
   
   btn.classList.add('hidden');
   row.querySelector('.btn-save-prices').classList.remove('hidden');
@@ -2402,14 +2469,15 @@ function cancelEditDessertPrices(btn) {
 
   // Toggle classes back
   row.querySelectorAll('.price-text').forEach(el => el.classList.remove('hidden'));
-  row.querySelectorAll('.price-input').forEach(el => el.classList.add('hidden'));
+  row.querySelectorAll('.price-input-container').forEach(el => el.classList.add('hidden'));
+  row.querySelectorAll('.price-input:not(.price-input-container)').forEach(el => el.classList.add('hidden'));
   
   row.querySelector('.btn-edit-prices').classList.remove('hidden');
   row.querySelector('.btn-save-prices').classList.add('hidden');
   row.querySelector('.btn-cancel-prices').classList.add('hidden');
 
   // Reset inputs to original values
-  row.querySelectorAll('.price-input').forEach(input => {
+  row.querySelectorAll('.price-input:not(.price-input-container)').forEach(input => {
     input.value = input.defaultValue;
   });
 }
@@ -2419,16 +2487,16 @@ async function saveDessertPrices(btn, id) {
   if (!row) return;
 
   const price8x5Input = row.querySelector('.price-8x5-input');
-  const price9x9Input = row.querySelector('.price-9x9-input');
   const price8x8Input = row.querySelector('.price-8x8-input');
 
   const p8x5 = price8x5Input.value === '' ? null : parseFloat(price8x5Input.value);
-  const p9x9 = price9x9Input.value === '' ? null : parseFloat(price9x9Input.value);
   const p8x8 = price8x8Input.value === '' ? null : parseFloat(price8x8Input.value);
 
   if (p8x5 !== null && isNaN(p8x5)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
-  if (p9x9 !== null && isNaN(p9x9)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
   if (p8x8 !== null && isNaN(p8x8)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
+
+  const originalItem = dessertsCache.find(d => d.id === id);
+  const p9x9 = originalItem ? originalItem.price_9x9 : null;
 
   try {
     const response = await fetch(`/api/admin/desserts/${id}/prices`, {
