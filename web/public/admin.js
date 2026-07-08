@@ -639,7 +639,7 @@ function renderOrders(orders) {
       minute: '2-digit'
     });
 
-    const parsedToppings = order.toppings ? JSON.parse(order.toppings) : [];
+    const parsedToppings = Array.isArray(order.toppings) ? order.toppings : (order.toppings ? JSON.parse(order.toppings) : []);
     const toppingsFormatted = parsedToppings.length > 0 
       ? parsedToppings.map(tKey => {
           const trans = t(tKey.toLowerCase());

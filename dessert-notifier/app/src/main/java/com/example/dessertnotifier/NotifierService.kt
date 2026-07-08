@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
@@ -71,8 +72,16 @@ class NotifierService : Service() {
         
         Log.d(TAG, "Service started. Saved URL: $savedUrl")
 
-        // Start Foreground Service immediately
-        startForeground(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification(savedUrl))
+        // Start Foreground Service immediately with service type on Android 10+ (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                FOREGROUND_NOTIFICATION_ID,
+                buildForegroundNotification(savedUrl),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            startForeground(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification(savedUrl))
+        }
 
         if (savedUrl.isNotEmpty() && (savedUrl != serverUrl || webSocket == null)) {
             serverUrl = savedUrl
@@ -202,14 +211,15 @@ class NotifierService : Service() {
                 }
             } else if (type == "order_updated") {
                 val orderId = json.get("id").asInt
-                val status = json.get("status").asString
+                val statusElement = json.get("status")
+                val status = if (statusElement != null && !statusElement.isJsonNull) statusElement.asString else "pending"
                 OrderRepository.updateOrder(this, orderId, status)
             } else if (type == "order_deleted") {
                 val orderId = json.get("id").asInt
                 OrderRepository.deleteOrder(this, orderId)
             }
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Failed to parse websocket message", e)
         }
     }

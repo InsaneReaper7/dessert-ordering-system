@@ -329,7 +329,15 @@ app.get('/api/admin/orders', authenticateAdminToken, async (req, res) => {
     const orders = await db.getOrders();
     const ordersWithCost = await Promise.all(orders.map(async (o) => {
       const cost = await db.calculateOrderCost(o);
-      return { ...o, cost_of_making: cost };
+      let parsedToppings = [];
+      if (o.toppings) {
+        try {
+          parsedToppings = typeof o.toppings === 'string' ? JSON.parse(o.toppings) : o.toppings;
+        } catch (e) {
+          parsedToppings = [];
+        }
+      }
+      return { ...o, toppings: parsedToppings, cost_of_making: cost };
     }));
     res.json(ordersWithCost);
   } catch (err) {
