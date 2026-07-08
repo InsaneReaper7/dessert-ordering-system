@@ -190,9 +190,20 @@ app.post('/api/orders', async (req, res) => {
       };
       basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
     }
-    
+
     if (basePrice !== null) {
-      total_price = basePrice;
+      // Extra toppings cost $0.75 each — pre-included ones are free
+      const EXTRA_TOPPING_PRICE = 0.75;
+      const preIncludedMap = {
+        'marshmallow_swirl_brownies': ['marshmallow dots'],
+        'butterscotch_blondies': ['butterscotch chips'],
+        'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
+        'carrot_cake_bars': ['pecans']
+      };
+      const includedToppings = preIncludedMap[dessert_id] || [];
+      const toppingList = Array.isArray(toppings) ? toppings : (toppings ? JSON.parse(toppings) : []);
+      const extraToppings = toppingList.filter(t => !includedToppings.includes(t));
+      total_price = basePrice + (extraToppings.length * EXTRA_TOPPING_PRICE);
     }
 
     const orderObj = {

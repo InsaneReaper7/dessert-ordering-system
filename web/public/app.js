@@ -34,7 +34,7 @@ const i18n = {
     option_icing_side: "Icing on the Side",
     summary_label_icing: "Icing Option:",
     form_label_toppings: "Choose Toppings / Extra Ingredients",
-    form_label_toppings_optional: "(Included — no extra charge)",
+    form_label_toppings_optional: "(Included: free | Extras: +$0.75 each)",
     form_toppings_help: "Customize your brownie or blondie! Select all the ingredients you would like mixed in or sprinkled on top.",
     form_label_notes: "Special Requests / Notes",
     form_placeholder_notes: "Any dietary preferences or custom notes? E.g., 'half walnuts, half chocolate chips'",
@@ -118,7 +118,7 @@ const i18n = {
     option_icing_side: "Glaseado Aparte",
     summary_label_icing: "Opción de Glaseado:",
     form_label_toppings: "Elige los Ingredientes Adicionales",
-    form_label_toppings_optional: "(Incluidos — sin cargo adicional)",
+    form_label_toppings_optional: "(Incluidos: gratis | Extras: +$0.75 c/u)",
     form_toppings_help: "¡Personaliza tu brownie o blondie! Selecciona todos los ingredientes que te gustaría mezclar o espolvorear por encima.",
     form_label_notes: "Solicitudes Especiales / Notas",
     form_placeholder_notes: "¿Alguna preferencia alimentaria o nota personalizada? Ej: 'mitad nueces, mitad chispas de chocolate'",
@@ -382,7 +382,9 @@ function updateAdditionsCheckboxes() {
         cb.checked = false;
         cb.disabled = false;
       }
-      span.textContent = baseText;
+      // Show +$0.75 hint on non-included toppings
+      const extraSuffix = currentLang === 'es' ? ' (+$0.75)' : ' (+$0.75)';
+      span.textContent = baseText + extraSuffix;
     }
   });
 }
@@ -729,24 +731,30 @@ function updateOrderSummary() {
     };
     basePrice = rollPriceMap[size] !== undefined ? rollPriceMap[size] : null;
   }
-  // Toppings are included in the base price — only TBD if no price is set for the size
+  const EXTRA_TOPPING_PRICE = 0.75;
+  const extraToppingsCost = extraToppings.length * EXTRA_TOPPING_PRICE;
+  // Toppings are included in the base price — only TBD if no base price is set
   let hasTBD = basePrice === null;
+  const totalPrice = hasTBD ? null : basePrice + extraToppingsCost;
 
   // Render individual base price
   if (summaryItemPrice) {
     summaryItemPrice.textContent = basePrice === null ? i18n[currentLang].summary_total_tbd : `$${basePrice.toFixed(2)}`;
   }
 
-  // Render toppings list with translations
+  // Render toppings list — included ones free, extras priced
   if (summaryToppingsList) {
-    if (extraToppings.length > 0) {
-      const formatted = extraToppings.map(t => {
-        // Map local checkbox value to translation key (e.g. 'walnuts' -> 'topping_walnuts')
-        const translationKey = 'topping_' + t.toLowerCase().replace(' ', '_');
-        return i18n[currentLang][translationKey] || t;
-      }).join(', ');
-      const incl = currentLang === 'es' ? '(Incluido)' : '(Included)';
-      summaryToppingsList.textContent = `${formatted} ${incl}`;
+    const allChecked = Array.from(document.querySelectorAll('input[name="toppings"]:checked'));
+    if (allChecked.length > 0) {
+      const parts = allChecked.map(cb => {
+        const key = 'topping_' + cb.value.toLowerCase().replace(' ', '_');
+        const name = i18n[currentLang][key] || cb.value;
+        const label = cb.disabled
+          ? `${name} (${currentLang === 'es' ? 'Incluido' : 'Included'})`
+          : `${name} (+$${EXTRA_TOPPING_PRICE.toFixed(2)})`;
+        return label;
+      });
+      summaryToppingsList.textContent = parts.join(', ');
     } else {
       summaryToppingsList.textContent = i18n[currentLang].summary_no_toppings;
     }
@@ -774,7 +782,7 @@ function updateOrderSummary() {
     if (hasTBD) {
       summaryTotalPrice.textContent = i18n[currentLang].summary_total_tbd;
     } else {
-      summaryTotalPrice.textContent = `$${basePrice.toFixed(2)}`;
+      summaryTotalPrice.textContent = `$${totalPrice.toFixed(2)}`;
     }
   }
 }
