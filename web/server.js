@@ -161,7 +161,7 @@ app.get('/api/desserts', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   const { customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, pickup_delivery } = req.body;
 
-  if (!customer_name || !customer_phone || !customer_email || !dessert_id || !size || !pickup_delivery) {
+  if (!customer_name || !customer_phone || !dessert_id || !size || !pickup_delivery) {
     return res.status(400).json({ error: 'Missing required customer or order details' });
   }
 
@@ -192,12 +192,7 @@ app.post('/api/orders', async (req, res) => {
     }
     
     if (basePrice !== null) {
-      // Calculate price (Currently toppings are TBD, so if toppings are selected, total price becomes TBD / null)
-      if (toppings && toppings.length > 0) {
-        total_price = null; // Mark as TBD since toppings have no set pricing
-      } else {
-        total_price = basePrice;
-      }
+      total_price = basePrice;
     }
 
     const orderObj = {

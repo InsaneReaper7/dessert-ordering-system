@@ -143,6 +143,7 @@ const TRANSLATIONS = {
     coconut_cream_bars: "Coconut Cream Bars",
     cinnamon_rolls: "Artisan Cinnamon Rolls",
     carrot_cake_bars: "Carrot Cake Bars",
+    banana_bread_bars: "Banana Bread Bars",
 
     // Sizes Mapping
     "8x5": "8x5",
@@ -309,6 +310,7 @@ const TRANSLATIONS = {
     coconut_cream_bars: "Barras de Crema de Coco",
     cinnamon_rolls: "Rollos de Canela Artesanales",
     carrot_cake_bars: "Barras de Pastel de Zanahoria",
+    banana_bread_bars: "Barras de Pan de Plátano",
 
     // Sizes Mapping
     "8x5": "8x5",

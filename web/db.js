@@ -405,6 +405,17 @@ async function seedData() {
       has_toppings: 1,
       image_url: '/images/carrot_cake_bars.png',
       base_mold: '9x9'
+    },
+    {
+      id: 'banana_bread_bars',
+      name: 'Banana Bread Bars',
+      description: 'Dense, moist banana bread bars with a golden-brown caramelized crust and a soft, tender crumb — finished with a delicate vanilla glaze drizzle.',
+      price_8x5: null, // TBD
+      price_9x9: null, // TBD
+      price_8x8: null, // TBD
+      has_toppings: 0,
+      image_url: '/images/banana_bread_bars.png',
+      base_mold: '9x9'
     }
   ];
 

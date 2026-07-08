@@ -258,6 +258,13 @@ const itemTranslations = {
       en: "Artisan carrot cake bars topped with smooth icing and toasted pecans, cut into perfect squares.", 
       es: "Barras artesanales de pastel de zanahoria cubiertas con glaseado suave y nueces pecana tostadas, cortadas en cuadrados perfectos." 
     }
+  },
+  banana_bread_bars: {
+    name: { en: "Banana Bread Bars", es: "Barras de Pan de Plátano" },
+    desc: {
+      en: "Dense, moist banana bread bars with a golden-brown caramelized crust and a soft, tender crumb — finished with a delicate vanilla glaze drizzle.",
+      es: "Barras densas y húmedas de pan de plátano con una costra caramelizada dorada y una miga suave y tierna — terminadas con un delicado chorro de glaseado de vainilla."
+    }
   }
 };
 
@@ -787,6 +794,18 @@ async function handleFormSubmit(e) {
   const customerName = document.getElementById('customer-name').value;
   const customerPhone = document.getElementById('customer-phone').value;
   const customerEmail = document.getElementById('customer-email').value;
+
+  // If no email, ask for confirmation before proceeding
+  if (!customerEmail.trim()) {
+    const msg = currentLang === 'es'
+      ? '⚠️ No ingresaste un correo electrónico. Sin él no podremos enviarte actualizaciones de tu pedido.\n\n¿Deseas continuar sin correo?'
+      : '⚠️ You didn\'t enter an email address. Without it we won\'t be able to send you order updates.\n\nDo you want to continue without an email?';
+    if (!confirm(msg)) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = i18n[currentLang].btn_submit;
+      return;
+    }
+  }
 
   const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
     .map(cb => cb.value);
