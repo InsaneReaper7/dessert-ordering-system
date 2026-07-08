@@ -90,11 +90,11 @@ const TRANSLATIONS = {
     placeholder_section: "e.g. Dough, Filling",
     walnuts: "Walnuts",
     pecans: "Pecans",
-    marshmallow_dots: "Marshmallow Dots",
+    marshmallow: "Marshmallow",
     caramel_dots: "Caramel Dots",
     chocolate_chips: "Chocolate Chips",
     butterscotch_chips: "Butterscotch Chips",
-    white_chocolate_chips: "White Chocolate Chips",
+    reeses_peanut_butter_chips: "Reese's Peanut Butter Chips",
     vanilla_chips: "Vanilla Chips",
 
     // Dynamic strings / mappings
@@ -258,11 +258,11 @@ const TRANSLATIONS = {
     placeholder_section: "ej. Masa, Relleno",
     walnuts: "Nueces",
     pecans: "Pacanas",
-    marshmallow_dots: "Malvaviscos",
+    marshmallow: "Malvavisco",
     caramel_dots: "Dulce de Leche",
     chocolate_chips: "Chispas de Chocolate",
     butterscotch_chips: "Chispas de Butterscotch",
-    white_chocolate_chips: "Chispas de Chocolate Blanco",
+    reeses_peanut_butter_chips: "Chips de Mantequilla de Maní Reese's",
     vanilla_chips: "Chispas de Vainilla",
 
     // Dynamic strings / mappings

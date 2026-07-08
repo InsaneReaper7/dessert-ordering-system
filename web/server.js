@@ -195,7 +195,7 @@ app.post('/api/orders', async (req, res) => {
       // Extra toppings cost $0.75 each — pre-included ones are free
       const EXTRA_TOPPING_PRICE = 0.75;
       const preIncludedMap = {
-        'marshmallow_swirl_brownies': ['marshmallow dots'],
+        'marshmallow_swirl_brownies': ['marshmallow'],
         'butterscotch_blondies': ['butterscotch chips'],
         'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
         'carrot_cake_bars': ['pecans']

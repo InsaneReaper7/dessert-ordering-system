@@ -68,11 +68,11 @@ const i18n = {
     // Toppings
     topping_walnuts: "Walnuts",
     topping_pecans: "Pecans",
-    topping_marshmallow_dots: "Marshmallow Dots",
+    topping_marshmallow: "Marshmallow",
     topping_caramels_dots: "Caramel Dots",
     topping_chocolate_chips: "Chocolate Chips",
     topping_butterscotch_chips: "Butterscotch Chips",
-    topping_white_chocolate_chips: "White Chocolate Chips",
+    topping_reeses_peanut_butter_chips: "Reese's Peanut Butter Chips",
     topping_vanilla_chips: "Vanilla Chips",
     // Miscellaneous
     card_starting_at: "Starting at",
@@ -152,11 +152,11 @@ const i18n = {
     // Toppings
     topping_walnuts: "Nueces",
     topping_pecans: "Pecanas",
-    topping_marshmallow_dots: "Malvaviscos",
+    topping_marshmallow: "Malvavisco",
     topping_caramels_dots: "Gotas de Caramelo",
     topping_chocolate_chips: "Chispas de Chocolate",
     topping_butterscotch_chips: "Chispas de Butterscotch",
-    topping_white_chocolate_chips: "Chispas de Chocolate Blanco",
+    topping_reeses_peanut_butter_chips: "Chips de Mantequilla de Maní Reese's",
     topping_vanilla_chips: "Chispas de Vainilla",
     // Miscellaneous
     card_starting_at: "Desde",
@@ -353,7 +353,7 @@ function updateAdditionsCheckboxes() {
   
   // Pre-included ingredients mapping
   const preIncludedMap = {
-    'marshmallow_swirl_brownies': ['marshmallow dots'],
+    'marshmallow_swirl_brownies': ['marshmallow'],
     'butterscotch_blondies': ['butterscotch chips'],
     'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
     'carrot_cake_bars': ['pecans']
