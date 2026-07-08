@@ -260,7 +260,7 @@ const itemTranslations = {
     }
   },
   banana_bread_bars: {
-    name: { en: "Banana Bread Bars", es: "Barras de Pan de Plátano" },
+    name: { en: "Banana Bread Bars", es: "Barras de Pan de Guineo" },
     desc: {
       en: "Dense, moist banana bread bars with a golden-brown caramelized crust and a soft, tender crumb — finished with a delicate vanilla glaze drizzle.",
       es: "Barras densas y húmedas de pan de plátano con una costra caramelizada dorada y una miga suave y tierna — terminadas con un delicado chorro de glaseado de vainilla."
