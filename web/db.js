@@ -857,61 +857,111 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
 
 function resolveInventoryIngredientName(recipeIngName, inventoryItems) {
   const name = recipeIngName.toLowerCase().trim();
-  const invNames = inventoryItems.map(item => item.name.toLowerCase().trim());
   
+  const isDerivative = (str) => {
+    const lower = str.toLowerCase();
+    return lower.includes('juice') || lower.includes('zest') || lower.includes('peel') || 
+           lower.includes('extract') || lower.includes('jugo') || lower.includes('ralladura') ||
+           lower.includes('crunch') || lower.includes('swirl') || lower.includes('topping');
+  };
+
+  // 1. Lemons
   if (name.includes('lemon') || name.includes('limón') || name.includes('limon') || name.includes('limones')) {
-    const match = invNames.find(n => n === 'lemons' || n === 'lemon' || n === 'limón' || n === 'limon' || n === 'limones');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('lemon') || itemLower.includes('limón') || itemLower.includes('limon') || itemLower.includes('limones')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
-  
+
+  // 2. Limes
   if (name.includes('lime') || name.includes('lima') || name.includes('limas')) {
-    const match = invNames.find(n => n === 'limes' || n === 'lime' || n === 'lima' || n === 'limas');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('lime') || itemLower.includes('lima') || itemLower.includes('limas')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
-  
+
+  // 3. Oranges
   if (name.includes('orange') || name.includes('naranja') || name.includes('naranjas')) {
-    const match = invNames.find(n => n === 'oranges' || n === 'orange' || n === 'naranja' || n === 'naranjas');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('orange') || itemLower.includes('naranja') || itemLower.includes('naranjas')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 4. Pineapples
   if (name.includes('pineapple') || name.includes('piña') || name.includes('pina')) {
-    const match = invNames.find(n => n === 'pineapples' || n === 'pineapple' || n === 'piña' || n === 'pina');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('pineapple') || itemLower.includes('piña') || itemLower.includes('pina')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 5. Apples
   if (name.includes('apple') || name.includes('manzana') || name.includes('manzanas')) {
-    const match = invNames.find(n => n === 'apples' || n === 'apple' || n === 'manzanas' || n === 'manzana');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('apple') || itemLower.includes('manzana') || itemLower.includes('manzanas')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 6. Bananas
   if (name.includes('banana') || name.includes('guineo') || name.includes('guineos') || name.includes('bananas')) {
-    const match = invNames.find(n => n === 'bananas' || n === 'banana' || n === 'guineos' || n === 'guineo');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('banana') || itemLower.includes('guineo') || itemLower.includes('guineos') || itemLower.includes('bananas')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 7. Strawberries
   if (name.includes('strawberry') || name.includes('fresa') || name.includes('fresas') || name.includes('strawberries')) {
-    const match = invNames.find(n => n === 'strawberries' || n === 'strawberry' || n === 'fresas' || n === 'fresa');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('strawberry') || itemLower.includes('fresa') || itemLower.includes('fresas') || itemLower.includes('strawberries')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 8. Blueberries
   if (name.includes('blueberry') || name.includes('arándano') || name.includes('arandano') || name.includes('blueberries')) {
-    const match = invNames.find(n => n === 'blueberries' || n === 'blueberry' || n === 'arándanos' || n === 'arandanos');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('blueberry') || itemLower.includes('arándano') || itemLower.includes('arandano') || itemLower.includes('blueberries')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 9. Passionfruit
   if (name.includes('passionfruit') || name.includes('maracuyá') || name.includes('maracuya')) {
-    const match = invNames.find(n => n === 'passionfruit' || n === 'maracuyá' || n === 'maracuya');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('passionfruit') || itemLower.includes('maracuyá') || itemLower.includes('maracuya')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 10. Mangos
   if (name.includes('mango') || name.includes('mangos')) {
-    const match = invNames.find(n => n === 'mangos' || n === 'mango');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('mango') || itemLower.includes('mangos')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
 
+  // 11. Coconuts
   if (name.includes('coconut') || name.includes('coco') || name.includes('coconuts')) {
-    const match = invNames.find(n => n === 'coconuts' || n === 'coconut' || n === 'coco' || n === 'cocos');
-    if (match) return match;
+    const match = inventoryItems.find(item => {
+      const itemLower = (item.name || '').toLowerCase().trim();
+      return (itemLower.includes('coconut') || itemLower.includes('coco') || itemLower.includes('coconuts')) && !isDerivative(itemLower);
+    });
+    if (match) return match.name;
   }
   
   return recipeIngName;
