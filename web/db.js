@@ -313,7 +313,7 @@ async function seedData() {
   const initialDesserts = [
     {
       id: 'brownies',
-      name: 'Create your own brownie',
+      name: 'Create Your Own Brownie',
       description: 'Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
@@ -322,7 +322,7 @@ async function seedData() {
     },
     {
       id: 'blondies',
-      name: 'Create your own blondie',
+      name: 'Create Your Own Blondie',
       description: 'Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
@@ -459,8 +459,8 @@ async function seedData() {
     // Force set cinnamon_rolls base_mold to Batch
     await query(`UPDATE desserts SET base_mold = 'Batch' WHERE id = 'cinnamon_rolls'`);
     // Force update Fudge Brownies and Classic Blondies names
-    await query(`UPDATE desserts SET name = 'Create your own brownie' WHERE id = 'brownies'`);
-    await query(`UPDATE desserts SET name = 'Create your own blondie' WHERE id = 'blondies'`);
+    await query(`UPDATE desserts SET name = 'Create Your Own Brownie' WHERE id = 'brownies'`);
+    await query(`UPDATE desserts SET name = 'Create Your Own Blondie' WHERE id = 'blondies'`);
     
     // Migrate previously established ingredients to their parent fruits
     const existingRecipeIngs = await query('SELECT DISTINCT ingredient_name FROM recipe_ingredients');

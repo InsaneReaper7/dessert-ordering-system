@@ -132,8 +132,8 @@ const TRANSLATIONS = {
     grand_total_batch: "Total Batch Cost:",
     
     // Dessert Names Mapping
-    brownies: "Create your own brownie",
-    blondies: "Create your own blondie",
+    brownies: "Create Your Own Brownie",
+    blondies: "Create Your Own Blondie",
     lemon_bars: "Tangy Lemon Bars",
     mango_bars: "Tangy Mango Bars",
     pineapple_bars: "Sweet Pineapple Bars",
