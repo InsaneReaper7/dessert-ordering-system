@@ -562,12 +562,23 @@ module.exports = {
   getRecipeIngredientsByDessert: (dessert_id) => 
     query('SELECT * FROM recipe_ingredients WHERE dessert_id = ? ORDER BY ingredient_name ASC', [dessert_id]),
   addRecipeIngredient: async (dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part) => {
-    // 1. Insert/ensure ingredient exists in inventory
     const nameTrim = ingredient_name.trim();
-    const exists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [nameTrim]);
-    if (Number(exists[0].count) === 0) {
-      await query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, 0.0, 1.0, ?)', [nameTrim, unit || 'g']);
+    const parentFruit = getParentFruitName(nameTrim);
+    
+    if (parentFruit) {
+      // 1. Ensure the parent fruit exists in inventory (in units)
+      const fruitExists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [parentFruit]);
+      if (Number(fruitExists[0].count) === 0) {
+        await query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, 0.0, 1.0, \'unit\')', [parentFruit]);
+      }
+    } else {
+      // 1. Ensure this exact ingredient exists in inventory
+      const exists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [nameTrim]);
+      if (Number(exists[0].count) === 0) {
+        await query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, 0.0, 1.0, ?)', [nameTrim, unit || 'g']);
+      }
     }
+    
     // 2. Insert recipe ingredient usage
     return query(
       `INSERT INTO recipe_ingredients (dessert_id, ingredient_name, amount, unit, is_topping, topping_value, recipe_part) 
@@ -791,6 +802,34 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
         return amount;
       }
     }
+    if (name.includes('pineapple juice') || name.includes('jugo de piña') || name.includes('jugo de pina')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 600.0; // 600g juice = 1 pineapple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('pineapple chunks') || name.includes('pineapple crush') || name.includes('piña en trozos') || name.includes('piña triturada')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 900.0; // 900g chunks = 1 pineapple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('apple juice') || name.includes('jugo de manzana')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 120.0; // 120g juice = 1 apple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('apple slices') || name.includes('apple chunks') || name.includes('sliced apple') || name.includes('manzana en rodajas')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 150.0; // 150g slices = 1 apple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
 
     if (recipeUnit !== 'unit') {
       return amountInGrams / gramsPerUnit;
@@ -819,6 +858,92 @@ function resolveInventoryIngredientName(recipeIngName, inventoryItems) {
     const match = invNames.find(n => n === 'oranges' || n === 'orange' || n === 'naranja' || n === 'naranjas');
     if (match) return match;
   }
+
+  if (name.includes('pineapple') || name.includes('piña') || name.includes('pina')) {
+    const match = invNames.find(n => n === 'pineapples' || n === 'pineapple' || n === 'piña' || n === 'pina');
+    if (match) return match;
+  }
+
+  if (name.includes('apple') || name.includes('manzana') || name.includes('manzanas')) {
+    const match = invNames.find(n => n === 'apples' || n === 'apple' || n === 'manzanas' || n === 'manzana');
+    if (match) return match;
+  }
+
+  if (name.includes('banana') || name.includes('guineo') || name.includes('guineos') || name.includes('bananas')) {
+    const match = invNames.find(n => n === 'bananas' || n === 'banana' || n === 'guineos' || n === 'guineo');
+    if (match) return match;
+  }
+
+  if (name.includes('strawberry') || name.includes('fresa') || name.includes('fresas') || name.includes('strawberries')) {
+    const match = invNames.find(n => n === 'strawberries' || n === 'strawberry' || n === 'fresas' || n === 'fresa');
+    if (match) return match;
+  }
+
+  if (name.includes('blueberry') || name.includes('arándano') || name.includes('arandano') || name.includes('blueberries')) {
+    const match = invNames.find(n => n === 'blueberries' || n === 'blueberry' || n === 'arándanos' || n === 'arandanos');
+    if (match) return match;
+  }
+
+  if (name.includes('passionfruit') || name.includes('maracuyá') || name.includes('maracuya')) {
+    const match = invNames.find(n => n === 'passionfruit' || n === 'maracuyá' || n === 'maracuya');
+    if (match) return match;
+  }
+
+  if (name.includes('mango') || name.includes('mangos')) {
+    const match = invNames.find(n => n === 'mangos' || n === 'mango');
+    if (match) return match;
+  }
+
+  if (name.includes('coconut') || name.includes('coco') || name.includes('coconuts')) {
+    const match = invNames.find(n => n === 'coconuts' || n === 'coconut' || n === 'coco' || n === 'cocos');
+    if (match) return match;
+  }
   
   return recipeIngName;
+}
+
+function getParentFruitName(recipeIngName) {
+  const name = recipeIngName.toLowerCase().trim();
+  
+  if (name.includes('lemon') || name.includes('limón') || name.includes('limon')) return 'Lemons';
+  if (name.includes('lime') || name.includes('lima')) return 'Limes';
+  if (name.includes('orange') || name.includes('naranja')) return 'Oranges';
+  if (name.includes('pineapple') || name.includes('piña') || name.includes('pina')) return 'Pineapples';
+  if (name.includes('apple') || name.includes('manzana')) return 'Apples';
+  if (name.includes('banana') || name.includes('guineo')) return 'Bananas';
+  if (name.includes('strawberry') || name.includes('fresa')) return 'Strawberries';
+  if (name.includes('blueberry') || name.includes('arándano') || name.includes('arandano')) return 'Blueberries';
+  if (name.includes('passionfruit') || name.includes('maracuyá') || name.includes('maracuya')) return 'Passionfruit';
+  if (name.includes('mango')) return 'Mangos';
+  if (name.includes('coconut') || name.includes('coco')) return 'Coconuts';
+  
+  const stripWords = [
+    'juice', 'zest', 'peel', 'extract', 
+    'jugo de', 'jugo', 'ralladura de', 'ralladura', 'ralladura de cáscara de',
+    'de limón', 'de limon', 'de naranja', 'de lima'
+  ];
+  
+  const isDerivative = stripWords.some(word => name.includes(word));
+  if (isDerivative) {
+    let clean = name;
+    stripWords.forEach(word => {
+      clean = clean.replace(new RegExp('\\b' + word + '\\b', 'gi'), '');
+    });
+    clean = clean.replace(/\s+/g, ' ').trim();
+    if (clean.length > 0) {
+      let cap = clean.charAt(0).toUpperCase() + clean.slice(1);
+      if (!cap.endsWith('s')) {
+        if (cap.endsWith('y')) {
+          cap = cap.slice(0, -1) + 'ies';
+        } else if (cap.endsWith('o') || cap.endsWith('ch') || cap.endsWith('sh')) {
+          cap = cap + 'es';
+        } else {
+          cap = cap + 's';
+        }
+      }
+      return cap;
+    }
+  }
+  
+  return null;
 }

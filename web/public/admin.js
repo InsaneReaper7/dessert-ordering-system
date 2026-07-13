@@ -2900,6 +2900,34 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
         return amount;
       }
     }
+    if (name.includes('pineapple juice') || name.includes('jugo de piña') || name.includes('jugo de pina')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 600.0; // 600g juice = 1 pineapple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('pineapple chunks') || name.includes('pineapple crush') || name.includes('piña en trozos') || name.includes('piña triturada')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 900.0; // 900g chunks = 1 pineapple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('apple juice') || name.includes('jugo de manzana')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 120.0; // 120g juice = 1 apple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('apple slices') || name.includes('apple chunks') || name.includes('sliced apple') || name.includes('manzana en rodajas')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 150.0; // 150g slices = 1 apple
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
 
     if (recipeUnit !== 'unit') {
       return amountInGrams / gramsPerUnit;
@@ -3146,6 +3174,46 @@ function resolveInventoryIngredientName(recipeIngName, inventoryItems) {
   
   if (name.includes('orange') || name.includes('naranja') || name.includes('naranjas')) {
     const match = invNames.find(n => n === 'oranges' || n === 'orange' || n === 'naranja' || n === 'naranjas');
+    if (match) return match;
+  }
+
+  if (name.includes('pineapple') || name.includes('piña') || name.includes('pina')) {
+    const match = invNames.find(n => n === 'pineapples' || n === 'pineapple' || n === 'piña' || n === 'pina');
+    if (match) return match;
+  }
+
+  if (name.includes('apple') || name.includes('manzana') || name.includes('manzanas')) {
+    const match = invNames.find(n => n === 'apples' || n === 'apple' || n === 'manzanas' || n === 'manzana');
+    if (match) return match;
+  }
+
+  if (name.includes('banana') || name.includes('guineo') || name.includes('guineos') || name.includes('bananas')) {
+    const match = invNames.find(n => n === 'bananas' || n === 'banana' || n === 'guineos' || n === 'guineo');
+    if (match) return match;
+  }
+
+  if (name.includes('strawberry') || name.includes('fresa') || name.includes('fresas') || name.includes('strawberries')) {
+    const match = invNames.find(n => n === 'strawberries' || n === 'strawberry' || n === 'fresas' || n === 'fresa');
+    if (match) return match;
+  }
+
+  if (name.includes('blueberry') || name.includes('arándano') || name.includes('arandano') || name.includes('blueberries')) {
+    const match = invNames.find(n => n === 'blueberries' || n === 'blueberry' || n === 'arándanos' || n === 'arandanos');
+    if (match) return match;
+  }
+
+  if (name.includes('passionfruit') || name.includes('maracuyá') || name.includes('maracuya')) {
+    const match = invNames.find(n => n === 'passionfruit' || n === 'maracuyá' || n === 'maracuya');
+    if (match) return match;
+  }
+
+  if (name.includes('mango') || name.includes('mangos')) {
+    const match = invNames.find(n => n === 'mangos' || n === 'mango');
+    if (match) return match;
+  }
+
+  if (name.includes('coconut') || name.includes('coco') || name.includes('coconuts')) {
+    const match = invNames.find(n => n === 'coconuts' || n === 'coconut' || n === 'coco' || n === 'cocos');
     if (match) return match;
   }
   
