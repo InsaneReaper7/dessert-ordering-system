@@ -949,6 +949,7 @@ async function loadIngredients() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const recipeIngredients = recipesResponse.ok ? await recipesResponse.json() : [];
+    recipeIngredientsCache = recipeIngredients; // Update global cache!
 
     // Fetch inventory ingredients (pricing)
     const response = await fetch('/api/admin/ingredients', {
@@ -963,6 +964,7 @@ async function loadIngredients() {
     if (!response.ok) throw new Error('Failed to fetch ingredients');
     
     const ingredients = await response.json();
+    inventoryCache = ingredients; // Update global cache!
     renderIngredients(ingredients, recipeIngredients);
   } catch (err) {
     console.error(err);
