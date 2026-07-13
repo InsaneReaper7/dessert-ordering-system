@@ -2683,45 +2683,7 @@ async function saveDessertPrices(btn, id) {
   }
 }
 
-async function saveCinnamonRollsPrices() {
-  const p1 = document.getElementById('roll-price-1').value === '' ? null : parseFloat(document.getElementById('roll-price-1').value);
-  const p4 = document.getElementById('roll-price-4').value === '' ? null : parseFloat(document.getElementById('roll-price-4').value);
-  const p6 = document.getElementById('roll-price-6').value === '' ? null : parseFloat(document.getElementById('roll-price-6').value);
-  const p12 = document.getElementById('roll-price-12').value === '' ? null : parseFloat(document.getElementById('roll-price-12').value);
-
-  if (p1 !== null && isNaN(p1)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
-  if (p4 !== null && isNaN(p4)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
-  if (p6 !== null && isNaN(p6)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
-  if (p12 !== null && isNaN(p12)) return alert(currentLanguage === 'es' ? 'Por favor ingrese un precio válido' : 'Please enter a valid price');
-
-  try {
-    const response = await fetch(`/api/admin/desserts/cinnamon_rolls/prices`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ 
-        price_8x5: null, 
-        price_8x8: null, 
-        price_1_roll: p1, 
-        price_4_pack: p4, 
-        price_6_pack: p6, 
-        price_12_pack: p12 
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Failed to update prices');
-    }
-
-    alert(currentLanguage === 'es' ? 'Precios de rollos de canela actualizados con éxito' : 'Cinnamon rolls prices updated successfully');
-    loadDessertsPricing();
-  } catch (err) {
-    alert(err.message);
-  }
-}
+// Removed duplicate saveCinnamonRollsPrices
 
 function convertRecipeAmountToInventoryGrams(ingredientName, amount, recipeUnit) {
   if (recipeUnit !== 'tsp' && recipeUnit !== 'tbsp') {
@@ -2894,6 +2856,8 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
     const costPerRollReg = costToMake / 9;
     const costPerRollMini = costToMake / 24;
 
+    const displayUpcharge = f.price > 0 ? `$${f.price.toFixed(2)}` : (isEs ? 'Gratis' : 'Free');
+
     frostingHtml += `
       <tr style="border-bottom: 1px solid var(--border);">
         <td style="padding: 12px; font-weight: 600;">${f.name}</td>
@@ -2904,7 +2868,10 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
           </div>
         </td>
         <td style="padding: 12px;">
-          <input type="number" class="frosting-upcharge-input" data-frosting-id="${f.id}" step="0.01" min="0" value="${f.price.toFixed(2)}" style="width: 100px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          <span class="frosting-price-text" style="font-weight: 600;">${displayUpcharge}</span>
+          ${f.id === 'classic' ? '' : `
+            <input type="number" class="frosting-upcharge-input hidden" data-frosting-id="${f.id}" step="0.01" min="0" value="${f.price !== null ? f.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          `}
         </td>
       </tr>
     `;
@@ -2925,14 +2892,18 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
             </tr>
           </thead>
           <tbody>
-            ${regPrices.map(p => `
-              <tr style="border-bottom: 1px dashed var(--border);">
-                <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Roll${p.quantity > 1 ? 's' : ''}</td>
-                <td style="padding: 8px 4px;">
-                  <input type="number" class="roll-price-input" data-size="regular" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
-                </td>
-              </tr>
-            `).join('')}
+            ${regPrices.map(p => {
+              const displayPrice = p.price !== null ? `$${p.price.toFixed(2)}` : 'TBD';
+              return `
+                <tr style="border-bottom: 1px dashed var(--border);">
+                  <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Roll${p.quantity > 1 ? 's' : ''}</td>
+                  <td style="padding: 8px 4px;">
+                    <span class="roll-price-text" style="font-weight: 600;">${displayPrice}</span>
+                    <input type="number" class="roll-price-input hidden" data-size="regular" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                  </td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -2950,14 +2921,18 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
             </tr>
           </thead>
           <tbody>
-            ${miniPrices.map(p => `
-              <tr style="border-bottom: 1px dashed var(--border);">
-                <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Mini Roll${p.quantity > 1 ? 's' : ''}</td>
-                <td style="padding: 8px 4px;">
-                  <input type="number" class="roll-price-input" data-size="mini" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
-                </td>
-              </tr>
-            `).join('')}
+            ${miniPrices.map(p => {
+              const displayPrice = p.price !== null ? `$${p.price.toFixed(2)}` : 'TBD';
+              return `
+                <tr style="border-bottom: 1px dashed var(--border);">
+                  <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Mini Roll${p.quantity > 1 ? 's' : ''}</td>
+                  <td style="padding: 8px 4px;">
+                    <span class="roll-price-text" style="font-weight: 600;">${displayPrice}</span>
+                    <input type="number" class="roll-price-input hidden" data-size="mini" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                  </td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -2983,13 +2958,37 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
     </div>
 
     <div style="margin-top: 24px; text-align: right;">
-      <button class="btn btn-primary" onclick="saveCinnamonRollsPrices()" style="padding: 12px 32px; font-size: 14px; font-weight: 600;">
-        ${isEs ? 'Guardar Cambios de Rollos de Canela' : 'Save Cinnamon Rolls Settings'}
+      <button class="btn btn-primary" id="btn-edit-rolls" onclick="editCinnamonRollsPricing()" style="padding: 10px 24px; font-size: 14px; font-weight: 600;">
+        ${isEs ? 'Editar Precios de Rollos' : 'Edit Cinnamon Rolls Prices'}
+      </button>
+      <button class="btn btn-success hidden" id="btn-save-rolls" onclick="saveCinnamonRollsPrices()" style="padding: 10px 24px; font-size: 14px; font-weight: 600; margin-right: 8px;">
+        ${isEs ? 'Guardar Cambios' : 'Save Changes'}
+      </button>
+      <button class="btn btn-danger hidden" id="btn-cancel-rolls" onclick="cancelEditCinnamonRollsPricing()" style="padding: 10px 24px; font-size: 14px; font-weight: 600; background-color: #ef4444;">
+        ${isEs ? 'Cancelar' : 'Cancel'}
       </button>
     </div>
   `;
 
   container.innerHTML = html;
+}
+
+// Edit Mode Toggle
+function editCinnamonRollsPricing() {
+  document.querySelectorAll('.roll-price-text').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.frosting-price-text').forEach(el => el.classList.add('hidden'));
+  
+  document.querySelectorAll('.roll-price-input').forEach(el => el.classList.remove('hidden'));
+  document.querySelectorAll('.frosting-upcharge-input').forEach(el => el.classList.remove('hidden'));
+  
+  document.getElementById('btn-edit-rolls')?.classList.add('hidden');
+  document.getElementById('btn-save-rolls')?.classList.remove('hidden');
+  document.getElementById('btn-cancel-rolls')?.classList.remove('hidden');
+}
+
+// Cancel Edit Mode
+function cancelEditCinnamonRollsPricing() {
+  loadDessertsPricing();
 }
 
 // Bulk save Cinnamon Rolls prices and upcharges
@@ -3008,7 +3007,8 @@ async function saveCinnamonRollsPrices() {
   const frostings = [];
   frostingInputs.forEach(input => {
     const id = input.dataset.frostingId;
-    const priceVal = input.value.trim() === '' ? 0.0 : parseFloat(input.value);
+    const priceVal = input.value.trim() === '' ? null : parseFloat(input.value);
+    prices.push({ size: 'frosting', quantity: 0, price: priceVal, id }); // Dummy wrapper for backward compability if needed, wait we just pass id and price
     frostings.push({ id, price: priceVal });
   });
 
@@ -3036,3 +3036,5 @@ async function saveCinnamonRollsPrices() {
 
 window.renderCinnamonRollsPricingManager = renderCinnamonRollsPricingManager;
 window.saveCinnamonRollsPrices = saveCinnamonRollsPrices;
+window.editCinnamonRollsPricing = editCinnamonRollsPricing;
+window.cancelEditCinnamonRollsPricing = cancelEditCinnamonRollsPricing;
