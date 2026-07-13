@@ -412,7 +412,8 @@ async function seedData() {
       price_9x9: null, // TBD
       price_8x8: null, // TBD
       has_toppings: 0,
-      image_url: '/images/cinnamon_rolls.png'
+      image_url: '/images/cinnamon_rolls.png',
+      base_mold: 'Batch'
     },
     {
       id: 'carrot_cake_bars',
@@ -449,22 +450,34 @@ async function seedData() {
     }
   }
 
+  // Clean up any previously seeded fictional frosting ingredients and placeholder prices
+  try {
+    await query(`DELETE FROM recipe_ingredients WHERE dessert_id IN ('frosting_classic', 'frosting_oreo', 'frosting_chocolate', 'frosting_lemon')`);
+    // Clear only our specific placeholder price seeds to avoid wiping user custom entries
+    await query(`UPDATE cinnamon_rolls_prices SET price = NULL WHERE price IN (3.50, 9.50, 18.00, 25.00, 1.75, 4.75, 9.00, 13.00, 16.00, 19.00, 22.00, 28.00)`);
+    await query(`UPDATE frosting_prices SET price = NULL WHERE id IN ('oreo', 'chocolate', 'lemon') AND price = 0.50`);
+    // Force set cinnamon_rolls base_mold to Batch
+    await query(`UPDATE desserts SET base_mold = 'Batch' WHERE id = 'cinnamon_rolls'`);
+  } catch (err) {
+    console.error('Error cleaning up placeholder seeds:', err);
+  }
+
   // Seed cinnamon_rolls_prices
   const initialRollPrices = [
-    { size: 'regular', quantity: 1, price: 3.50 },
-    { size: 'regular', quantity: 3, price: 9.50 },
-    { size: 'regular', quantity: 6, price: 18.00 },
-    { size: 'regular', quantity: 9, price: 25.00 },
+    { size: 'regular', quantity: 1, price: null },
+    { size: 'regular', quantity: 3, price: null },
+    { size: 'regular', quantity: 6, price: null },
+    { size: 'regular', quantity: 9, price: null },
     
-    { size: 'mini', quantity: 1, price: 1.75 },
-    { size: 'mini', quantity: 3, price: 4.75 },
-    { size: 'mini', quantity: 6, price: 9.00 },
-    { size: 'mini', quantity: 9, price: 13.00 },
-    { size: 'mini', quantity: 12, price: 16.00 },
-    { size: 'mini', quantity: 15, price: 19.00 },
-    { size: 'mini', quantity: 18, price: 22.00 },
-    { size: 'mini', quantity: 21, price: 25.00 },
-    { size: 'mini', quantity: 24, price: 28.00 }
+    { size: 'mini', quantity: 1, price: null },
+    { size: 'mini', quantity: 3, price: null },
+    { size: 'mini', quantity: 6, price: null },
+    { size: 'mini', quantity: 9, price: null },
+    { size: 'mini', quantity: 12, price: null },
+    { size: 'mini', quantity: 15, price: null },
+    { size: 'mini', quantity: 18, price: null },
+    { size: 'mini', quantity: 21, price: null },
+    { size: 'mini', quantity: 24, price: null }
   ];
 
   for (const item of initialRollPrices) {
@@ -477,55 +490,15 @@ async function seedData() {
   // Seed frosting_prices
   const initialFrostings = [
     { id: 'classic', name: 'Classic', price: 0.0 },
-    { id: 'oreo', name: 'Oreo', price: 0.50 },
-    { id: 'chocolate', name: 'Chocolate', price: 0.50 },
-    { id: 'lemon', name: 'Lemon', price: 0.50 }
+    { id: 'oreo', name: 'Oreo', price: null },
+    { id: 'chocolate', name: 'Chocolate', price: null },
+    { id: 'lemon', name: 'Lemon', price: null }
   ];
 
   for (const frosting of initialFrostings) {
     const exists = await query('SELECT COUNT(*) as count FROM frosting_prices WHERE id = ?', [frosting.id]);
     if (Number(exists[0].count) === 0) {
       await query('INSERT INTO frosting_prices (id, name, price) VALUES (?, ?, ?)', [frosting.id, frosting.name, frosting.price]);
-    }
-  }
-
-  // Seed default ingredients for frosting recipes if they are empty
-  const defaultFrostingIngredients = {
-    'frosting_classic': [
-      { ingredient: 'butter', amount: 75, unit: 'g', part: 'Frosting' },
-      { ingredient: 'powdered sugar', amount: 300, unit: 'g', part: 'Frosting' }
-    ],
-    'frosting_oreo': [
-      { ingredient: 'butter', amount: 75, unit: 'g', part: 'Frosting' },
-      { ingredient: 'powdered sugar', amount: 300, unit: 'g', part: 'Frosting' },
-      { ingredient: 'oreos', amount: 80, unit: 'g', part: 'Frosting' }
-    ],
-    'frosting_chocolate': [
-      { ingredient: 'butter', amount: 75, unit: 'g', part: 'Frosting' },
-      { ingredient: 'powdered sugar', amount: 300, unit: 'g', part: 'Frosting' },
-      { ingredient: 'cocoa powder', amount: 40, unit: 'g', part: 'Frosting' }
-    ],
-    'frosting_lemon': [
-      { ingredient: 'butter', amount: 75, unit: 'g', part: 'Frosting' },
-      { ingredient: 'powdered sugar', amount: 300, unit: 'g', part: 'Frosting' },
-      { ingredient: 'lemons', amount: 1, unit: 'unit', part: 'Frosting' }
-    ]
-  };
-
-  for (const [fId, ingredients] of Object.entries(defaultFrostingIngredients)) {
-    const exists = await query('SELECT COUNT(*) as count FROM recipe_ingredients WHERE dessert_id = ?', [fId]);
-    if (Number(exists[0].count) === 0) {
-      for (const ing of ingredients) {
-        const ingName = ing.ingredient;
-        const ingExists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [ingName]);
-        if (Number(ingExists[0].count) === 0) {
-          await query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, 0.0, 1.0, ?)', [ingName, ing.unit]);
-        }
-        await query(
-          'INSERT INTO recipe_ingredients (dessert_id, ingredient_name, amount, unit, recipe_part) VALUES (?, ?, ?, ?, ?)',
-          [fId, ingName, ing.amount, ing.unit, ing.part]
-        );
-      }
     }
   }
 }
@@ -634,15 +607,34 @@ module.exports = {
       }
     }
     
-    const SIZE_MULTIPLIERS = {
-      '8x5': 1.0,
-      '9x9': 1.8,
-      '1_roll': 1.0,
-      '4_pack': 4.0,
-      '6_pack': 6.0,
-      'full_tray': 12.0
-    };
-    const multiplier = SIZE_MULTIPLIERS[order.size] || 1.0;
+    let multiplier = 1.0;
+    if (order.dessert_id === 'cinnamon_rolls') {
+      const match = order.size.match(/^(reg|mini)_(\d+)$/);
+      if (match) {
+        const type = match[1];
+        const qty = parseInt(match[2]);
+        if (type === 'reg') {
+          multiplier = qty / 9;
+        } else {
+          multiplier = qty / 24;
+        }
+      } else {
+        const legacyMultipliers = {
+          '1_roll': 1 / 9,
+          '4_pack': 4 / 9,
+          '6_pack': 6 / 9,
+          'full_tray': 1.0
+        };
+        multiplier = legacyMultipliers[order.size] || 1.0;
+      }
+    } else {
+      const SIZE_MULTIPLIERS = {
+        '8x5': 1.0,
+        '9x9': 1.8,
+        '8x8': 1.6
+      };
+      multiplier = SIZE_MULTIPLIERS[order.size] || 1.0;
+    }
     
     let baseCost = 0;
     let toppingsCost = 0;

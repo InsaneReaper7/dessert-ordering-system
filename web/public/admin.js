@@ -1089,16 +1089,46 @@ function renderRecipeCostsList(baseCosts, containerId, inventoryItems) {
     itemDiv.appendChild(headerRow);
 
     if (isRolls) {
-      // For rolls just show base cost with no mold sizing
-      const rollRow = document.createElement('div');
-      rollRow.style.cssText = 'display:flex; justify-content:center;';
-      rollRow.innerHTML = `
-        <button class="recipe-size-pill" style="background:var(--primary); color:#fff;" onclick="openCostBreakdownModal(${JSON.stringify(JSON.stringify(d))}, 1.0, 'Base')">
-          <span>Base (1 Roll)</span>
-          <span>$${baseCost.toFixed(2)}</span>
-        </button>
-      `;
-      itemDiv.appendChild(rollRow);
+      const rollsDiv = document.createElement('div');
+      rollsDiv.style.cssText = 'display:flex; flex-direction:column; gap:6px; border-top:1px dashed var(--border); padding-top:8px;';
+      
+      const makeBtn = (label, cost, mult, sizeLabel) => {
+        const btn = document.createElement('button');
+        btn.className = 'recipe-size-pill';
+        btn.style.cssText = 'padding: 6px 8px;';
+        btn.innerHTML = `<span style="font-size:10px; font-weight:600; opacity:0.85;">${label}</span><span style="font-size:12px; font-weight:700;">$${cost.toFixed(2)}</span>`;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCostBreakdownModal(d, mult, sizeLabel);
+        });
+        return btn;
+      };
+
+      const regLabel = document.createElement('div');
+      regLabel.style.cssText = 'font-size:11px; font-weight:600; color:var(--primary); margin-bottom:2px;';
+      regLabel.textContent = currentLanguage === 'es' ? 'Regular (Grande):' : 'Regular (Big):';
+      rollsDiv.appendChild(regLabel);
+
+      const regGrid = document.createElement('div');
+      regGrid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:6px;';
+      regGrid.appendChild(makeBtn('1 Roll', baseCost / 9, 1/9, '1 Regular Roll'));
+      regGrid.appendChild(makeBtn('3 Rolls', baseCost / 3, 1/3, '3 Regular Rolls'));
+      regGrid.appendChild(makeBtn('Full (9)', baseCost, 1.0, 'Full Regular Batch (9 Rolls)'));
+      rollsDiv.appendChild(regGrid);
+
+      const miniLabel = document.createElement('div');
+      miniLabel.style.cssText = 'font-size:11px; font-weight:600; color:var(--primary); margin-bottom:2px;';
+      miniLabel.textContent = currentLanguage === 'es' ? 'Mini (Pequeño):' : 'Mini (Small):';
+      rollsDiv.appendChild(miniLabel);
+
+      const miniGrid = document.createElement('div');
+      miniGrid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;';
+      miniGrid.appendChild(makeBtn('1 Roll', baseCost / 24, 1/24, '1 Mini Roll'));
+      miniGrid.appendChild(makeBtn('1/2 Batch', baseCost / 2, 0.5, '1/2 Mini Batch (12 Rolls)'));
+      miniGrid.appendChild(makeBtn('Full (24)', baseCost, 1.0, 'Full Mini Batch (24 Rolls)'));
+      rollsDiv.appendChild(miniGrid);
+
+      itemDiv.appendChild(rollsDiv);
     } else {
       const sizesRow = document.createElement('div');
       sizesRow.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;';
