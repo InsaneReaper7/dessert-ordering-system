@@ -159,7 +159,7 @@ app.get('/api/desserts', async (req, res) => {
 
 // Public: Place order
 app.post('/api/orders', async (req, res) => {
-  const { customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, pickup_delivery } = req.body;
+  const { customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, pickup_delivery, frosting_id } = req.body;
 
   if (!customer_name || !customer_phone || !dessert_id || !size || !pickup_delivery) {
     return res.status(400).json({ error: 'Missing required customer or order details' });
@@ -175,35 +175,68 @@ app.post('/api/orders', async (req, res) => {
     // Determine price. If size price is null, then the total price is null (TBD)
     let total_price = null;
     let basePrice = null;
-    if (size === '8x8') {
-      basePrice = dessert.price_8x8;
-    } else if (size === '9x9') {
-      basePrice = dessert.price_9x9;
-    } else if (size === '8x5') {
-      basePrice = dessert.price_8x5;
-    } else {
-      const priceMap = {
-        '1_roll': dessert.price_1_roll,
-        '4_pack': dessert.price_4_pack,
-        '6_pack': dessert.price_6_pack,
-        'full_tray': dessert.price_12_pack
-      };
-      basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
-    }
 
-    if (basePrice !== null) {
-      // Extra toppings cost $0.75 each — pre-included ones are free
-      const EXTRA_TOPPING_PRICE = 0.75;
-      const preIncludedMap = {
-        'marshmallow_swirl_brownies': ['marshmallow'],
-        'butterscotch_blondies': ['butterscotch chips'],
-        'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
-        'carrot_cake_bars': ['pecans']
-      };
-      const includedToppings = preIncludedMap[dessert_id] || [];
-      const toppingList = Array.isArray(toppings) ? toppings : (toppings ? JSON.parse(toppings) : []);
-      const extraToppings = toppingList.filter(t => !includedToppings.includes(t));
-      total_price = basePrice + (extraToppings.length * EXTRA_TOPPING_PRICE);
+    if (dessert_id === 'cinnamon_rolls') {
+      const match = size.match(/^(reg|mini)_(\d+)$/);
+      if (match) {
+        const rollSize = match[1] === 'reg' ? 'regular' : 'mini';
+        const qty = parseInt(match[2]);
+        const rollsPriceObj = await db.getCinnamonRollPrice(rollSize, qty);
+        basePrice = rollsPriceObj ? rollsPriceObj.price : null;
+        
+        if (basePrice !== null) {
+          total_price = basePrice;
+          if (frosting_id && frosting_id !== 'classic') {
+            const frosting = await db.getFrosting(frosting_id);
+            if (frosting && frosting.price) {
+              total_price += qty * frosting.price;
+            }
+          }
+        }
+      } else {
+        // Fallback for legacy roll pack sizes (1_roll, 4_pack, etc.)
+        const priceMap = {
+          '1_roll': dessert.price_1_roll,
+          '4_pack': dessert.price_4_pack,
+          '6_pack': dessert.price_6_pack,
+          'full_tray': dessert.price_12_pack
+        };
+        basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
+        if (basePrice !== null) {
+          total_price = basePrice;
+        }
+      }
+    } else {
+      if (size === '8x8') {
+        basePrice = dessert.price_8x8;
+      } else if (size === '9x9') {
+        basePrice = dessert.price_9x9;
+      } else if (size === '8x5') {
+        basePrice = dessert.price_8x5;
+      } else {
+        const priceMap = {
+          '1_roll': dessert.price_1_roll,
+          '4_pack': dessert.price_4_pack,
+          '6_pack': dessert.price_6_pack,
+          'full_tray': dessert.price_12_pack
+        };
+        basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
+      }
+
+      if (basePrice !== null) {
+        // Extra toppings cost $0.75 each — pre-included ones are free
+        const EXTRA_TOPPING_PRICE = 0.75;
+        const preIncludedMap = {
+          'marshmallow_swirl_brownies': ['marshmallow'],
+          'butterscotch_blondies': ['butterscotch chips'],
+          'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
+          'carrot_cake_bars': ['pecans']
+        };
+        const includedToppings = preIncludedMap[dessert_id] || [];
+        const toppingList = Array.isArray(toppings) ? toppings : (toppings ? JSON.parse(toppings) : []);
+        const extraToppings = toppingList.filter(t => !includedToppings.includes(t));
+        total_price = basePrice + (extraToppings.length * EXTRA_TOPPING_PRICE);
+      }
     }
 
     const orderObj = {
@@ -627,6 +660,43 @@ app.put('/api/admin/desserts/:id/prices', authenticateAdminToken, async (req, re
     res.json({ message: 'Dessert prices updated successfully' });
   } catch (err) {
     console.error('Failed to update dessert prices:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
+// Public: Get Cinnamon Rolls pricing config
+app.get('/api/cinnamon-rolls/pricing', async (req, res) => {
+  try {
+    const rolls_prices = await db.getCinnamonRollsPrices();
+    const frostings = await db.getFrostingPrices();
+    res.json({ rolls_prices, frostings });
+  } catch (err) {
+    console.error('Failed to get Cinnamon Rolls pricing:', err);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+// Admin: Save Cinnamon Rolls pricing and frosting upcharges in bulk
+app.put('/api/admin/cinnamon-rolls/pricing', authenticateAdminToken, async (req, res) => {
+  const { prices, frostings } = req.body;
+  if (!Array.isArray(prices) || !Array.isArray(frostings)) {
+    return res.status(400).json({ error: 'Prices and frostings lists are required' });
+  }
+
+  try {
+    for (const item of prices) {
+      const priceVal = item.price === '' || item.price === null || isNaN(item.price) ? null : parseFloat(item.price);
+      await db.updateCinnamonRollsPrice(item.size, parseInt(item.quantity), priceVal);
+    }
+    
+    for (const f of frostings) {
+      const priceVal = f.price === '' || f.price === null || isNaN(f.price) ? 0.0 : parseFloat(f.price);
+      await db.updateFrostingPrice(f.id, priceVal);
+    }
+
+    res.json({ message: 'Cinnamon Rolls pricing and frosting upcharges saved successfully' });
+  } catch (err) {
+    console.error('Failed to save Cinnamon Rolls pricing:', err);
     res.status(500).json({ error: 'Database update failed' });
   }
 });

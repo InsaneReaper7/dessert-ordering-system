@@ -269,9 +269,23 @@ const itemTranslations = {
 };
 
 
+let rollsPricingData = { rolls_prices: [], frostings: [] };
+
+async function fetchCinnamonRollsPricing() {
+  try {
+    const response = await fetch('/api/cinnamon-rolls/pricing');
+    if (response.ok) {
+      rollsPricingData = await response.json();
+    }
+  } catch (err) {
+    console.error('Failed to fetch Cinnamon Rolls pricing options:', err);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   detectInitialLanguage();
   fetchDesserts();
+  fetchCinnamonRollsPricing();
   setupEventListeners();
 });
 
@@ -393,9 +407,12 @@ function updateAdditionsCheckboxes() {
 function renderSizeOptions(dessertId) {
   const container = document.getElementById('size-options-container');
   const sectionLabel = document.getElementById('size-section-label');
+  const rollsContainer = document.getElementById('cinnamon-rolls-options-container');
+  
   if (!container || !sectionLabel) return;
   if (!dessertId) {
     container.innerHTML = '';
+    if (rollsContainer) rollsContainer.classList.add('hidden');
     return;
   }
 
@@ -403,37 +420,17 @@ function renderSizeOptions(dessertId) {
   let html = '';
 
   if (dessertId === 'cinnamon_rolls') {
-    sectionLabel.textContent = currentLang === 'es' ? 'Selecciona la Cantidad' : 'Select Quantity';
-    
-    const selectedDessert = dessertsData.find(d => d.id === dessertId);
-    const rollsPrices = {
-      '1_roll': selectedDessert ? selectedDessert.price_1_roll : null,
-      '4_pack': selectedDessert ? selectedDessert.price_4_pack : null,
-      '6_pack': selectedDessert ? selectedDessert.price_6_pack : null,
-      'full_tray': selectedDessert ? selectedDessert.price_12_pack : null
-    };
-
-    const options = [
-      { value: '1_roll', titleKey: 'size_1_roll_title', price: rollsPrices['1_roll'] },
-      { value: '4_pack', titleKey: 'size_4_pack_title', price: rollsPrices['4_pack'] },
-      { value: '6_pack', titleKey: 'size_6_pack_title', price: rollsPrices['6_pack'] },
-      { value: 'full_tray', titleKey: 'size_full_tray_title', price: rollsPrices['full_tray'] }
-    ];
-
-    options.forEach((opt, idx) => {
-      const isChecked = prevSelected === opt.value || (!prevSelected && idx === 0);
-      const priceText = opt.price !== null ? `$${opt.price.toFixed(2)}` : i18n[currentLang].form_size_pricing_tbd;
-      html += `
-        <label class="radio-label">
-          <input type="radio" name="size" value="${opt.value}" ${isChecked ? 'checked' : ''} required>
-          <div class="radio-design">
-            <span class="size-title">${i18n[currentLang][opt.titleKey]}</span>
-            <span class="size-desc">${priceText}</span>
-          </div>
-        </label>
-      `;
-    });
+    sectionLabel.classList.add('hidden');
+    container.classList.add('hidden');
+    if (rollsContainer) {
+      rollsContainer.classList.remove('hidden');
+      renderCinnamonRollsOptions();
+    }
   } else {
+    sectionLabel.classList.remove('hidden');
+    container.classList.remove('hidden');
+    if (rollsContainer) rollsContainer.classList.add('hidden');
+
     sectionLabel.textContent = currentLang === 'es' ? 'Elige el Tamaño del Molde' : 'Choose Pan Size';
     
     const selectedDessert = dessertsData.find(d => d.id === dessertId);
@@ -658,7 +655,7 @@ function handleDessertChange(dessertId) {
     toppingsContainer.classList.add('hidden');
     // Clear checkmarks on hidden checkboxes
     const checkedBoxes = toppingsContainer.querySelectorAll('input[name="toppings"]:checked');
-    checkedBoxes.forEach(cb => { cb.checked = false; });
+      checkedBoxes.forEach(cb => { cb.checked = false; });
   }
 
   renderSizeOptions(dessertId);
@@ -670,10 +667,8 @@ function handleDessertChange(dessertId) {
 function updateOrderSummary() {
   const select = document.getElementById('dessert-select');
   if (!select) return;
-  
+
   const selectedDessert = dessertsData.find(d => d.id === select.value);
-  const size = document.querySelector('input[name="size"]:checked')?.value;
-  
   const summaryItemName = document.getElementById('summary-item-name');
   const summaryItemPrice = document.getElementById('summary-item-price');
   const summaryToppingsList = document.getElementById('summary-toppings-list');
@@ -687,97 +682,156 @@ function updateOrderSummary() {
     return;
   }
 
-  // Get selected toppings
-  const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
-    .map(cb => cb.value);
-
-  // Get only extra custom toppings (not disabled)
-  const extraToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
-    .filter(cb => !cb.disabled)
-    .map(cb => cb.value);
-
   // Get translated dessert name
   const translatedName = itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name;
-  
-  let sizeText = size;
-  if (size === '8x5' || size === '8x8' || size === '9x9') {
-    sizeText = size;
-  } else {
-    const sizeKeys = {
-      '1_roll': currentLang === 'es' ? '1 Rollo' : '1 Roll',
-      '4_pack': currentLang === 'es' ? 'Paquete de 4' : '4 Pack',
-      '6_pack': currentLang === 'es' ? 'Paquete de 6' : '6 Pack',
-      'full_tray': currentLang === 'es' ? 'Bandeja Completa' : 'Full Tray'
-    };
-    sizeText = sizeKeys[size] || size;
-  }
-  
-  if (summaryItemName) summaryItemName.textContent = `${translatedName} (${sizeText})`;
 
-  // Calculate pricing
   let basePrice = null;
-  if (size === '8x5') {
-    basePrice = selectedDessert.price_8x5;
-  } else if (size === '8x8') {
-    basePrice = selectedDessert.price_8x8;
-  } else if (size === '9x9') {
-    basePrice = selectedDessert.price_9x9;
-  } else {
-    const rollPriceMap = {
-      '1_roll': selectedDessert.price_1_roll,
-      '4_pack': selectedDessert.price_4_pack,
-      '6_pack': selectedDessert.price_6_pack,
-      'full_tray': selectedDessert.price_12_pack
-    };
-    basePrice = rollPriceMap[size] !== undefined ? rollPriceMap[size] : null;
-  }
-  const EXTRA_TOPPING_PRICE = 0.75;
-  const extraToppingsCost = extraToppings.length * EXTRA_TOPPING_PRICE;
-  // Toppings are included in the base price — only TBD if no base price is set
-  let hasTBD = basePrice === null;
-  const totalPrice = hasTBD ? null : basePrice + extraToppingsCost;
+  let totalPrice = null;
+  let hasTBD = false;
 
-  // Render individual base price
+  const summaryIcingRow = document.getElementById('summary-icing-row');
+  const summaryIcingLabel = summaryIcingRow ? summaryIcingRow.querySelector('span:first-child') : null;
+  const summaryIcingValue = document.getElementById('summary-icing-value');
+  const summaryToppingsRow = document.getElementById('summary-toppings-row');
+
+  if (selectedDessert.id === 'cinnamon_rolls') {
+    if (summaryToppingsRow) summaryToppingsRow.classList.add('hidden');
+    if (summaryIcingRow) {
+      summaryIcingRow.classList.remove('hidden');
+      if (summaryIcingLabel) {
+        summaryIcingLabel.textContent = currentLang === 'es' ? 'Detalles de Rollos:' : 'Roll Details:';
+      }
+    }
+
+    const sizeType = document.querySelector('input[name="roll_size_type"]:checked')?.value || 'regular';
+    const qty = parseInt(document.querySelector('input[name="roll_qty"]:checked')?.value || '1');
+    const style = document.querySelector('input[name="roll_style"]:checked')?.value || 'cooked';
+    const frostingId = document.querySelector('input[name="roll_frosting"]:checked')?.value || 'classic';
+    const placement = document.querySelector('input[name="roll_placement"]:checked')?.value || 'on_rolls';
+
+    const sizeLabel = sizeType === 'regular' 
+      ? (currentLang === 'es' ? 'Regular' : 'Regular') 
+      : (currentLang === 'es' ? 'Mini' : 'Mini');
+      
+    const styleLabel = style === 'cooked' 
+      ? (currentLang === 'es' ? 'Cocido' : 'Cooked') 
+      : (currentLang === 'es' ? 'Crudo' : 'Uncooked');
+      
+    const frosting = rollsPricingData.frostings.find(f => f.id === frostingId);
+    const frostingLabel = frosting ? frosting.name : frostingId;
+    
+    const placementLabel = placement === 'on_rolls' 
+      ? (currentLang === 'es' ? 'Sobre los rollos' : 'On rolls') 
+      : (currentLang === 'es' ? 'Aparte' : 'On side');
+
+    if (summaryIcingValue) {
+      summaryIcingValue.textContent = `${qty} ${sizeLabel} [${styleLabel}, ${frostingLabel}, ${placementLabel}]`;
+    }
+
+    const sizeText = `${qty} ${sizeLabel}`;
+    if (summaryItemName) summaryItemName.textContent = `${translatedName} (${sizeText})`;
+
+    // Lookup base price
+    const found = rollsPricingData.rolls_prices.find(p => p.size === sizeType && p.quantity === qty);
+    basePrice = found && found.price !== null ? found.price : null;
+
+    if (basePrice !== null) {
+      totalPrice = basePrice;
+      if (frostingId !== 'classic') {
+        const frostingObj = rollsPricingData.frostings.find(f => f.id === frostingId);
+        if (frostingObj && frostingObj.price !== null) {
+          totalPrice += qty * frostingObj.price;
+        }
+      }
+    } else {
+      hasTBD = true;
+    }
+  } else {
+    const size = document.querySelector('input[name="size"]:checked')?.value;
+    if (summaryToppingsRow) summaryToppingsRow.classList.remove('hidden');
+
+    if (selectedDessert.id === 'carrot_cake_bars') {
+      if (summaryIcingRow) {
+        summaryIcingRow.classList.remove('hidden');
+        if (summaryIcingLabel) {
+          summaryIcingLabel.textContent = currentLang === 'es' ? 'Opción de Glaseado:' : 'Icing Option:';
+        }
+      }
+      const checkedIcing = document.querySelector('input[name="icing_option"]:checked');
+      if (checkedIcing) {
+        const icingVal = checkedIcing.value;
+        const icingMap = {
+          'with_icing': i18n[currentLang].option_with_icing,
+          'no_icing': i18n[currentLang].option_no_icing,
+          'icing_side': i18n[currentLang].option_icing_side
+        };
+        if (summaryIcingValue) summaryIcingValue.textContent = icingMap[icingVal] || icingVal;
+      }
+    } else {
+      if (summaryIcingRow) summaryIcingRow.classList.add('hidden');
+    }
+
+    let sizeText = size || '';
+    if (size === '8x5' || size === '8x8' || size === '9x9') {
+      sizeText = size;
+    } else if (size) {
+      const sizeKeys = {
+        '1_roll': currentLang === 'es' ? '1 Rollo' : '1 Roll',
+        '4_pack': currentLang === 'es' ? 'Paquete de 4' : '4 Pack',
+        '6_pack': currentLang === 'es' ? 'Paquete de 6' : '6 Pack',
+        'full_tray': currentLang === 'es' ? 'Bandeja Completa' : 'Full Tray'
+      };
+      sizeText = sizeKeys[size] || size;
+    }
+    if (summaryItemName) summaryItemName.textContent = `${translatedName} ${sizeText ? `(${sizeText})` : ''}`;
+
+    if (size === '8x5') {
+      basePrice = selectedDessert.price_8x5;
+    } else if (size === '8x8') {
+      basePrice = selectedDessert.price_8x8;
+    } else if (size === '9x9') {
+      basePrice = selectedDessert.price_9x9;
+    } else if (size) {
+      const rollPriceMap = {
+        '1_roll': selectedDessert.price_1_roll,
+        '4_pack': selectedDessert.price_4_pack,
+        '6_pack': selectedDessert.price_6_pack,
+        'full_tray': selectedDessert.price_12_pack
+      };
+      basePrice = rollPriceMap[size] !== undefined ? rollPriceMap[size] : null;
+    }
+
+    const extraToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
+      .filter(cb => !cb.disabled)
+      .map(cb => cb.value);
+
+    const EXTRA_TOPPING_PRICE = 0.75;
+    const extraToppingsCost = extraToppings.length * EXTRA_TOPPING_PRICE;
+    hasTBD = basePrice === null;
+    totalPrice = hasTBD ? null : basePrice + extraToppingsCost;
+
+    if (summaryToppingsList) {
+      const allChecked = Array.from(document.querySelectorAll('input[name="toppings"]:checked'));
+      if (allChecked.length > 0) {
+        const parts = allChecked.map(cb => {
+          const key = 'topping_' + cb.value.toLowerCase().replace(' ', '_');
+          const name = i18n[currentLang][key] || cb.value;
+          const label = cb.disabled
+            ? `${name} (${currentLang === 'es' ? 'Incluido' : 'Included'})`
+            : `${name} (+$${EXTRA_TOPPING_PRICE.toFixed(2)})`;
+          return label;
+        });
+        summaryToppingsList.textContent = parts.join(', ');
+      } else {
+        summaryToppingsList.textContent = i18n[currentLang].summary_no_toppings;
+      }
+    }
+  }
+
   if (summaryItemPrice) {
     summaryItemPrice.textContent = basePrice === null ? i18n[currentLang].summary_total_tbd : `$${basePrice.toFixed(2)}`;
   }
 
-  // Render toppings list — included ones free, extras priced
-  if (summaryToppingsList) {
-    const allChecked = Array.from(document.querySelectorAll('input[name="toppings"]:checked'));
-    if (allChecked.length > 0) {
-      const parts = allChecked.map(cb => {
-        const key = 'topping_' + cb.value.toLowerCase().replace(' ', '_');
-        const name = i18n[currentLang][key] || cb.value;
-        const label = cb.disabled
-          ? `${name} (${currentLang === 'es' ? 'Incluido' : 'Included'})`
-          : `${name} (+$${EXTRA_TOPPING_PRICE.toFixed(2)})`;
-        return label;
-      });
-      summaryToppingsList.textContent = parts.join(', ');
-    } else {
-      summaryToppingsList.textContent = i18n[currentLang].summary_no_toppings;
-    }
-  }
-
-  // Update icing option text in summary if selected
-  const summaryIcingValue = document.getElementById('summary-icing-value');
-  if (summaryIcingValue) {
-    const checkedIcing = document.querySelector('input[name="icing_option"]:checked');
-    if (checkedIcing) {
-      const icingVal = checkedIcing.value;
-      const icingMap = {
-        'with_icing': i18n[currentLang].option_with_icing,
-        'no_icing': i18n[currentLang].option_no_icing,
-        'icing_side': i18n[currentLang].option_icing_side
-      };
-      summaryIcingValue.textContent = icingMap[icingVal] || icingVal;
-    } else {
-      summaryIcingValue.textContent = i18n[currentLang].summary_no_toppings;
-    }
-  }
-
-  // Set final total
   if (summaryTotalPrice) {
     if (hasTBD) {
       summaryTotalPrice.textContent = i18n[currentLang].summary_total_tbd;
@@ -797,7 +851,6 @@ async function handleFormSubmit(e) {
 
   const select = document.getElementById('dessert-select');
   const selectedDessert = dessertsData.find(d => d.id === select.value);
-  const size = document.querySelector('input[name="size"]:checked').value;
   const pickupDelivery = document.getElementById('pickup-delivery').value;
   const notes = document.getElementById('order-notes').value;
   
@@ -820,22 +873,54 @@ async function handleFormSubmit(e) {
   const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
     .map(cb => cb.value);
 
-  // Prepend icing selection to notes for Carrot Cake Bars
   let finalNotes = notes;
-  if (selectedDessert.id === 'carrot_cake_bars') {
-    const icingRadio = document.querySelector('input[name="icing_option"]:checked');
-    const icingValue = icingRadio ? icingRadio.value : 'with_icing';
-    const icingLabels = currentLang === 'es' ? {
-      'with_icing': 'Con Glaseado',
-      'no_icing': 'Sin Glaseado',
-      'icing_side': 'Glaseado Aparte'
-    } : {
-      'with_icing': 'With Icing',
-      'no_icing': 'No Icing',
-      'icing_side': 'Icing on the Side'
-    };
-    const icingText = icingLabels[icingValue] || icingValue;
-    finalNotes = `[${currentLang === 'es' ? 'Glaseado' : 'Icing'}: ${icingText}]` + (notes ? ` ${notes}` : '');
+  let size = '';
+  let frosting_id = 'classic';
+
+  if (selectedDessert.id === 'cinnamon_rolls') {
+    const sizeType = document.querySelector('input[name="roll_size_type"]:checked').value;
+    const qty = document.querySelector('input[name="roll_qty"]:checked').value;
+    size = `${sizeType === 'regular' ? 'reg' : 'mini'}_${qty}`;
+    
+    frosting_id = document.querySelector('input[name="roll_frosting"]:checked').value;
+    const style = document.querySelector('input[name="roll_style"]:checked').value;
+    const placement = document.querySelector('input[name="roll_placement"]:checked').value;
+    
+    const sizeLabel = sizeType === 'regular' 
+      ? (currentLang === 'es' ? 'Regular' : 'Regular') 
+      : (currentLang === 'es' ? 'Mini' : 'Mini');
+      
+    const styleLabel = style === 'cooked' 
+      ? (currentLang === 'es' ? 'Cocido' : 'Cooked') 
+      : (currentLang === 'es' ? 'Crudo' : 'Uncooked');
+      
+    const frostingObj = rollsPricingData.frostings.find(f => f.id === frosting_id);
+    const frostingLabel = frostingObj ? frostingObj.name : frosting_id;
+    
+    const placementLabel = placement === 'on_rolls' 
+      ? (currentLang === 'es' ? 'Sobre los rollos' : 'On rolls') 
+      : (currentLang === 'es' ? 'Aparte' : 'On side');
+      
+    finalNotes = `[${currentLang === 'es' ? 'Opción' : 'Style'}: ${styleLabel}, ${currentLang === 'es' ? 'Glaseado' : 'Frosting'}: ${frostingLabel}, ${currentLang === 'es' ? 'Ubicación' : 'Placement'}: ${placementLabel}]` + (notes ? ` ${notes}` : '');
+  } else {
+    size = document.querySelector('input[name="size"]:checked').value;
+    
+    // Prepend icing selection to notes for Carrot Cake Bars
+    if (selectedDessert.id === 'carrot_cake_bars') {
+      const icingRadio = document.querySelector('input[name="icing_option"]:checked');
+      const icingValue = icingRadio ? icingRadio.value : 'with_icing';
+      const icingLabels = currentLang === 'es' ? {
+        'with_icing': 'Con Glaseado',
+        'no_icing': 'Sin Glaseado',
+        'icing_side': 'Glaseado Aparte'
+      } : {
+        'with_icing': 'With Icing',
+        'no_icing': 'No Icing',
+        'icing_side': 'Icing on the Side'
+      };
+      const icingText = icingLabels[icingValue] || icingValue;
+      finalNotes = `[${currentLang === 'es' ? 'Glaseado' : 'Icing'}: ${icingText}]` + (notes ? ` ${notes}` : '');
+    }
   }
 
   const orderData = {
@@ -846,7 +931,8 @@ async function handleFormSubmit(e) {
     size: size,
     toppings: checkedToppings,
     notes: finalNotes,
-    pickup_delivery: pickupDelivery
+    pickup_delivery: pickupDelivery,
+    frosting_id: frosting_id
   };
 
   try {
@@ -880,7 +966,13 @@ async function handleFormSubmit(e) {
     
     // Translate size description
     let translatedSize = '';
-    if (size === '8x5') {
+    if (selectedDessert.id === 'cinnamon_rolls') {
+      const match = size.match(/^(reg|mini)_(\d+)$/);
+      if (match) {
+        const sizeLabel = match[1] === 'reg' ? (currentLang === 'es' ? 'Regulares' : 'Regular') : (currentLang === 'es' ? 'Minis' : 'Mini');
+        translatedSize = `${match[2]} ${sizeLabel}`;
+      }
+    } else if (size === '8x5') {
       translatedSize = i18n[currentLang].form_size_8x5;
     } else if (size === '8x8') {
       translatedSize = i18n[currentLang].form_size_8x8;
@@ -904,7 +996,6 @@ async function handleFormSubmit(e) {
     // Total price
     document.getElementById('success-price').textContent = result.total_price === 'TBD' ? `${i18n[currentLang].summary_total_tbd} (${currentLang === 'es' ? 'Por confirmar' : 'To be confirmed'})` : `$${result.total_price.toFixed(2)}`;
 
-
     document.getElementById('success-modal').style.display = 'block';
 
     // Reset form
@@ -924,3 +1015,144 @@ async function handleFormSubmit(e) {
 window.closeSuccessModal = function() {
   document.getElementById('success-modal').style.display = 'none';
 };
+
+// Render custom Cinnamon Rolls selectors dynamically
+function renderCinnamonRollsOptions() {
+  const container = document.getElementById('cinnamon-rolls-options-container');
+  if (!container) return;
+
+  const selectedSize = document.querySelector('input[name="roll_size_type"]:checked')?.value || 'regular';
+  const selectedQty = document.querySelector('input[name="roll_qty"]:checked')?.value || '1';
+  const selectedStyle = document.querySelector('input[name="roll_style"]:checked')?.value || 'cooked';
+  const selectedFrosting = document.querySelector('input[name="roll_frosting"]:checked')?.value || 'classic';
+  const selectedPlacement = document.querySelector('input[name="roll_placement"]:checked')?.value || 'on_rolls';
+
+  const isEs = (currentLang === 'es');
+  const quantities = selectedSize === 'regular' ? [1, 3, 6, 9] : [1, 3, 6, 9, 12, 15, 18, 21, 24];
+
+  const getPrice = (qty) => {
+    const found = rollsPricingData.rolls_prices.find(p => p.size === selectedSize && p.quantity === parseInt(qty));
+    return found && found.price !== null ? `$${found.price.toFixed(2)}` : (isEs ? 'TBD' : 'TBD');
+  };
+
+  let html = `
+    <!-- Roll Size Category -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-weight: 600; font-size: 14px; margin-bottom: 8px; display: block;">
+        ${isEs ? 'Elige el Tamaño del Rollo' : 'Choose Roll Size'}
+      </label>
+      <div class="radio-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label class="radio-label" style="padding: 10px;">
+          <input type="radio" name="roll_size_type" value="regular" ${selectedSize === 'regular' ? 'checked' : ''} onchange="renderCinnamonRollsOptions(); updateOrderSummary();">
+          <div class="radio-design">
+            <span class="size-title" style="font-size: 14px;">${isEs ? 'Tamaño Regular (Grande)' : 'Regular Size (Big)'}</span>
+          </div>
+        </label>
+        <label class="radio-label" style="padding: 10px;">
+          <input type="radio" name="roll_size_type" value="mini" ${selectedSize === 'mini' ? 'checked' : ''} onchange="renderCinnamonRollsOptions(); updateOrderSummary();">
+          <div class="radio-design">
+            <span class="size-title" style="font-size: 14px;">${isEs ? 'Tamaño Mini (Pequeño)' : 'Mini Size (Small)'}</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Roll Quantity Selection -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-weight: 600; font-size: 14px; margin-bottom: 8px; display: block;">
+        ${isEs ? 'Cantidad de Rollos' : 'Number of Rolls'}
+      </label>
+      <div class="radio-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px;">
+        ${quantities.map(qty => {
+          const isChecked = parseInt(selectedQty) === qty || (quantities.indexOf(parseInt(selectedQty)) === -1 && qty === quantities[0]);
+          return `
+            <label class="radio-label" style="padding: 8px; text-align: center;">
+              <input type="radio" name="roll_qty" value="${qty}" ${isChecked ? 'checked' : ''} onchange="updateOrderSummary();">
+              <div class="radio-design" style="flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                <span class="size-title" style="font-size: 14px; font-weight: 700;">${qty}</span>
+                <span style="font-size: 11px; opacity: 0.85;">${getPrice(qty)}</span>
+              </div>
+            </label>
+          `;
+        }).join('')}
+      </div>
+      ${selectedSize === 'mini' ? `
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+          * ${isEs ? '12 mini rollos es medio lote, 24 mini rollos es un lote completo.' : '12 mini rolls is a half batch, 24 mini rolls is a full batch.'}
+        </p>
+      ` : `
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+          * ${isEs ? '9 rollos regulares es un lote completo.' : '9 regular rolls is a full batch.'}
+        </p>
+      `}
+    </div>
+
+    <!-- Bake Style Choice (Cooked vs Uncooked) -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-weight: 600; font-size: 14px; margin-bottom: 8px; display: block;">
+        ${isEs ? 'Opción de Cocción' : 'Baking Style'}
+      </label>
+      <div class="radio-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label class="radio-label" style="padding: 10px;">
+          <input type="radio" name="roll_style" value="cooked" ${selectedStyle === 'cooked' ? 'checked' : ''} onchange="updateOrderSummary();">
+          <div class="radio-design">
+            <span class="size-title" style="font-size: 14px;">${isEs ? 'Cocidos (Listos para comer)' : 'Cooked (Ready to Eat)'}</span>
+          </div>
+        </label>
+        <label class="radio-label" style="padding: 10px;">
+          <input type="radio" name="roll_style" value="uncooked" ${selectedStyle === 'uncooked' ? 'checked' : ''} onchange="updateOrderSummary();">
+          <div class="radio-design">
+            <span class="size-title" style="font-size: 14px;">${isEs ? 'Crudos (Para hornear en casa)' : 'Uncooked (Bake at Home)'}</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Frosting Selection -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-weight: 600; font-size: 14px; margin-bottom: 8px; display: block;">
+        ${isEs ? 'Selección de Glaseado' : 'Choose Frosting'}
+      </label>
+      <div class="radio-group" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+        ${rollsPricingData.frostings.map(f => {
+          const isChecked = selectedFrosting === f.id;
+          const upchargeText = f.price > 0 ? `+$${f.price.toFixed(2)} ${isEs ? 'c/u' : 'ea'}` : (isEs ? 'Incluido' : 'Included');
+          return `
+            <label class="radio-label" style="padding: 10px;">
+              <input type="radio" name="roll_frosting" value="${f.id}" ${isChecked ? 'checked' : ''} onchange="updateOrderSummary();">
+              <div class="radio-design" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                <span class="size-title" style="font-size: 14px; font-weight: 600;">${f.name}</span>
+                <span style="font-size: 11px; opacity: 0.85; color: var(--accent); font-weight: 500;">${upchargeText}</span>
+              </div>
+            </label>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Frosting Placement -->
+    <div>
+      <label style="font-weight: 600; font-size: 14px; margin-bottom: 8px; display: block;">
+        ${isEs ? 'Ubicación del Glaseado' : 'Frosting Placement'}
+      </label>
+      <div class="radio-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label class="radio-label" style="padding: 10px;">
+          <input type="radio" name="roll_placement" value="on_rolls" ${selectedPlacement === 'on_rolls' ? 'checked' : ''} onchange="updateOrderSummary();">
+          <div class="radio-design">
+            <span class="size-title" style="font-size: 14px;">${isEs ? 'Sobre los rollos' : 'On the rolls'}</span>
+          </div>
+        </label>
+        <label class="radio-label" style="padding: 10px;">
+          <input type="radio" name="roll_placement" value="on_side" ${selectedPlacement === 'on_side' ? 'checked' : ''} onchange="updateOrderSummary();">
+          <div class="radio-design">
+            <span class="size-title" style="font-size: 14px;">${isEs ? 'Al lado (envase aparte)' : 'On the side'}</span>
+          </div>
+        </label>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+window.renderCinnamonRollsOptions = renderCinnamonRollsOptions;

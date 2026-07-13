@@ -378,31 +378,14 @@
           <div style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px;">
             <img src="/images/cinnamon_rolls.png" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
             <div>
-              <h3 class="analytics-title" style="margin: 0; border: none; padding: 0;" data-translate="cinnamon_rolls_pricing_title">Artisan Cinnamon Rolls Pricing</h3>
-              <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;" data-translate="cinnamon_rolls_pricing_desc">Configure the pricing for individual rolls, and packs of 4, 6, and 12.</p>
+              <h3 class="analytics-title" style="margin: 0; border: none; padding: 0;" data-translate="cinnamon_rolls_pricing_title">Artisan Cinnamon Rolls Pricing & Frosting Setup</h3>
+              <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;" data-translate="cinnamon_rolls_pricing_desc">Configure size/quantity combo pricing, frosting upcharges, and monitor recipe cost to make in real-time.</p>
             </div>
           </div>
           
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px;">
-            <div class="form-group">
-              <label style="font-weight: 600; font-size: 14px; margin-bottom: 6px; display: block;" data-translate="price_1_roll_label">Individual Roll (1 Roll)</label>
-              <input type="number" id="roll-price-1" step="0.01" min="0" placeholder="TBD" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-            </div>
-            <div class="form-group">
-              <label style="font-weight: 600; font-size: 14px; margin-bottom: 6px; display: block;" data-translate="price_4_pack_label">Pack of 4</label>
-              <input type="number" id="roll-price-4" step="0.01" min="0" placeholder="TBD" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-            </div>
-            <div class="form-group">
-              <label style="font-weight: 600; font-size: 14px; margin-bottom: 6px; display: block;" data-translate="price_6_pack_label">Pack of 6</label>
-              <input type="number" id="roll-price-6" step="0.01" min="0" placeholder="TBD" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-            </div>
-            <div class="form-group">
-              <label style="font-weight: 600; font-size: 14px; margin-bottom: 6px; display: block;" data-translate="price_12_pack_label">Pack of 12 (Full Tray)</label>
-              <input type="number" id="roll-price-12" step="0.01" min="0" placeholder="TBD" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-            </div>
+          <div id="cinnamon-rolls-dynamic-manager">
+            <!-- Rendered dynamically from JS -->
           </div>
-          
-          <button class="btn btn-primary" onclick="saveCinnamonRollsPrices()" style="padding: 10px 24px; font-size: 14px;" data-translate="btn_save_roll_prices">Save Cinnamon Rolls Prices</button>
         </div>
       </div>
     </div>

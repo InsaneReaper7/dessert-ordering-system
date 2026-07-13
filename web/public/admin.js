@@ -1462,10 +1462,14 @@ function renderRecipes(recipeIngredients, inventory) {
   if (!container) return;
   container.innerHTML = '';
   
-  // Group recipe ingredients by dessert_id
   const recipeGroups = {};
   dessertsCache.forEach(d => {
     recipeGroups[d.id] = [];
+  });
+  
+  const frostingIds = ['frosting_classic', 'frosting_oreo', 'frosting_chocolate', 'frosting_lemon'];
+  frostingIds.forEach(fid => {
+    recipeGroups[fid] = [];
   });
   
   recipeIngredients.forEach(ing => {
@@ -1474,7 +1478,6 @@ function renderRecipes(recipeIngredients, inventory) {
     }
   });
   
-  // Create unit cost lookup map (including tax_rate)
   const costMap = {};
   inventory.forEach(item => {
     const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
@@ -1494,7 +1497,6 @@ function renderRecipes(recipeIngredients, inventory) {
     if (list.length === 0) {
       tableHtml = `<div style="padding: 10px; color: var(--text-muted); font-style: italic;">${t('no_recipes_yet')}</div>`;
     } else {
-      // Group recipe ingredients by recipe_part
       const partsMap = {};
       list.forEach(ing => {
         const part = ing.recipe_part || 'Main';
@@ -1518,11 +1520,9 @@ function renderRecipes(recipeIngredients, inventory) {
             <tbody>
       `;
       
-      // Render parts
       Object.keys(partsMap).forEach(part => {
         const partIngredients = partsMap[part];
         
-        // Output part sub-heading row
         tableHtml += `
           <tr class="recipe-part-header">
             <td colspan="6">${t('section_label')} ${part}</td>
@@ -1629,20 +1629,17 @@ function renderRecipes(recipeIngredients, inventory) {
 
     sectionCard.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
-        <!-- Clickable Title & Caret for Collapse/Expand -->
         <div onclick="toggleRecipeCardCollapse('${d.id}')" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
           <span id="collapse-icon-${d.id}" style="font-size: 14px; color: var(--text-muted); font-weight: bold; width: 14px; display: inline-block;">▶</span>
           <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${t(d.id, d.name)}</h4>
         </div>
         
         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-          <!-- Permanent Base Mold/Yield Selector -->
           <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
             <span style="font-weight: 500;">${isBatchBased ? t('yield') : t('base_mold')}</span>
             ${baseMoldHtml}
           </div>
           
-          <!-- Dynamic Display Scaler -->
           <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
             <span style="font-weight: 500;">${t('scale_to')}</span>
             ${scaleSelectHtml}
@@ -1653,7 +1650,6 @@ function renderRecipes(recipeIngredients, inventory) {
         </div>
       </div>
       
-      <!-- Collapsible Body Container (hidden by default) -->
       <div id="recipe-body-${d.id}" class="recipe-card-body hidden" style="transition: all 0.2s ease;">
         ${tableHtml}
       </div>
@@ -1661,8 +1657,130 @@ function renderRecipes(recipeIngredients, inventory) {
     
     container.appendChild(sectionCard);
   });
+
+  const isEs = (currentLanguage === 'es');
+  const divider = document.createElement('h3');
+  divider.className = 'section-title';
+  divider.style.marginTop = '48px';
+  divider.style.marginBottom = '24px';
+  divider.style.borderBottom = '2px solid var(--accent)';
+  divider.style.paddingBottom = '8px';
+  divider.style.color = 'var(--primary)';
+  divider.style.fontFamily = "'Playfair Display', serif";
+  divider.textContent = isEs ? 'Fórmulas de Glaseado (Costo de Lote)' : 'Frosting Formulations (Batch Cost)';
+  container.appendChild(divider);
+
+  const frostingMetaData = [
+    { id: 'frosting_classic', name: isEs ? 'Glaseado Clásico (Classic)' : 'Classic Frosting', desc: isEs ? 'Glaseado base para los rollos de canela' : 'Base cream cheese frosting for cinnamon rolls' },
+    { id: 'frosting_oreo', name: isEs ? 'Glaseado de Oreo' : 'Oreo Frosting', desc: isEs ? 'Glaseado con galletas Oreo trituradas' : 'Cream cheese frosting loaded with crushed Oreos' },
+    { id: 'frosting_chocolate', name: isEs ? 'Glaseado de Chocolate' : 'Chocolate Frosting', desc: isEs ? 'Glaseado rico de cacao' : 'Rich chocolate cocoa cream cheese frosting' },
+    { id: 'frosting_lemon', name: isEs ? 'Glaseado de Limón' : 'Lemon Frosting', desc: isEs ? 'Glaseado fresco con ralladura/jugo de limón' : 'Zesty lemon cream cheese frosting' }
+  ];
+
+  frostingMetaData.forEach(f => {
+    const list = recipeGroups[f.id] || [];
+    const sectionCard = document.createElement('div');
+    sectionCard.className = 'recipe-section-card';
+    
+    let tableHtml = '';
+    let totalRecipeBaseCost = 0;
+    
+    if (list.length === 0) {
+      tableHtml = `<div style="padding: 10px; color: var(--text-muted); font-style: italic;">${t('no_recipes_yet')}</div>`;
+    } else {
+      tableHtml = `
+        <div class="table-responsive">
+          <table class="orders-table" id="recipe-table-${f.id}" style="margin-top: 10px;">
+            <thead>
+              <tr>
+                <th>${t('label_ing_name')}</th>
+                <th>${t('label_amount')}</th>
+                <th>${t('th_unit')}</th>
+                <th>${t('th_type', 'Type')}</th>
+                <th>${t('cost_in_batch', 'Cost in Batch ($)')}</th>
+                <th>${t('th_actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      list.forEach(ing => {
+        const nameLower = ing.ingredient_name.toLowerCase().trim();
+        const unitCost = costMap[nameLower] || 0.0;
+        const inventoryItem = inventory.find(item => item.name.toLowerCase().trim() === nameLower);
+        const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
+        const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+        const computedCost = convertedAmount * unitCost;
+        
+        totalRecipeBaseCost += computedCost;
+        
+        const typeLabel = t('type_base');
+        const formattedAmount = formatIngredientAmount(ing.amount, ing.unit);
+        
+        tableHtml += `
+          <tr data-id="${ing.id}" data-name="${ing.ingredient_name}" data-unit="${ing.unit}" data-original-amount="${ing.amount}" data-unit-cost="${unitCost}">
+            <td><strong>${ing.ingredient_name}</strong></td>
+            <td>
+              <span class="recipe-amount-text">${formattedAmount}</span>
+              <input type="number" class="cost-input recipe-amount-input hidden" value="${ing.amount}" step="0.01" style="width: 80px; text-align: center;">
+              <select class="recipe-amount-select hidden" style="width: 80px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white;">
+                <option value="0.125">1/8</option>
+                <option value="0.25">1/4</option>
+                <option value="0.33">1/3</option>
+                <option value="0.375">3/8</option>
+                <option value="0.5">1/2</option>
+                <option value="0.625">5/8</option>
+                <option value="0.67">2/3</option>
+                <option value="0.75">3/4</option>
+                <option value="0.875">7/8</option>
+                <option value="1">1</option>
+              </select>
+            </td>
+            <td><code>${ing.unit}</code></td>
+            <td><span class="status-badge completed" style="font-size: 11px;">${typeLabel}</span></td>
+            <td class="recipe-cost-cell">$${computedCost.toFixed(2)}</td>
+            <td class="recipe-actions-cell">
+              <button class="btn-action btn-complete" onclick="editRecipeRow(this, ${ing.id})">${t('action_edit')}</button>
+              <button class="btn-action btn-delete" onclick="deleteRecipeIngredient(${ing.id})">${t('action_remove')}</button>
+            </td>
+          </tr>
+        `;
+      });
+      
+      tableHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+    
+    baseCosts[f.id] = totalRecipeBaseCost;
+    
+    sectionCard.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+        <div onclick="toggleRecipeCardCollapse('${f.id}')" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+          <span id="collapse-icon-${f.id}" style="font-size: 14px; color: var(--text-muted); font-weight: bold; width: 14px; display: inline-block;">▶</span>
+          <h4 class="recipe-section-title" style="margin: 0; border: none; padding: 0;">${f.name}</h4>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <span style="font-weight: 500;">${isEs ? 'Rendimiento' : 'Yield'}</span>
+            <span style="font-weight: 600; color: var(--primary); font-size: 12px; background: #f3f4f6; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">${isEs ? '1 Lote de Receta' : '1 Recipe Batch'}</span>
+          </div>
+          
+          <span id="base-cost-display-${f.id}" data-original-cost="${totalRecipeBaseCost}" style="font-weight: bold; color: var(--primary); font-size: 14px;">${t('base_cost')}: $${totalRecipeBaseCost.toFixed(2)}</span>
+        </div>
+      </div>
+      
+      <div id="recipe-body-${f.id}" class="recipe-card-body hidden" style="transition: all 0.2s ease;">
+        ${tableHtml}
+      </div>
+    `;
+    
+    container.appendChild(sectionCard);
+  });
   
-  // Render sidebar costs on recipe tab
   renderRecipeCostsList(baseCosts, 'recipe-costs-list-recipe-tab', inventoryCache);
 }
 
@@ -1676,6 +1794,14 @@ async function populateRecipeDessertsDropdown() {
   dessertsCache.forEach(d => {
     html += `<option value="${d.id}">${d.name}</option>`;
   });
+
+  html += `<optgroup label="${currentLanguage === 'es' ? 'Recetas de Glaseado' : 'Frosting Recipes'}">`;
+  html += `<option value="frosting_classic">${currentLanguage === 'es' ? 'Glaseado Clásico (Classic)' : 'Classic Frosting'}</option>`;
+  html += `<option value="frosting_oreo">${currentLanguage === 'es' ? 'Glaseado Oreo' : 'Oreo Frosting'}</option>`;
+  html += `<option value="frosting_chocolate">${currentLanguage === 'es' ? 'Glaseado de Chocolate' : 'Chocolate Frosting'}</option>`;
+  html += `<option value="frosting_lemon">${currentLanguage === 'es' ? 'Glaseado de Limón' : 'Lemon Frosting'}</option>`;
+  html += `</optgroup>`;
+
   dropdown.innerHTML = html;
   updateRecipePartOptions(dropdown.value);
 }
@@ -2321,6 +2447,8 @@ async function loadDessertsPricing() {
   await fetchDessertsCache(true);
   
   let baseCosts = {};
+  let rollsPricing = { rolls_prices: [], frostings: [] };
+  
   try {
     const recipesResp = await fetch('/api/admin/recipes', {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -2342,6 +2470,11 @@ async function loadDessertsPricing() {
       baseCosts[d.id] = 0;
     });
 
+    const frostingIds = ['frosting_classic', 'frosting_oreo', 'frosting_chocolate', 'frosting_lemon'];
+    frostingIds.forEach(fid => {
+      baseCosts[fid] = 0;
+    });
+
     recipeIngredients.forEach(ing => {
       if (!ing.is_topping) {
         const nameLower = ing.ingredient_name.toLowerCase().trim();
@@ -2349,17 +2482,25 @@ async function loadDessertsPricing() {
         const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
         const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
         const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
-        baseCosts[ing.dessert_id] += convertedAmount * unitCost;
+        
+        if (baseCosts[ing.dessert_id] !== undefined) {
+          baseCosts[ing.dessert_id] += convertedAmount * unitCost;
+        }
       }
     });
+
+    const rollsPricingResp = await fetch('/api/cinnamon-rolls/pricing');
+    if (rollsPricingResp.ok) {
+      rollsPricing = await rollsPricingResp.json();
+    }
   } catch (err) {
     console.error('Failed to calculate recipe costs for pricing manager:', err);
   }
 
-  renderDessertsPricing(dessertsCache, baseCosts);
+  renderDessertsPricing(dessertsCache, baseCosts, rollsPricing);
 }
 
-function renderDessertsPricing(desserts, baseCosts = {}) {
+function renderDessertsPricing(desserts, baseCosts = {}, rollsPricing = { rolls_prices: [], frostings: [] }) {
   const tbody = document.getElementById('pricing-table-body');
   if (!tbody) return;
   tbody.innerHTML = '';
@@ -2367,17 +2508,8 @@ function renderDessertsPricing(desserts, baseCosts = {}) {
   desserts.forEach(item => {
     const translatedName = t(item.id);
     
-    // Check if cinnamon rolls (which don't use 8x5 or 8x8 molds)
     if (item.id === 'cinnamon_rolls') {
-      const rollsInput1 = document.getElementById('roll-price-1');
-      const rollsInput4 = document.getElementById('roll-price-4');
-      const rollsInput6 = document.getElementById('roll-price-6');
-      const rollsInput12 = document.getElementById('roll-price-12');
-      
-      if (rollsInput1) rollsInput1.value = item.price_1_roll !== null ? item.price_1_roll.toFixed(2) : '';
-      if (rollsInput4) rollsInput4.value = item.price_4_pack !== null ? item.price_4_pack.toFixed(2) : '';
-      if (rollsInput6) rollsInput6.value = item.price_6_pack !== null ? item.price_6_pack.toFixed(2) : '';
-      if (rollsInput12) rollsInput12.value = item.price_12_pack !== null ? item.price_12_pack.toFixed(2) : '';
+      renderCinnamonRollsPricingManager(rollsPricing, baseCosts);
     } else {
       const tr = document.createElement('tr');
       tr.id = `pricing-row-${item.id}`;
@@ -2712,3 +2844,165 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
   
   return amount; // Fallback
 }
+
+// Render dynamic cinnamon rolls pricing/frosting manager
+function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
+  const container = document.getElementById('cinnamon-rolls-dynamic-manager');
+  if (!container) return;
+
+  const isEs = (currentLanguage === 'es');
+
+  // Filter rolls_prices by size category
+  const regPrices = rollsPricing.rolls_prices.filter(p => p.size === 'regular');
+  const miniPrices = rollsPricing.rolls_prices.filter(p => p.size === 'mini');
+
+  // Frosting list showing cost to make and editable upcharge
+  let frostingHtml = '';
+  rollsPricing.frostings.forEach(f => {
+    const virtualId = `frosting_${f.id}`;
+    const costToMake = baseCosts[virtualId] || 0.0;
+    const costPerRollReg = costToMake / 9;
+    const costPerRollMini = costToMake / 24;
+
+    frostingHtml += `
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 12px; font-weight: 600;">${f.name}</td>
+        <td style="padding: 12px;">
+          <div style="font-size: 13px;">$${costToMake.toFixed(2)} / batch</div>
+          <div style="font-size: 11px; color: var(--text-muted);">
+            Reg: $${costPerRollReg.toFixed(2)}/roll | Mini: $${costPerRollMini.toFixed(2)}/roll
+          </div>
+        </td>
+        <td style="padding: 12px;">
+          <input type="number" class="frosting-upcharge-input" data-frosting-id="${f.id}" step="0.01" min="0" value="${f.price.toFixed(2)}" style="width: 100px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+        </td>
+      </tr>
+    `;
+  });
+
+  let html = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px;">
+      <!-- Column 1: Regular Size combos -->
+      <div>
+        <h4 style="margin: 0 0 12px 0; border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: 15px; color: var(--primary);">
+          ${isEs ? 'Tamaño Regular (Grande) - Precios' : 'Regular Size (Big) - Pack Prices'}
+        </h4>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; color: var(--text-muted);">
+              <th style="padding: 8px 4px;">${isEs ? 'Cantidad' : 'Quantity'}</th>
+              <th style="padding: 8px 4px;">${isEs ? 'Precio' : 'Price ($)'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${regPrices.map(p => `
+              <tr style="border-bottom: 1px dashed var(--border);">
+                <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Roll${p.quantity > 1 ? 's' : ''}</td>
+                <td style="padding: 8px 4px;">
+                  <input type="number" class="roll-price-input" data-size="regular" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Column 2: Mini Size combos -->
+      <div>
+        <h4 style="margin: 0 0 12px 0; border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: 15px; color: var(--primary);">
+          ${isEs ? 'Tamaño Mini (Pequeño) - Precios' : 'Mini Size (Small) - Pack Prices'}
+        </h4>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; color: var(--text-muted);">
+              <th style="padding: 8px 4px;">${isEs ? 'Cantidad' : 'Quantity'}</th>
+              <th style="padding: 8px 4px;">${isEs ? 'Precio' : 'Price ($)'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${miniPrices.map(p => `
+              <tr style="border-bottom: 1px dashed var(--border);">
+                <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Mini Roll${p.quantity > 1 ? 's' : ''}</td>
+                <td style="padding: 8px 4px;">
+                  <input type="number" class="roll-price-input" data-size="mini" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Frosting prices list -->
+    <div style="margin-top: 32px;">
+      <h4 style="margin: 0 0 12px 0; border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: 15px; color: var(--primary);">
+        ${isEs ? 'Upcharges de Glaseado y Costos de Receta' : 'Frosting Upcharges & Recipe Costs'}
+      </h4>
+      <table class="orders-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--bg-card); border-bottom: 2px solid var(--border); text-align: left;">
+            <th style="padding: 12px;">${isEs ? 'Glaseado' : 'Frosting'}</th>
+            <th style="padding: 12px;">${isEs ? 'Costo de Producción' : 'Cost of Production'}</th>
+            <th style="padding: 12px;">${isEs ? 'Upcharge Extra ($ / rollo)' : 'Upcharge ($ / roll)'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${frostingHtml}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 24px; text-align: right;">
+      <button class="btn btn-primary" onclick="saveCinnamonRollsPrices()" style="padding: 12px 32px; font-size: 14px; font-weight: 600;">
+        ${isEs ? 'Guardar Cambios de Rollos de Canela' : 'Save Cinnamon Rolls Settings'}
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+// Bulk save Cinnamon Rolls prices and upcharges
+async function saveCinnamonRollsPrices() {
+  const priceInputs = document.querySelectorAll('.roll-price-input');
+  const frostingInputs = document.querySelectorAll('.frosting-upcharge-input');
+
+  const prices = [];
+  priceInputs.forEach(input => {
+    const size = input.dataset.size;
+    const quantity = parseInt(input.dataset.qty);
+    const priceVal = input.value.trim() === '' ? null : parseFloat(input.value);
+    prices.push({ size, quantity, price: priceVal });
+  });
+
+  const frostings = [];
+  frostingInputs.forEach(input => {
+    const id = input.dataset.frostingId;
+    const priceVal = input.value.trim() === '' ? 0.0 : parseFloat(input.value);
+    frostings.push({ id, price: priceVal });
+  });
+
+  try {
+    const response = await fetch('/api/admin/cinnamon-rolls/pricing', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ prices, frostings })
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to save Cinnamon Rolls pricing');
+    }
+
+    alert(currentLanguage === 'es' ? 'Precios y upcharges de rollos guardados con éxito' : 'Cinnamon Rolls pricing and upcharges saved successfully');
+    loadDessertsPricing();
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  }
+}
+
+window.renderCinnamonRollsPricingManager = renderCinnamonRollsPricingManager;
+window.saveCinnamonRollsPrices = saveCinnamonRollsPrices;
