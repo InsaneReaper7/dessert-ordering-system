@@ -1028,7 +1028,8 @@ function renderIngredients(ingredients, recipeIngredients) {
   
   recipeIngredients.forEach(ing => {
     if (!ing.is_topping) {
-      const nameLower = ing.ingredient_name.toLowerCase().trim();
+      const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, ingredients);
+      const nameLower = resolvedName.toLowerCase().trim();
       const unitCost = costMap[nameLower] || 0.0;
       const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
       const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
@@ -1201,7 +1202,8 @@ function openCostBreakdownModal(dessert, sizeMultiplier, sizeLabel) {
       tbody.appendChild(headerRow);
 
       parts[part].forEach(ing => {
-        const nameLower = ing.ingredient_name.toLowerCase().trim();
+        const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, inventoryCache);
+        const nameLower = resolvedName.toLowerCase().trim();
         const unitCost = costMap[nameLower] || 0.0;
         const inventoryUnit = unitMap[nameLower] || 'g';
         // Scale the ingredient amount by the mold-size multiplier
@@ -1560,7 +1562,8 @@ function renderRecipes(recipeIngredients, inventory) {
         `;
         
         partIngredients.forEach(ing => {
-          const nameLower = ing.ingredient_name.toLowerCase().trim();
+          const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, inventory);
+          const nameLower = resolvedName.toLowerCase().trim();
           const unitCost = costMap[nameLower] || 0.0;
           const inventoryItem = inventory.find(item => item.name.toLowerCase().trim() === nameLower);
           const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
@@ -1735,7 +1738,8 @@ function renderRecipes(recipeIngredients, inventory) {
       `;
       
       list.forEach(ing => {
-        const nameLower = ing.ingredient_name.toLowerCase().trim();
+        const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, inventory);
+        const nameLower = resolvedName.toLowerCase().trim();
         const unitCost = costMap[nameLower] || 0.0;
         const inventoryItem = inventory.find(item => item.name.toLowerCase().trim() === nameLower);
         const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
@@ -2256,7 +2260,8 @@ function copyShoppingListToClipboard() {
       const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === d.id && !ing.is_topping);
       ingredients.forEach(ing => {
         const nameTrim = ing.ingredient_name.trim();
-        const nameLower = nameTrim.toLowerCase();
+        const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, inventoryCache);
+        const nameLower = resolvedName.toLowerCase().trim();
         
         const inventoryItem = inventoryCache.find(item => item.name.toLowerCase().trim() === nameLower);
         const inventoryUnit = inventoryItem ? inventoryItem.unit : (ing.unit === 'tsp' || ing.unit === 'tbsp' ? 'g' : ing.unit);
@@ -2406,7 +2411,8 @@ function handleScaleDisplay(dessertId, targetMold) {
         
         const newAmount = originalAmount * multiplier;
         
-        const inventoryItem = inventoryCache.find(item => item.name.toLowerCase().trim() === name.toLowerCase().trim());
+        const resolvedName = resolveInventoryIngredientName(name, inventoryCache);
+        const inventoryItem = inventoryCache.find(item => item.name.toLowerCase().trim() === resolvedName.toLowerCase().trim());
         const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
         
         const convertedNewAmount = convertRecipeAmountToInventoryUnit(name, newAmount, unit, inventoryUnit);
@@ -2507,7 +2513,8 @@ async function loadDessertsPricing() {
 
     recipeIngredients.forEach(ing => {
       if (!ing.is_topping) {
-        const nameLower = ing.ingredient_name.toLowerCase().trim();
+        const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, ingredients);
+        const nameLower = resolvedName.toLowerCase().trim();
         const unitCost = costMap[nameLower] || 0.0;
         const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
         const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
@@ -2826,11 +2833,77 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
     // If recipe is already in grams/tsp/tbsp, it's already converted to grams in amountInGrams
     return amountInGrams;
   } else if (inventoryUnit === 'unit') {
-    // If inventory is in units, and recipe is in grams/tsp/tbsp, convert grams to units
+    // Custom fruit juice/zest conversions to whole fruits
+    if (name.includes('lemon juice') || name.includes('jugo de limón') || name.includes('jugo de limon')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 30.0;
+      } else if (recipeUnit === 'tbsp') {
+        return (amount * 15.0) / 30.0;
+      } else if (recipeUnit === 'tsp') {
+        return (amount * 5.0) / 30.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('lemon zest') || name.includes('ralladura de limón') || name.includes('ralladura de limon')) {
+      if (recipeUnit === 'tbsp') {
+        return amount;
+      } else if (recipeUnit === 'tsp') {
+        return amount / 3.0;
+      } else if (recipeUnit === 'g') {
+        return amount / 6.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('lime juice') || name.includes('jugo de lima')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 20.0;
+      } else if (recipeUnit === 'tbsp') {
+        return (amount * 15.0) / 20.0;
+      } else if (recipeUnit === 'tsp') {
+        return (amount * 5.0) / 20.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('lime zest') || name.includes('ralladura de lima')) {
+      if (recipeUnit === 'tsp') {
+        return amount;
+      } else if (recipeUnit === 'tbsp') {
+        return amount * 3.0;
+      } else if (recipeUnit === 'g') {
+        return amount / 2.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('orange juice') || name.includes('jugo de naranja')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 80.0;
+      } else if (recipeUnit === 'tbsp') {
+        return (amount * 15.0) / 80.0;
+      } else if (recipeUnit === 'tsp') {
+        return (amount * 5.0) / 80.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('orange zest') || name.includes('ralladura de naranja')) {
+      if (recipeUnit === 'tbsp') {
+        return amount / 1.5;
+      } else if (recipeUnit === 'tsp') {
+        return amount / 4.5;
+      } else if (recipeUnit === 'g') {
+        return amount / 9.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+
     if (recipeUnit !== 'unit') {
       return amountInGrams / gramsPerUnit;
     }
-    // If both are units, return amount as-is
     return amount;
   }
   
@@ -2847,6 +2920,11 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
   // Filter rolls_prices by size category
   const regPrices = rollsPricing.rolls_prices.filter(p => p.size === 'regular');
   const miniPrices = rollsPricing.rolls_prices.filter(p => p.size === 'mini');
+
+  // Get total batch cost (rolls + classic frosting)
+  const baseRollsCost = baseCosts['cinnamon_rolls'] || 0.0;
+  const classicFrostingCost = baseCosts['frosting_classic'] || 0.0;
+  const totalBatchCost = baseRollsCost + classicFrostingCost;
 
   // Frosting list showing cost to make and editable upcharge
   let frostingHtml = '';
@@ -2889,17 +2967,26 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
             <tr style="border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; color: var(--text-muted);">
               <th style="padding: 8px 4px;">${isEs ? 'Cantidad' : 'Quantity'}</th>
               <th style="padding: 8px 4px;">${isEs ? 'Precio' : 'Price ($)'}</th>
+              <th style="padding: 8px 4px;">${isEs ? 'Sugerido (2.5x - 3x)' : 'Suggested (2.5x - 3x)'}</th>
             </tr>
           </thead>
           <tbody>
             ${regPrices.map(p => {
               const displayPrice = p.price !== null ? `$${p.price.toFixed(2)}` : 'TBD';
+              const packageCost = (p.quantity / 9) * totalBatchCost;
+              const sugMin = packageCost * 2.5;
+              const sugMax = packageCost * 3.0;
+              const suggestionText = sugMin > 0 ? `$${sugMin.toFixed(2)} - $${sugMax.toFixed(2)}` : 'N/A';
+              
               return `
                 <tr style="border-bottom: 1px dashed var(--border);">
                   <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Roll${p.quantity > 1 ? 's' : ''}</td>
                   <td style="padding: 8px 4px;">
                     <span class="roll-price-text" style="font-weight: 600;">${displayPrice}</span>
                     <input type="number" class="roll-price-input hidden" data-size="regular" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                  </td>
+                  <td style="padding: 8px 4px; font-size: 13px; color: var(--text-muted); font-weight: 500;">
+                    ${suggestionText}
                   </td>
                 </tr>
               `;
@@ -2918,17 +3005,26 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
             <tr style="border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; color: var(--text-muted);">
               <th style="padding: 8px 4px;">${isEs ? 'Cantidad' : 'Quantity'}</th>
               <th style="padding: 8px 4px;">${isEs ? 'Precio' : 'Price ($)'}</th>
+              <th style="padding: 8px 4px;">${isEs ? 'Sugerido (2.5x - 3x)' : 'Suggested (2.5x - 3x)'}</th>
             </tr>
           </thead>
           <tbody>
             ${miniPrices.map(p => {
               const displayPrice = p.price !== null ? `$${p.price.toFixed(2)}` : 'TBD';
+              const packageCost = (p.quantity / 24) * totalBatchCost;
+              const sugMin = packageCost * 2.5;
+              const sugMax = packageCost * 3.0;
+              const suggestionText = sugMin > 0 ? `$${sugMin.toFixed(2)} - $${sugMax.toFixed(2)}` : 'N/A';
+              
               return `
                 <tr style="border-bottom: 1px dashed var(--border);">
                   <td style="padding: 8px 4px; font-weight: 600;">${p.quantity} Mini Roll${p.quantity > 1 ? 's' : ''}</td>
                   <td style="padding: 8px 4px;">
                     <span class="roll-price-text" style="font-weight: 600;">${displayPrice}</span>
                     <input type="number" class="roll-price-input hidden" data-size="mini" data-qty="${p.quantity}" step="0.01" min="0" value="${p.price !== null ? p.price.toFixed(2) : ''}" placeholder="TBD" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                  </td>
+                  <td style="padding: 8px 4px; font-size: 13px; color: var(--text-muted); font-weight: 500;">
+                    ${suggestionText}
                   </td>
                 </tr>
               `;
@@ -3032,6 +3128,28 @@ async function saveCinnamonRollsPrices() {
   } catch (err) {
     alert(`Error: ${err.message}`);
   }
+}
+
+function resolveInventoryIngredientName(recipeIngName, inventoryItems) {
+  const name = recipeIngName.toLowerCase().trim();
+  const invNames = inventoryItems.map(item => item.name.toLowerCase().trim());
+  
+  if (name.includes('lemon') || name.includes('limón') || name.includes('limon') || name.includes('limones')) {
+    const match = invNames.find(n => n === 'lemons' || n === 'lemon' || n === 'limón' || n === 'limon' || n === 'limones');
+    if (match) return match;
+  }
+  
+  if (name.includes('lime') || name.includes('lima') || name.includes('limas')) {
+    const match = invNames.find(n => n === 'limes' || n === 'lime' || n === 'lima' || n === 'limas');
+    if (match) return match;
+  }
+  
+  if (name.includes('orange') || name.includes('naranja') || name.includes('naranjas')) {
+    const match = invNames.find(n => n === 'oranges' || n === 'orange' || n === 'naranja' || n === 'naranjas');
+    if (match) return match;
+  }
+  
+  return recipeIngName;
 }
 
 window.renderCinnamonRollsPricingManager = renderCinnamonRollsPricingManager;

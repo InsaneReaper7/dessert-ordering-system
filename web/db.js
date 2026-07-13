@@ -640,7 +640,8 @@ module.exports = {
     let toppingsCost = 0;
     
     recipeIngredients.forEach(ing => {
-      const nameKey = ing.ingredient_name.toLowerCase().trim();
+      const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, inventory);
+      const nameKey = resolvedName.toLowerCase().trim();
       const unitCost = costMap[nameKey] || 0.0;
       const inventoryUnit = unitMap[nameKey] || 'g';
       
@@ -723,6 +724,74 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
     }
     return amountInGrams;
   } else if (inventoryUnit === 'unit') {
+    // Custom fruit juice/zest conversions to whole fruits
+    if (name.includes('lemon juice') || name.includes('jugo de limón') || name.includes('jugo de limon')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 30.0;
+      } else if (recipeUnit === 'tbsp') {
+        return (amount * 15.0) / 30.0;
+      } else if (recipeUnit === 'tsp') {
+        return (amount * 5.0) / 30.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('lemon zest') || name.includes('ralladura de limón') || name.includes('ralladura de limon')) {
+      if (recipeUnit === 'tbsp') {
+        return amount;
+      } else if (recipeUnit === 'tsp') {
+        return amount / 3.0;
+      } else if (recipeUnit === 'g') {
+        return amount / 6.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('lime juice') || name.includes('jugo de lima')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 20.0;
+      } else if (recipeUnit === 'tbsp') {
+        return (amount * 15.0) / 20.0;
+      } else if (recipeUnit === 'tsp') {
+        return (amount * 5.0) / 20.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('lime zest') || name.includes('ralladura de lima')) {
+      if (recipeUnit === 'tsp') {
+        return amount;
+      } else if (recipeUnit === 'tbsp') {
+        return amount * 3.0;
+      } else if (recipeUnit === 'g') {
+        return amount / 2.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('orange juice') || name.includes('jugo de naranja')) {
+      if (recipeUnit === 'g' || recipeUnit === 'ml') {
+        return amount / 80.0;
+      } else if (recipeUnit === 'tbsp') {
+        return (amount * 15.0) / 80.0;
+      } else if (recipeUnit === 'tsp') {
+        return (amount * 5.0) / 80.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+    if (name.includes('orange zest') || name.includes('ralladura de naranja')) {
+      if (recipeUnit === 'tbsp') {
+        return amount / 1.5;
+      } else if (recipeUnit === 'tsp') {
+        return amount / 4.5;
+      } else if (recipeUnit === 'g') {
+        return amount / 9.0;
+      } else if (recipeUnit === 'unit') {
+        return amount;
+      }
+    }
+
     if (recipeUnit !== 'unit') {
       return amountInGrams / gramsPerUnit;
     }
@@ -730,4 +799,26 @@ function convertRecipeAmountToInventoryUnit(ingredientName, amount, recipeUnit, 
   }
   
   return amount;
+}
+
+function resolveInventoryIngredientName(recipeIngName, inventoryItems) {
+  const name = recipeIngName.toLowerCase().trim();
+  const invNames = inventoryItems.map(item => item.name.toLowerCase().trim());
+  
+  if (name.includes('lemon') || name.includes('limón') || name.includes('limon') || name.includes('limones')) {
+    const match = invNames.find(n => n === 'lemons' || n === 'lemon' || n === 'limón' || n === 'limon' || n === 'limones');
+    if (match) return match;
+  }
+  
+  if (name.includes('lime') || name.includes('lima') || name.includes('limas')) {
+    const match = invNames.find(n => n === 'limes' || n === 'lime' || n === 'lima' || n === 'limas');
+    if (match) return match;
+  }
+  
+  if (name.includes('orange') || name.includes('naranja') || name.includes('naranjas')) {
+    const match = invNames.find(n => n === 'oranges' || n === 'orange' || n === 'naranja' || n === 'naranjas');
+    if (match) return match;
+  }
+  
+  return recipeIngName;
 }
