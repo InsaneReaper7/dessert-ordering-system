@@ -132,8 +132,8 @@ const TRANSLATIONS = {
     grand_total_batch: "Total Batch Cost:",
     
     // Dessert Names Mapping
-    brownies: "Fudge Brownies",
-    blondies: "Classic Blondies",
+    brownies: "Create your own brownie",
+    blondies: "Create your own blondie",
     lemon_bars: "Tangy Lemon Bars",
     mango_bars: "Tangy Mango Bars",
     pineapple_bars: "Sweet Pineapple Bars",
@@ -300,8 +300,8 @@ const TRANSLATIONS = {
     grand_total_batch: "Costo Total del Lote:",
 
     // Dessert Names Mapping
-    brownies: "Brownies de Fudge",
-    blondies: "Blondies Clásicos",
+    brownies: "Crea tu propio brownie",
+    blondies: "Crea tu propio blondie",
     lemon_bars: "Barras de Limón",
     mango_bars: "Barras de Mango",
     pineapple_bars: "Barras de Piña",

@@ -313,7 +313,7 @@ async function seedData() {
   const initialDesserts = [
     {
       id: 'brownies',
-      name: 'Fudge Brownies',
+      name: 'Create your own brownie',
       description: 'Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
@@ -322,7 +322,7 @@ async function seedData() {
     },
     {
       id: 'blondies',
-      name: 'Classic Blondies',
+      name: 'Create your own blondie',
       description: 'Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.',
       price_8x5: null, // TBD
       price_9x9: null, // TBD
@@ -458,8 +458,23 @@ async function seedData() {
     await query(`UPDATE frosting_prices SET price = NULL WHERE id IN ('oreo', 'chocolate', 'lemon') AND price = 0.50`);
     // Force set cinnamon_rolls base_mold to Batch
     await query(`UPDATE desserts SET base_mold = 'Batch' WHERE id = 'cinnamon_rolls'`);
+    // Force update Fudge Brownies and Classic Blondies names
+    await query(`UPDATE desserts SET name = 'Create your own brownie' WHERE id = 'brownies'`);
+    await query(`UPDATE desserts SET name = 'Create your own blondie' WHERE id = 'blondies'`);
+    
+    // Migrate previously established ingredients to their parent fruits
+    const existingRecipeIngs = await query('SELECT DISTINCT ingredient_name FROM recipe_ingredients');
+    for (const row of existingRecipeIngs) {
+      const parentFruit = getParentFruitName(row.ingredient_name);
+      if (parentFruit) {
+        const fruitExists = await query('SELECT COUNT(*) as count FROM ingredients WHERE LOWER(name) = LOWER(?)', [parentFruit]);
+        if (Number(fruitExists[0].count) === 0) {
+          await query('INSERT INTO ingredients (name, bulk_cost, bulk_qty, unit) VALUES (?, 0.0, 1.0, \'unit\')', [parentFruit]);
+        }
+      }
+    }
   } catch (err) {
-    console.error('Error cleaning up placeholder seeds:', err);
+    console.error('Error in seedData cleanups and migration:', err);
   }
 
   // Seed cinnamon_rolls_prices

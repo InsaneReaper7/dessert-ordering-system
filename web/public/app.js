@@ -176,14 +176,14 @@ const i18n = {
 // Database items translation dictionary
 const itemTranslations = {
   brownies: {
-    name: { en: "Fudge Brownies", es: "Brownies de Chocolate" },
+    name: { en: "Create your own brownie", es: "Crea tu propio brownie" },
     desc: { 
       en: "Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.", 
       es: "Brownies de chocolate ricos y melosos hechos con cacao premium y una capa superior crujiente." 
     }
   },
   blondies: {
-    name: { en: "Classic Blondies", es: "Blondies Clásicos" },
+    name: { en: "Create your own blondie", es: "Crea tu propio blondie" },
     desc: { 
       en: "Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.", 
       es: "Blondies masticables de azúcar morena con toques de vainilla y un rico trasfondo de caramelo." 
