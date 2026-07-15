@@ -74,6 +74,7 @@ const i18n = {
     topping_butterscotch_chips: "Butterscotch Chips",
     topping_reeses_peanut_butter_chips: "Reese's Peanut Butter Chips",
     topping_vanilla_chips: "Vanilla Chips",
+    topping_honey_butter: "Honey Butter on the side",
     // Miscellaneous
     card_starting_at: "Starting at",
     card_customizable: "Customizable",
@@ -158,6 +159,7 @@ const i18n = {
     topping_butterscotch_chips: "Chispas de Butterscotch",
     topping_reeses_peanut_butter_chips: "Chips de Mantequilla de Maní Reese's",
     topping_vanilla_chips: "Chispas de Vainilla",
+    topping_honey_butter: "Mantequilla de miel al lado",
     // Miscellaneous
     card_starting_at: "Desde",
     card_customizable: "Personalizable",
@@ -264,6 +266,13 @@ const itemTranslations = {
     desc: {
       en: "Dense, moist banana bread bars with a golden-brown caramelized crust and a soft, tender crumb — finished with a delicate vanilla glaze drizzle.",
       es: "Barras densas y húmedas de pan de plátano con una costra caramelizada dorada y una miga suave y tierna — terminadas con un delicado chorro de glaseado de vainilla."
+    }
+  },
+  sweet_cornbread: {
+    name: { en: "Sweet Cornbread", es: "Pan de Maíz Dulce" },
+    desc: {
+      en: "Sweet, moist cornbread with a golden crumb and a rich corn flavor.",
+      es: "Pan de maíz dulce y húmedo con miga dorada y un rico sabor a maíz."
     }
   }
 };
@@ -651,11 +660,51 @@ function handleDessertChange(dessertId) {
 
   if (selectedDessert && selectedDessert.has_toppings) {
     toppingsContainer.classList.remove('hidden');
+    
+    // Dynamic toppings filtering for Sweet Cornbread vs Brownies/Blondies
+    const honeyButterLabel = document.getElementById('topping-honey-butter-label');
+    const allCheckboxLabels = toppingsContainer.querySelectorAll('.checkbox-label');
+    const toppingsLabelSpan = toppingsContainer.querySelector('label span:not(.label-optional)');
+    const toppingsHelpP = toppingsContainer.querySelector('.form-help');
+    
+    if (dessertId === 'sweet_cornbread') {
+      // Show only honey butter
+      allCheckboxLabels.forEach(lbl => {
+        if (lbl.id === 'topping-honey-butter-label') {
+          lbl.classList.remove('hidden');
+        } else {
+          lbl.classList.add('hidden');
+        }
+      });
+      // Customize label and helper description
+      if (toppingsLabelSpan) {
+        toppingsLabelSpan.textContent = currentLang === 'es' ? 'Elige Acompañantes' : 'Choose Add-ons';
+      }
+      if (toppingsHelpP) {
+        toppingsHelpP.textContent = currentLang === 'es' ? 'Opcionalmente añade mantequilla de miel al lado.' : 'Optionally add honey butter on the side.';
+      }
+    } else {
+      // Show everything except honey butter
+      allCheckboxLabels.forEach(lbl => {
+        if (lbl.id === 'topping-honey-butter-label') {
+          lbl.classList.add('hidden');
+        } else {
+          lbl.classList.remove('hidden');
+        }
+      });
+      // Restore standard labels and helper
+      if (toppingsLabelSpan) {
+        toppingsLabelSpan.textContent = i18n[currentLang].form_label_toppings;
+      }
+      if (toppingsHelpP) {
+        toppingsHelpP.textContent = i18n[currentLang].form_toppings_help;
+      }
+    }
   } else {
     toppingsContainer.classList.add('hidden');
     // Clear checkmarks on hidden checkboxes
     const checkedBoxes = toppingsContainer.querySelectorAll('input[name="toppings"]:checked');
-      checkedBoxes.forEach(cb => { cb.checked = false; });
+    checkedBoxes.forEach(cb => { cb.checked = false; });
   }
 
   renderSizeOptions(dessertId);

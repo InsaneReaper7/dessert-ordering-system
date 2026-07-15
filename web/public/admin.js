@@ -145,6 +145,8 @@ const TRANSLATIONS = {
     cinnamon_rolls: "Artisan Cinnamon Rolls",
     carrot_cake_bars: "Carrot Cake Bars",
     banana_bread_bars: "Banana Bread Bars",
+    sweet_cornbread: "Sweet Cornbread",
+    topping_honey_butter: "Honey Butter on the side",
 
     // Sizes Mapping
     "8x5": "8x5",
@@ -313,6 +315,8 @@ const TRANSLATIONS = {
     cinnamon_rolls: "Rollos de Canela Artesanales",
     carrot_cake_bars: "Barras de Pastel de Zanahoria",
     banana_bread_bars: "Barras de Pan de Guineo",
+    sweet_cornbread: "Pan de Maíz Dulce",
+    topping_honey_butter: "Mantequilla de miel al lado",
 
     // Sizes Mapping
     "8x5": "8x5",
