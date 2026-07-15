@@ -1122,23 +1122,32 @@ function renderIngredients(ingredients, recipeIngredients) {
   });
   
   const baseCosts = {};
+  const toppingsCosts = {};
   dessertsCache.forEach(d => {
     baseCosts[d.id] = 0;
+    toppingsCosts[d.id] = {};
   });
   
   recipeIngredients.forEach(ing => {
+    const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, ingredients);
+    const nameLower = resolvedName.toLowerCase().trim();
+    const unitCost = costMap[nameLower] || 0.0;
+    const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
+    const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
+    const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
+    const ingredientCost = convertedAmount * unitCost;
+
     if (!ing.is_topping) {
-      const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, ingredients);
-      const nameLower = resolvedName.toLowerCase().trim();
-      const unitCost = costMap[nameLower] || 0.0;
-      const inventoryItem = ingredients.find(item => item.name.toLowerCase().trim() === nameLower);
-      const inventoryUnit = inventoryItem ? inventoryItem.unit : 'g';
-      const convertedAmount = convertRecipeAmountToInventoryUnit(ing.ingredient_name, ing.amount, ing.unit, inventoryUnit);
-      baseCosts[ing.dessert_id] += convertedAmount * unitCost;
+      baseCosts[ing.dessert_id] += ingredientCost;
+    } else {
+      const topVal = (ing.topping_value || '').toLowerCase().trim();
+      if (topVal) {
+        toppingsCosts[ing.dessert_id][topVal] = (toppingsCosts[ing.dessert_id][topVal] || 0) + ingredientCost;
+      }
     }
   });
   
-  renderRecipeCostsList(baseCosts, 'recipe-costs-list', ingredients);
+  renderRecipeCostsList(baseCosts, 'recipe-costs-list', ingredients, toppingsCosts);
 }
 
 // Returns the area (sq inches) for a mold string, or null for special batches
@@ -1153,7 +1162,7 @@ function getMoldArea(moldStr) {
   return null; // e.g. '1 Batch', rolls
 }
 
-function renderRecipeCostsList(baseCosts, containerId, inventoryItems) {
+function renderRecipeCostsList(baseCosts, containerId, inventoryItems, toppingsCosts) {
   const listContainer = document.getElementById(containerId);
   if (!listContainer) return;
   listContainer.innerHTML = '';
@@ -1230,6 +1239,32 @@ function renderRecipeCostsList(baseCosts, containerId, inventoryItems) {
       rollsDiv.appendChild(miniGrid);
 
       itemDiv.appendChild(rollsDiv);
+    } else if (d.id === 'sweet_cornbread') {
+      const cornbreadToppings = (toppingsCosts && toppingsCosts[d.id]) || {};
+      const honeyButterCost = cornbreadToppings['honey butter on the side'] || 0.0;
+      
+      const sizesRow = document.createElement('div');
+      sizesRow.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;';
+
+      const makeBtn = (label, cost, mult, sizeLabel) => {
+        const btn = document.createElement('button');
+        btn.className = 'recipe-size-pill';
+        btn.innerHTML = `<span style="font-size:10px; font-weight:600; opacity:0.85;">${label}</span><span style="font-size:13px; font-weight:700;">$${cost.toFixed(2)}</span>`;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCostBreakdownModal(d, mult, sizeLabel);
+        });
+        return btn;
+      };
+
+      const plainLabel = currentLanguage === 'es' ? 'Solo (8x5)' : 'Plain (8x5)';
+      const withButterLabel = currentLanguage === 'es' ? 'Con Miel (8x5)' : 'With Butter (8x5)';
+      const plain8x8Label = currentLanguage === 'es' ? 'Solo (8x8)' : 'Plain (8x8)';
+
+      sizesRow.appendChild(makeBtn(plainLabel, baseCost, 1.0, plainLabel));
+      sizesRow.appendChild(makeBtn(withButterLabel, baseCost + honeyButterCost, 1.0, withButterLabel));
+      sizesRow.appendChild(makeBtn(plain8x8Label, cost8x8, mult8x8, plain8x8Label));
+      itemDiv.appendChild(sizesRow);
     } else {
       const sizesRow = document.createElement('div');
       sizesRow.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;';
@@ -1283,7 +1318,14 @@ function openCostBreakdownModal(dessert, sizeMultiplier, sizeLabel) {
     unitMap[nameLower] = item.unit || 'g';
   });
 
-  const ingredients = recipeIngredientsCache.filter(ing => ing.dessert_id === dessert.id && !ing.is_topping);
+  const includeToppings = (label && (label.includes('With Butter') || label.includes('Con Miel')));
+  const ingredients = recipeIngredientsCache.filter(ing => {
+    if (ing.dessert_id !== dessert.id) return false;
+    if (ing.is_topping) {
+      return includeToppings;
+    }
+    return true;
+  });
   let grandTotal = 0;
 
   if (ingredients.length === 0) {
@@ -1617,6 +1659,11 @@ function renderRecipes(recipeIngredients, inventory) {
   });
   
   const baseCosts = {};
+  const toppingsCosts = {};
+  
+  dessertsCache.forEach(d => {
+    toppingsCosts[d.id] = {};
+  });
   
   dessertsCache.forEach(d => {
     const list = recipeGroups[d.id] || [];
@@ -1672,6 +1719,11 @@ function renderRecipes(recipeIngredients, inventory) {
           
           if (!ing.is_topping) {
             totalRecipeBaseCost += computedCost;
+          } else {
+            const topVal = (ing.topping_value || '').toLowerCase().trim();
+            if (topVal) {
+              toppingsCosts[d.id][topVal] = (toppingsCosts[d.id][topVal] || 0) + computedCost;
+            }
           }
           
           const typeLabel = ing.is_topping 
@@ -1915,7 +1967,7 @@ function renderRecipes(recipeIngredients, inventory) {
     container.appendChild(sectionCard);
   });
   
-  renderRecipeCostsList(baseCosts, 'recipe-costs-list-recipe-tab', inventoryCache);
+  renderRecipeCostsList(baseCosts, 'recipe-costs-list-recipe-tab', inventoryCache, toppingsCosts);
 }
 
 async function populateRecipeDessertsDropdown() {
