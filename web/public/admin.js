@@ -663,26 +663,67 @@ function renderOrders(orders) {
     const sizeFormatted = t(order.size, order.size);
 
     // Pricing display — TBD orders get an inline price setter
-    const priceDisplay = order.total_price === null
-      ? `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-           <span style="color:var(--text-muted); font-style:italic; font-size:12px;">TBD</span>
-           <div style="display:flex; align-items:center; gap:4px;">
-             <span style="font-size:12px; color:var(--text-muted);">$</span>
-             <input
-               id="price-input-${order.id}"
-               type="number"
-               min="0"
-               step="0.01"
-               placeholder="0.00"
-               style="width:72px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit;"
-             />
-             <button
-               onclick="setOrderPrice(${order.id})"
-               style="padding:4px 10px; background:var(--primary); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;"
-             >✓ Set</button>
-           </div>
-         </div>`
-      : `$${order.total_price.toFixed(2)}`;
+    let priceDisplay = '';
+    if (order.total_price === null) {
+      priceDisplay = `
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span style="color:var(--text-muted); font-style:italic; font-size:12px;">TBD</span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text-muted);">$</span>
+            <input
+              id="price-input-${order.id}"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              style="width:72px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit;"
+            />
+            <button
+              onclick="setOrderPrice(${order.id})"
+              style="padding:4px 10px; background:var(--primary); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;"
+            >✓ Set</button>
+          </div>
+        </div>
+      `;
+    } else {
+      const tipAmount = order.tip_amount || 0;
+      const totalEarned = order.total_price + tipAmount;
+      
+      priceDisplay = `
+        <div>
+          <div style="font-size: 13px; font-weight: 600;">$${order.total_price.toFixed(2)}</div>
+          ${tipAmount > 0 ? `
+            <div style="font-size: 11px; color: #10b981; font-weight: 500; margin-top: 2px;">+ $${tipAmount.toFixed(2)} tip</div>
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Total: $${totalEarned.toFixed(2)}</div>
+          ` : ''}
+          <div style="margin-top: 4px;">
+            <a href="#" onclick="showTipInput(${order.id}, event)" style="font-size: 11px; color: var(--primary); text-decoration: underline; font-weight: 500; cursor: pointer;">
+              ${tipAmount > 0 ? (currentLanguage === 'es' ? 'Editar Propina' : 'Edit Tip') : (currentLanguage === 'es' ? '+ Propina' : '+ Add Tip')}
+            </a>
+            <div id="tip-input-container-${order.id}" style="display: none; align-items: center; gap: 4px; margin-top: 4px;">
+              <span style="font-size: 11px; color: var(--text-muted);">$</span>
+              <input
+                id="tip-input-${order.id}"
+                type="number"
+                min="0"
+                step="0.01"
+                value="${tipAmount || ''}"
+                placeholder="0.00"
+                style="width: 55px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; font-size: 11px;"
+              />
+              <button
+                onclick="setOrderTip(${order.id}, event)"
+                style="padding: 2px 6px; background: #10b981; color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;"
+              >✓</button>
+              <button
+                onclick="hideTipInput(${order.id}, event)"
+                style="padding: 2px 6px; background: var(--border); color: var(--text-main); border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;"
+              >✕</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     // Status action buttons
     let actionButtons = '';
@@ -754,6 +795,59 @@ async function setOrderPrice(orderId) {
     console.error(err);
   }
 }
+
+function showTipInput(orderId, event) {
+  if (event) event.preventDefault();
+  const container = document.getElementById(`tip-input-container-${orderId}`);
+  if (container) {
+    container.style.display = 'inline-flex';
+  }
+}
+
+function hideTipInput(orderId, event) {
+  if (event) event.preventDefault();
+  const container = document.getElementById(`tip-input-container-${orderId}`);
+  if (container) {
+    container.style.display = 'none';
+  }
+}
+
+async function setOrderTip(orderId, event) {
+  if (event) event.preventDefault();
+  const input = document.getElementById(`tip-input-${orderId}`);
+  if (!input) return;
+  const tipVal = parseFloat(input.value) || 0.0;
+  
+  if (isNaN(tipVal) || tipVal < 0) {
+    alert(currentLanguage === 'es' ? 'Por favor ingrese un monto de propina válido.' : 'Please enter a valid tip amount.');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/orders/${orderId}/tip`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ tip_amount: tipVal })
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Failed to update tip');
+    }
+
+    await loadOrders();
+    await loadStats();
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  }
+}
+
+window.showTipInput = showTipInput;
+window.hideTipInput = hideTipInput;
+window.setOrderTip = setOrderTip;
 
 async function updateStatus(orderId, status) {
   if (status === 'cancelled' && !confirm(t('confirm_cancel_order', 'Are you sure you want to cancel this order?'))) {

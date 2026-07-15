@@ -321,11 +321,13 @@ app.get('/api/admin/stats', authenticateAdminToken, async (req, res) => {
       const orderYear = orderDateStr.slice(0, 4);
 
       const price = order.total_price || 0; // Exclude TBD orders from direct totals
+      const tip = order.tip_amount || 0;
+      const totalEarned = price + tip;
 
       // Group totals
-      if (orderDay === todayStr) stats.sales.today += price;
-      if (orderMonth === monthStr) stats.sales.month += price;
-      if (orderYear === yearStr) stats.sales.year += price;
+      if (orderDay === todayStr) stats.sales.today += totalEarned;
+      if (orderMonth === monthStr) stats.sales.month += totalEarned;
+      if (orderYear === yearStr) stats.sales.year += totalEarned;
 
       // Group item sales
       if (stats.itemSales[order.dessert_id]) {
@@ -415,6 +417,26 @@ app.patch('/api/admin/orders/:id/price', authenticateAdminToken, async (req, res
     res.json({ message: 'Order price updated', total_price: parsed });
   } catch (err) {
     console.error('Failed to update order price:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
+// Admin: Update order tip amount
+app.patch('/api/admin/orders/:id/tip', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { tip_amount } = req.body;
+
+  const parsed = parseFloat(tip_amount);
+  if (isNaN(parsed) || parsed < 0) {
+    return res.status(400).json({ error: 'Invalid tip value' });
+  }
+
+  try {
+    await db.updateOrderTip(id, parsed);
+    broadcast({ type: 'order_updated', id: parseInt(id), tip_amount: parsed });
+    res.json({ message: 'Order tip updated', tip_amount: parsed });
+  } catch (err) {
+    console.error('Failed to update order tip:', err);
     res.status(500).json({ error: 'Database update failed' });
   }
 });

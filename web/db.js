@@ -307,6 +307,29 @@ async function createTables() {
       price REAL DEFAULT 0.0
     )
   `);
+
+  // Migrate orders table to include tip_amount column
+  try {
+    let hasTipAmount = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' AND column_name = 'tip_amount'
+      `);
+      hasTipAmount = res.length > 0;
+    } else {
+      const info = await query("PRAGMA table_info(orders)");
+      hasTipAmount = info.some(col => col.name === 'tip_amount');
+    }
+
+    if (!hasTipAmount) {
+      console.log('Adding column tip_amount to orders table...');
+      await query("ALTER TABLE orders ADD COLUMN tip_amount REAL DEFAULT 0.0");
+    }
+  } catch (e) {
+    console.error('Error during orders schema migration, skipping:', e);
+  }
 }
 
 async function seedData() {
@@ -566,6 +589,7 @@ module.exports = {
   ),
   updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),
   updateOrderPrice: (id, price) => query('UPDATE orders SET total_price = ? WHERE id = ?', [price, id]),
+  updateOrderTip: (id, tip_amount) => query('UPDATE orders SET tip_amount = ? WHERE id = ?', [tip_amount, id]),
   deleteOrder: (id) => query('DELETE FROM orders WHERE id = ?', [id]),
 
   // Ingredients CRUD (Inventory pricing)
