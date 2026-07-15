@@ -234,7 +234,12 @@ app.post('/api/orders', async (req, res) => {
         };
         const includedToppings = preIncludedMap[dessert_id] || [];
         const toppingList = Array.isArray(toppings) ? toppings : (toppings ? JSON.parse(toppings) : []);
-        const extraToppings = toppingList.filter(t => !includedToppings.includes(t));
+        const extraToppings = toppingList.filter(t => {
+          if (dessert_id === 'sweet_cornbread' && t.toLowerCase().trim() === 'honey butter on the side') {
+            return false; // Honey butter is free for sweet cornbread!
+          }
+          return !includedToppings.includes(t);
+        });
         total_price = basePrice + (extraToppings.length * EXTRA_TOPPING_PRICE);
       }
     }

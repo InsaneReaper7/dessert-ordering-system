@@ -405,9 +405,18 @@ function updateAdditionsCheckboxes() {
         cb.checked = false;
         cb.disabled = false;
       }
-      // Show +$0.75 hint on non-included toppings
-      const extraSuffix = currentLang === 'es' ? ' (+$0.75)' : ' (+$0.75)';
-      span.textContent = baseText + extraSuffix;
+      
+      // Remove any previously appended "Free" / "Gratis" labels
+      baseText = baseText.replace(/ \((Free|Gratis)\)/i, '');
+      
+      if (cb.value === 'honey butter on the side' && dessertId === 'sweet_cornbread') {
+        const freeSuffix = currentLang === 'es' ? ' (Gratis)' : ' (Free)';
+        span.textContent = baseText + freeSuffix;
+      } else {
+        // Show +$0.75 hint on non-included toppings
+        const extraSuffix = currentLang === 'es' ? ' (+$0.75)' : ' (+$0.75)';
+        span.textContent = baseText + extraSuffix;
+      }
     }
   });
 }
@@ -851,7 +860,13 @@ function updateOrderSummary() {
     }
 
     const extraToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
-      .filter(cb => !cb.disabled)
+      .filter(cb => {
+        if (cb.disabled) return false;
+        if (cb.value === 'honey butter on the side' && selectedDessert.id === 'sweet_cornbread') {
+          return false; // Honey butter is free for sweet cornbread!
+        }
+        return true;
+      })
       .map(cb => cb.value);
 
     const EXTRA_TOPPING_PRICE = 0.75;
@@ -865,9 +880,14 @@ function updateOrderSummary() {
         const parts = allChecked.map(cb => {
           const key = 'topping_' + cb.value.toLowerCase().replace(' ', '_');
           const name = i18n[currentLang][key] || cb.value;
-          const label = cb.disabled
-            ? `${name} (${currentLang === 'es' ? 'Incluido' : 'Included'})`
-            : `${name} (+$${EXTRA_TOPPING_PRICE.toFixed(2)})`;
+          let label = '';
+          if (cb.value === 'honey butter on the side' && selectedDessert.id === 'sweet_cornbread') {
+            label = `${name} (${currentLang === 'es' ? 'Gratis' : 'Free'})`;
+          } else {
+            label = cb.disabled
+              ? `${name} (${currentLang === 'es' ? 'Incluido' : 'Included'})`
+              : `${name} (+$${EXTRA_TOPPING_PRICE.toFixed(2)})`;
+          }
           return label;
         });
         summaryToppingsList.textContent = parts.join(', ');
