@@ -22,6 +22,19 @@ const TRANSLATIONS = {
     tab_inventory: "Ingredient Cost Manager",
     tab_recipes: "Current Recipes",
     tab_pricing: "Dessert Pricing Manager",
+    tab_reports: "Reports & Exports",
+    reports_filters_title: "Report Filters",
+    label_date_preset: "Date Range Preset",
+    label_start_date: "Start Date",
+    label_end_date: "End Date",
+    label_order_status: "Order Statuses",
+    label_dessert_filter: "Filter by Dessert",
+    label_topping_filter: "Filter by Toppings",
+    btn_generate_report: "Generate Report",
+    report_dashboard_title: "Report Dashboard",
+    btn_export_excel: "Export to Excel",
+    btn_print_pdf: "Print / Save as PDF",
+    none_topping: "No Toppings",
     pricing_manager_title: "Dessert Pricing Manager",
     pricing_manager_desc: "Manage the customer-facing selling prices for your desserts in 8\"x5\" and 8\"x8\" molds. Set to blank (TBD) if pricing is not yet finalized.",
     col_image: "Image",
@@ -197,6 +210,19 @@ const TRANSLATIONS = {
     tab_inventory: "Gestor de Costos de Ingredientes",
     tab_recipes: "Recetas Actuales",
     tab_pricing: "Gestor de Precios de Postres",
+    tab_reports: "Reportes y Exportaciones",
+    reports_filters_title: "Filtros del Reporte",
+    label_date_preset: "Periodo del Reporte",
+    label_start_date: "Fecha Inicial",
+    label_end_date: "Fecha Final",
+    label_order_status: "Estados de Pedido",
+    label_dessert_filter: "Filtrar por Postre",
+    label_topping_filter: "Filtrar por Coberturas",
+    btn_generate_report: "Generar Reporte",
+    report_dashboard_title: "Panel de Reportes",
+    btn_export_excel: "Exportar a Excel",
+    btn_print_pdf: "Imprimir / Guardar PDF",
+    none_topping: "Sin Coberturas",
     pricing_manager_title: "Gestor de Precios de Postres",
     pricing_manager_desc: "Administre los precios de venta al público para sus postres en moldes de 8\"x5\" y 8\"x8\". Deje en blanco (TBD) si el precio aún no está finalizado.",
     col_image: "Imagen",
@@ -1089,6 +1115,9 @@ function switchTab(tabId) {
   } else if (tabId === 'pricing-tab') {
     document.getElementById('tab-btn-pricing').classList.add('active');
     loadDessertsPricing();
+  } else if (tabId === 'reports-tab') {
+    document.getElementById('tab-btn-reports').classList.add('active');
+    loadReportsTab();
   }
 }
 
@@ -3499,3 +3528,624 @@ window.renderCinnamonRollsPricingManager = renderCinnamonRollsPricingManager;
 window.saveCinnamonRollsPrices = saveCinnamonRollsPrices;
 window.editCinnamonRollsPricing = editCinnamonRollsPricing;
 window.cancelEditCinnamonRollsPricing = cancelEditCinnamonRollsPricing;
+
+// ==========================================
+// REPORTS & ANALYTICS TAB FUNCTIONS
+// ==========================================
+
+let reportsOrders = [];
+
+async function loadReportsTab() {
+  await fetchDessertsCache();
+  populateReportsFilters();
+  generateReport();
+}
+
+function populateReportsFilters() {
+  const dessertSelect = document.getElementById('report-dessert-select');
+  if (!dessertSelect) return;
+  
+  if (dessertSelect.options.length <= 1) {
+    let html = `<option value="all">${currentLanguage === 'es' ? 'Todos los Postres' : 'All Desserts'}</option>`;
+    dessertsCache.forEach(d => {
+      const dessertName = t(d.id, d.name);
+      html += `<option value="${d.id}">${dessertName}</option>`;
+    });
+    dessertSelect.innerHTML = html;
+  }
+  
+  const startDateInput = document.getElementById('report-start-date');
+  const endDateInput = document.getElementById('report-end-date');
+  if (startDateInput && !startDateInput.value) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+  }
+  if (endDateInput && !endDateInput.value) {
+    endDateInput.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+function handleDatePresetChange(preset) {
+  const startInput = document.getElementById('report-start-date');
+  const endInput = document.getElementById('report-end-date');
+  if (!startInput || !endInput) return;
+
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = today.getMonth();
+  const dd = today.getDate();
+
+  let start = new Date();
+  let end = new Date();
+
+  switch (preset) {
+    case 'today':
+      start = new Date(yyyy, mm, dd);
+      end = new Date(yyyy, mm, dd);
+      break;
+    case 'yesterday':
+      start = new Date(yyyy, mm, dd - 1);
+      end = new Date(yyyy, mm, dd - 1);
+      break;
+    case 'this_week':
+      const day = today.getDay();
+      start = new Date(yyyy, mm, dd - day);
+      end = new Date(yyyy, mm, dd + (6 - day));
+      break;
+    case 'last_7_days':
+      start = new Date(yyyy, mm, dd - 6);
+      end = new Date(yyyy, mm, dd);
+      break;
+    case 'this_month':
+      start = new Date(yyyy, mm, 1);
+      end = new Date(yyyy, mm + 1, 0);
+      break;
+    case 'last_month':
+      start = new Date(yyyy, mm - 1, 1);
+      end = new Date(yyyy, mm, 0);
+      break;
+    case 'trimester':
+      start = new Date(yyyy, mm - 2, 1);
+      end = new Date(yyyy, mm + 1, 0);
+      break;
+    case 'half_year':
+      start = new Date(yyyy, mm - 5, 1);
+      end = new Date(yyyy, mm + 1, 0);
+      break;
+    case 'year':
+      start = new Date(yyyy, 0, 1);
+      end = new Date(yyyy, 11, 31);
+      break;
+    case 'custom':
+      return;
+  }
+
+  startInput.value = start.toISOString().split('T')[0];
+  endInput.value = end.toISOString().split('T')[0];
+}
+
+async function generateReport() {
+  const startDateStr = document.getElementById('report-start-date').value;
+  const endDateStr = document.getElementById('report-end-date').value;
+  const dessertFilter = document.getElementById('report-dessert-select').value;
+  
+  const showPending = document.getElementById('report-status-pending').checked;
+  const showCompleted = document.getElementById('report-status-completed').checked;
+  const showCancelled = document.getElementById('report-status-cancelled').checked;
+  
+  const toppingCheckboxes = document.querySelectorAll('.report-topping-cb');
+  const allowedToppings = Array.from(toppingCheckboxes).filter(cb => cb.checked).map(cb => cb.value.toLowerCase().trim());
+
+  try {
+    const response = await fetch('/api/admin/orders', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch orders');
+    const allOrders = await response.json();
+    
+    const filteredOrders = allOrders.filter(order => {
+      if (order.status === 'pending' && !showPending) return false;
+      if (order.status === 'completed' && !showCompleted) return false;
+      if (order.status === 'cancelled' && !showCancelled) return false;
+      
+      if (dessertFilter !== 'all' && order.dessert_id !== dessertFilter) return false;
+      
+      const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
+      if (startDateStr && orderDateStr < startDateStr) return false;
+      if (endDateStr && orderDateStr > endDateStr) return false;
+      
+      const orderToppings = Array.isArray(order.toppings) ? order.toppings : (order.toppings ? JSON.parse(order.toppings) : []);
+      if (orderToppings.length > 0) {
+        const hasMatch = orderToppings.some(t => allowedToppings.includes(t.toLowerCase().trim()));
+        if (!hasMatch) return false;
+      } else {
+        if (!allowedToppings.includes('none')) return false;
+      }
+      
+      return true;
+    });
+
+    reportsOrders = filteredOrders;
+    renderReportVisuals(filteredOrders);
+  } catch (err) {
+    console.error('Error generating report:', err);
+    alert('Failed to generate report: ' + err.message);
+  }
+}
+
+function renderReportVisuals(orders) {
+  const container = document.getElementById('report-visuals-container');
+  if (!container) return;
+  
+  const isEs = (currentLanguage === 'es');
+  
+  if (orders.length === 0) {
+    container.innerHTML = `
+      <div class="analytics-card" style="padding: 40px; text-align: center; color: var(--text-muted); font-style: italic;">
+        ${isEs ? 'No hay pedidos que coincidan con los filtros seleccionados.' : 'No orders match the selected filters.'}
+      </div>
+    `;
+    return;
+  }
+
+  let totalSales = 0;
+  let totalTips = 0;
+  let totalCostOfMaking = 0;
+  const dessertStats = {};
+  const toppingStats = {};
+
+  orders.forEach(order => {
+    totalSales += (order.total_price || 0);
+    totalTips += (order.tip_amount || 0);
+    if (order.cost_of_making !== null && order.cost_of_making !== undefined) {
+      totalCostOfMaking += order.cost_of_making;
+    }
+    
+    if (!dessertStats[order.dessert_id]) {
+      dessertStats[order.dessert_id] = { qty: 0, revenue: 0 };
+    }
+    dessertStats[order.dessert_id].qty += 1;
+    dessertStats[order.dessert_id].revenue += (order.total_price || 0);
+
+    const toppings = Array.isArray(order.toppings) ? order.toppings : (order.toppings ? JSON.parse(order.toppings) : []);
+    if (toppings.length === 0) {
+      toppingStats['None'] = (toppingStats['None'] || 0) + 1;
+    } else {
+      toppings.forEach(tKey => {
+        const trans = t(tKey.toLowerCase());
+        const tCap = trans.charAt(0).toUpperCase() + trans.slice(1);
+        toppingStats[tCap] = (toppingStats[tCap] || 0) + 1;
+      });
+    }
+  });
+
+  const totalRevenue = totalSales + totalTips;
+  const grossProfit = totalRevenue - totalCostOfMaking;
+  const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+  const aov = totalSales / orders.length;
+
+  const sortedDesserts = Object.keys(dessertStats).sort((a,b) => dessertStats[b].qty - dessertStats[a].qty);
+  const sortedToppings = Object.keys(toppingStats).sort((a,b) => toppingStats[b] - toppingStats[a]);
+
+  let html = `
+    <div class="grid grid-4" style="gap: 16px; margin-bottom: 24px;">
+      <div class="stat-card">
+        <span class="stat-label">${isEs ? 'Ventas Netas' : 'Gross Sales'}</span>
+        <span class="stat-value">$${totalSales.toFixed(2)}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">${isEs ? 'Propinas Recibidas' : 'Tips Received'}</span>
+        <span class="stat-value" style="color: #10b981;">$${totalTips.toFixed(2)}</span>
+      </div>
+      <div class="stat-card" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+        <span class="stat-label" style="color: #1e40af;">${isEs ? 'Ingresos Totales' : 'Total Revenue'}</span>
+        <span class="stat-value" style="color: #1e3a8a;">$${totalRevenue.toFixed(2)}</span>
+      </div>
+      <div class="stat-card" style="background: #ecfdf5; border: 1px solid #a7f3d0;">
+        <span class="stat-label" style="color: #065f46;">${isEs ? 'Margen de Ganancia' : 'Gross Profit Margin'}</span>
+        <span class="stat-value" style="color: #047857;">${profitMargin.toFixed(1)}%</span>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Profit: $${grossProfit.toFixed(2)}</div>
+      </div>
+    </div>
+
+    <div class="grid grid-4" style="gap: 16px; margin-bottom: 24px;">
+      <div class="stat-card">
+        <span class="stat-label">${isEs ? 'Costo de Producción' : 'Ingredient Cost'}</span>
+        <span class="stat-value">$${totalCostOfMaking.toFixed(2)}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">${isEs ? 'Ganancia Bruta' : 'Gross Profit'}</span>
+        <span class="stat-value">$${grossProfit.toFixed(2)}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">${isEs ? 'Pedidos Totales' : 'Total Orders'}</span>
+        <span class="stat-value">${orders.length}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">${isEs ? 'Ticket Promedio' : 'Average Order Value'}</span>
+        <span class="stat-value">$${aov.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+      <div class="analytics-card" style="padding: 20px;">
+        <h4 class="analytics-title" style="margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+          ${isEs ? 'Ventas por Categoría de Postre' : 'Sales by Dessert Item'}
+        </h4>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          ${sortedDesserts.map(dId => {
+            const stats = dessertStats[dId];
+            const dName = t(dId);
+            const pct = (stats.qty / orders.length) * 100;
+            return `
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px;">
+                  <span>${dName} (x${stats.qty})</span>
+                  <span>$${stats.revenue.toFixed(2)} (${pct.toFixed(1)}%)</span>
+                </div>
+                <div style="height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden;">
+                  <div style="height: 100%; width: ${pct}%; background: var(--primary); border-radius: 999px;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="analytics-card" style="padding: 20px;">
+        <h4 class="analytics-title" style="margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+          ${isEs ? 'Popularidad de Coberturas (Toppings)' : 'Topping Popularity & Counts'}
+        </h4>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          ${sortedToppings.map(tName => {
+            const qty = toppingStats[tName];
+            const maxQty = toppingStats[sortedToppings[0]] || 1;
+            const pct = (qty / maxQty) * 100;
+            return `
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px;">
+                  <span>${tName}</span>
+                  <span>${qty} ${isEs ? 'vendidos' : 'sold'}</span>
+                </div>
+                <div style="height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden;">
+                  <div style="height: 100%; width: ${pct}%; background: #10b981; border-radius: 999px;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="analytics-card" style="padding: 20px;">
+      <h4 class="analytics-title" style="margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+        ${isEs ? 'Detalle de Pedidos en el Reporte' : 'Itemized Orders in Report'}
+      </h4>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>${isEs ? 'Fecha' : 'Date'}</th>
+              <th>${isEs ? 'Cliente' : 'Customer'}</th>
+              <th>${isEs ? 'Postre' : 'Dessert'}</th>
+              <th>${isEs ? 'Fulfillment' : 'Delivery/Pickup'}</th>
+              <th>${isEs ? 'Precio' : 'Price'}</th>
+              <th>${isEs ? 'Propina' : 'Tip'}</th>
+              <th>${isEs ? 'Costo' : 'Cost'}</th>
+              <th>${isEs ? 'Estado' : 'Status'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orders.map(o => {
+              const dateStr = new Date(o.created_at).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              });
+              const dessertName = t(o.dessert_id);
+              const costDisplay = o.cost_of_making !== null ? `$${o.cost_of_making.toFixed(2)}` : '$0.00';
+              return `
+                <tr>
+                  <td>#${o.id}</td>
+                  <td>dateStr</td>
+                  <td><strong>${o.customer_name}</strong></td>
+                  <td>${dessertName} (${t(o.size, o.size)})</td>
+                  <td>${t(o.pickup_delivery.toLowerCase(), o.pickup_delivery)}</td>
+                  <td>$${(o.total_price || 0).toFixed(2)}</td>
+                  <td>$${(o.tip_amount || 0).toFixed(2)}</td>
+                  <td>${costDisplay}</td>
+                  <td><span class="status-badge ${o.status}">${t(o.status.toLowerCase(), o.status)}</span></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Fix dateStr template literal replacement issue
+  html = html.replace('dateStr', '${dateStr}');
+
+  container.innerHTML = html;
+}
+
+function exportToExcel() {
+  if (reportsOrders.length === 0) {
+    alert(currentLanguage === 'es' ? 'No hay datos para exportar.' : 'No data available to export.');
+    return;
+  }
+
+  let csvContent = "Order ID,Date,Customer Name,Phone,Email,Dessert,Size,Toppings,Notes,Fulfillment,Base Cost,Price,Tip,Total,Status\n";
+
+  reportsOrders.forEach(o => {
+    const orderDate = new Date(o.created_at).toISOString().split('T')[0];
+    const dessertName = t(o.dessert_id).replace(/,/g, '');
+    const sizeStr = t(o.size, o.size).replace(/,/g, '');
+    
+    const toppings = Array.isArray(o.toppings) ? o.toppings : (o.toppings ? JSON.parse(o.toppings) : []);
+    const toppingsStr = toppings.join('; ').replace(/,/g, '');
+    
+    const notesStr = (o.notes || '').replace(/"/g, '""').replace(/\n/g, ' ');
+    const nameStr = o.customer_name.replace(/,/g, '');
+    
+    const baseCost = o.cost_of_making !== null ? o.cost_of_making.toFixed(2) : '0.00';
+    const price = (o.total_price || 0).toFixed(2);
+    const tip = (o.tip_amount || 0).toFixed(2);
+    const total = ((o.total_price || 0) + (o.tip_amount || 0)).toFixed(2);
+
+    csvContent += `"${o.id}","${orderDate}","${nameStr}","${o.customer_phone}","${o.customer_email || ''}","${dessertName}","${sizeStr}","${toppingsStr}","${notesStr}","${o.pickup_delivery}","${baseCost}","${price}","${tip}","${total}","${o.status}"\n`;
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Sugar_and_Crumb_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function printReport() {
+  if (reportsOrders.length === 0) {
+    alert(currentLanguage === 'es' ? 'No hay datos para imprimir.' : 'No data available to print.');
+    return;
+  }
+  
+  const isEs = (currentLanguage === 'es');
+  const printWindow = window.open('', '_blank');
+  
+  let totalSales = 0;
+  let totalTips = 0;
+  let totalCostOfMaking = 0;
+  const dessertStats = {};
+  const toppingStats = {};
+
+  reportsOrders.forEach(order => {
+    totalSales += (order.total_price || 0);
+    totalTips += (order.tip_amount || 0);
+    if (order.cost_of_making !== null && order.cost_of_making !== undefined) {
+      totalCostOfMaking += order.cost_of_making;
+    }
+    
+    if (!dessertStats[order.dessert_id]) {
+      dessertStats[order.dessert_id] = { qty: 0, revenue: 0 };
+    }
+    dessertStats[order.dessert_id].qty += 1;
+    dessertStats[order.dessert_id].revenue += (order.total_price || 0);
+
+    const toppings = Array.isArray(order.toppings) ? order.toppings : (order.toppings ? JSON.parse(order.toppings) : []);
+    if (toppings.length === 0) {
+      toppingStats['None'] = (toppingStats['None'] || 0) + 1;
+    } else {
+      toppings.forEach(tKey => {
+        const trans = t(tKey.toLowerCase());
+        const tCap = trans.charAt(0).toUpperCase() + trans.slice(1);
+        toppingStats[tCap] = (toppingStats[tCap] || 0) + 1;
+      });
+    }
+  });
+
+  const totalRevenue = totalSales + totalTips;
+  const grossProfit = totalRevenue - totalCostOfMaking;
+  const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+  
+  const startVal = document.getElementById('report-start-date').value;
+  const endVal = document.getElementById('report-end-date').value;
+
+  let html = `
+    <html>
+      <head>
+        <title>Sugar & Crumb Bakery - Sales Report</title>
+        <style>
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #1f2937;
+            padding: 24px;
+            margin: 0;
+            background: #fff;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            color: #111827;
+          }
+          .subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 6px 0 0 0;
+          }
+          .grid-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+          }
+          .metric-card {
+            border: 1px solid #e5e7eb;
+            padding: 16px;
+            border-radius: 8px;
+            background: #f9fafb;
+          }
+          .metric-label {
+            font-size: 12px;
+            color: #4b5563;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+          .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+          }
+          .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            border-bottom: 1.5px solid #f3f4f6;
+            padding-bottom: 6px;
+            color: #374151;
+          }
+          .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+          }
+          .list-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 6px 0;
+            border-bottom: 1px solid #f3f4f6;
+          }
+          .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+          .orders-table th, .orders-table td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: left;
+          }
+          .orders-table th {
+            background: #f9fafb;
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">${isEs ? 'Reporte de Ventas y Rendimiento' : 'Sales & Performance Report'}</div>
+          <div class="subtitle">${isEs ? 'Periodo' : 'Date Range'}: ${startVal || 'Start'} - ${endVal || 'End'}</div>
+        </div>
+        
+        <div class="grid-metrics">
+          <div class="metric-card">
+            <div class="metric-label">${isEs ? 'Ventas' : 'Gross Sales'}</div>
+            <div class="metric-value">$${totalSales.toFixed(2)}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">${isEs ? 'Propinas' : 'Tips'}</div>
+            <div class="metric-value">$${totalTips.toFixed(2)}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">${isEs ? 'Ingresos Totales' : 'Total Revenue'}</div>
+            <div class="metric-value">$${totalRevenue.toFixed(2)}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">${isEs ? 'Margen de Utilidad' : 'Profit Margin'}</div>
+            <div class="metric-value">${profitMargin.toFixed(1)}%</div>
+            <div style="font-size:10px; color:#6b7280; margin-top:2px;">Profit: $${grossProfit.toFixed(2)}</div>
+          </div>
+        </div>
+        
+        <div class="two-column">
+          <div>
+            <div class="section-title">${isEs ? 'Ventas por Postre' : 'Sales by Dessert'}</div>
+            ${Object.keys(dessertStats).map(dId => {
+              const stats = dessertStats[dId];
+              const dName = t(dId);
+              return `
+                <div class="list-item">
+                  <strong>${dName} (x${stats.qty})</strong>
+                  <span>$${stats.revenue.toFixed(2)}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div>
+            <div class="section-title">${isEs ? 'Frecuencia de Toppings' : 'Toppings Frequency'}</div>
+            ${Object.keys(toppingStats).map(tName => {
+              return `
+                <div class="list-item">
+                  <strong>${tName}</strong>
+                  <span>${toppingStats[tName]} ${isEs ? 'vendidos' : 'sold'}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        
+        <div class="section-title">${isEs ? 'Pedidos Detallados' : 'Itemized Orders'}</div>
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>${isEs ? 'Fecha' : 'Date'}</th>
+              <th>${isEs ? 'Cliente' : 'Customer'}</th>
+              <th>${isEs ? 'Postre' : 'Dessert'}</th>
+              <th>${isEs ? 'Fulfillment' : 'Delivery/Pickup'}</th>
+              <th>${isEs ? 'Precio' : 'Price'}</th>
+              <th>${isEs ? 'Propina' : 'Tip'}</th>
+              <th>${isEs ? 'Estado' : 'Status'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reportsOrders.map(o => {
+              const dateStr = new Date(o.created_at).toLocaleDateString();
+              const dessertName = t(o.dessert_id);
+              return `
+                <tr>
+                  <td>#${o.id}</td>
+                  <td>${dateStr}</td>
+                  <td>${o.customer_name}</td>
+                  <td>${dessertName} (${t(o.size, o.size)})</td>
+                  <td>${t(o.pickup_delivery.toLowerCase(), o.pickup_delivery)}</td>
+                  <td>$${(o.total_price || 0).toFixed(2)}</td>
+                  <td>$${(o.tip_amount || 0).toFixed(2)}</td>
+                  <td>${t(o.status.toLowerCase(), o.status)}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  
+  printWindow.onload = function() {
+    printWindow.print();
+  };
+}
+
+window.loadReportsTab = loadReportsTab;
+window.handleDatePresetChange = handleDatePresetChange;
+window.generateReport = generateReport;
+window.exportToExcel = exportToExcel;
+window.printReport = printReport;
+

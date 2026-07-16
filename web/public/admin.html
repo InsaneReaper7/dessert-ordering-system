@@ -70,6 +70,7 @@
       <button id="tab-btn-ingredients" class="tab-btn" onclick="switchTab('ingredients-tab')" data-translate="tab_inventory">Ingredient Cost Manager</button>
       <button id="tab-btn-recipes" class="tab-btn" onclick="switchTab('recipes-tab')" data-translate="tab_recipes">Current Recipes</button>
       <button id="tab-btn-pricing" class="tab-btn" onclick="switchTab('pricing-tab')" data-translate="tab_pricing">Dessert Pricing Manager</button>
+      <button id="tab-btn-reports" class="tab-btn" onclick="switchTab('reports-tab')" data-translate="tab_reports">Reports & Exports</button>
     </div>
 
     <!-- Orders & Analytics Tab Content -->
@@ -389,7 +390,135 @@
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Reports Tab Content -->
+    <div id="reports-tab" class="tab-content hidden" style="margin-top: 32px;">
+      <div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
+        
+        <!-- Filters Sidebar -->
+        <div class="analytics-card" style="align-self: start; padding: 20px;">
+          <h3 class="analytics-title" style="margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <span data-translate="reports_filters_title">Report Filters</span>
+          </h3>
+          
+          <!-- Date Presets -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;" data-translate="label_date_preset">Date Range Preset</label>
+            <select id="report-date-preset" onchange="handleDatePresetChange(this.value)" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; background: white; color: var(--text-main); font-weight: 500;">
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="last_7_days">Last 7 Days</option>
+              <option value="this_month" selected>This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="trimester">This Quarter (3 Mos)</option>
+              <option value="half_year">Half Year (6 Mos)</option>
+              <option value="year">This Year</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+          
+          <!-- Custom Dates -->
+          <div class="grid grid-2" style="gap: 12px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label style="font-weight: 600; font-size: 12px; margin-bottom: 6px; display: block;" data-translate="label_start_date">Start Date</label>
+              <input type="date" id="report-start-date" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 12px; background: white; color: var(--text-main);">
+            </div>
+            <div class="form-group">
+              <label style="font-weight: 600; font-size: 12px; margin-bottom: 6px; display: block;" data-translate="label_end_date">End Date</label>
+              <input type="date" id="report-end-date" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 12px; background: white; color: var(--text-main);">
+            </div>
+          </div>
+          
+          <!-- Order Statuses -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;" data-translate="label_order_status">Order Statuses</label>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="report-status-pending" checked style="cursor: pointer;">
+                <span data-translate="status_pending">Pending</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="report-status-completed" checked style="cursor: pointer;">
+                <span data-translate="status_completed">Completed</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="report-status-cancelled" checked style="cursor: pointer;">
+                <span data-translate="status_cancelled">Cancelled</span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Dessert Selection -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;" data-translate="label_dessert_filter">Filter by Dessert</label>
+            <select id="report-dessert-select" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; background: white; color: var(--text-main); font-weight: 500;">
+              <option value="all">All Desserts</option>
+            </select>
+          </div>
+          
+          <!-- Toppings Selection -->
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;" data-translate="label_topping_filter">Filter by Toppings</label>
+            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 6px; background: white;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="marshmallow" checked style="cursor: pointer;">
+                <span>Marshmallow</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="butterscotch chips" checked style="cursor: pointer;">
+                <span>Butterscotch Chips</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="caramels dots" checked style="cursor: pointer;">
+                <span>Caramels Dots</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="walnuts" checked style="cursor: pointer;">
+                <span>Walnuts</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="pecans" checked style="cursor: pointer;">
+                <span>Pecans</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="honey butter on the side" checked style="cursor: pointer;">
+                <span>Honey Butter</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" class="report-topping-cb" value="none" checked style="cursor: pointer;">
+                <span data-translate="none_topping">No Toppings</span>
+              </label>
+            </div>
+          </div>
+          
+          <button class="btn btn-primary" onclick="generateReport()" style="width: 100%; padding: 10px; font-size: 13px; font-weight: 600; border-radius: var(--radius-md);" data-translate="btn_generate_report">Generate Report</button>
+        </div>
+        
+        <!-- Report Dashboard Content Area -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          
+          <!-- Actions & Export Header -->
+          <div class="analytics-card" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <h3 class="analytics-title" style="margin: 0; border: none; padding: 0;" data-translate="report_dashboard_title">Report Dashboard</h3>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-complete" onclick="exportToExcel()" style="padding: 8px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <span>📊</span> <span data-translate="btn_export_excel">Export to Excel</span>
+              </button>
+              <button class="btn btn-primary" onclick="printReport()" style="padding: 8px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; background: #3b82f6;">
+                <span>🖨️</span> <span data-translate="btn_print_pdf">Print / Save as PDF</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Report Visual Wrapper -->
+          <div id="report-visuals-container">
+            <!-- Populated dynamically by renderReportVisuals -->
+          </div>
+          
+        </div>
+      </div>
+    </div>
 
   <!-- Recipe Cost Breakdown Modal -->
   <div id="cost-breakdown-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px);">
