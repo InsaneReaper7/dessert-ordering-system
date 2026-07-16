@@ -330,6 +330,29 @@ async function createTables() {
   } catch (e) {
     console.error('Error during orders schema migration, skipping:', e);
   }
+
+  // Migrate orders table to include requested_date column
+  try {
+    let hasRequestedDate = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' AND column_name = 'requested_date'
+      `);
+      hasRequestedDate = res.length > 0;
+    } else {
+      const info = await query("PRAGMA table_info(orders)");
+      hasRequestedDate = info.some(col => col.name === 'requested_date');
+    }
+
+    if (!hasRequestedDate) {
+      console.log('Adding column requested_date to orders table...');
+      await query("ALTER TABLE orders ADD COLUMN requested_date TEXT");
+    }
+  } catch (e) {
+    console.error('Error during orders schema migration for requested_date, skipping:', e);
+  }
 }
 
 async function seedData() {
@@ -572,8 +595,8 @@ module.exports = {
   getOrderById: (id) => query('SELECT * FROM orders WHERE id = ?', [id]).then(rows => rows[0]),
   createOrder: (order) => query(
     `INSERT INTO orders 
-     (customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, total_price, status, pickup_delivery) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, total_price, status, pickup_delivery, requested_date) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       order.customer_name,
       order.customer_phone,
@@ -584,7 +607,8 @@ module.exports = {
       order.notes || '',
       order.total_price, // Will be null or numerical
       'pending',
-      order.pickup_delivery
+      order.pickup_delivery,
+      order.requested_date || null
     ]
   ),
   updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),

@@ -195,6 +195,12 @@
             </select>
           </div>
 
+          <!-- Step 5.5: Requested Date -->
+          <div class="form-group">
+            <label for="requested-date"><span data-i18n="form_label_requested_date">Requested Delivery/Pickup Date</span></label>
+            <input type="date" id="requested-date" name="requested_date" required>
+          </div>
+
           <!-- Step 6: Customer Details -->
           <div class="customer-info-section">
             <h3 class="subsection-title" data-i18n="form_label_contact">Your Contact Details</h3>
@@ -253,6 +259,7 @@
         <p><strong data-i18n="success_modal_dessert">Dessert:</strong> <span id="success-dessert-name"></span></p>
         <p><strong data-i18n="success_modal_size">Size:</strong> <span id="success-size"></span></p>
         <p><strong data-i18n="success_modal_fulfillment">Fulfillment:</strong> <span id="success-fulfillment"></span></p>
+        <p><strong data-i18n="success_modal_date">Requested Date:</strong> <span id="success-requested-date"></span></p>
         <p class="success-total-price"><strong data-i18n="success_modal_total">Total Price:</strong> <span id="success-price"></span></p>
       </div>
       <p class="modal-subtext"><span id="success-subtext-translated">A notification has been pinged to the chef's phone. We will contact you at <span id="success-phone"></span> shortly to confirm price & delivery!</span></p>

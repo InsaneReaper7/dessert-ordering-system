@@ -159,9 +159,9 @@ app.get('/api/desserts', async (req, res) => {
 
 // Public: Place order
 app.post('/api/orders', async (req, res) => {
-  const { customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, pickup_delivery, frosting_id } = req.body;
+  const { customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, pickup_delivery, frosting_id, requested_date } = req.body;
 
-  if (!customer_name || !customer_phone || !dessert_id || !size || !pickup_delivery) {
+  if (!customer_name || !customer_phone || !dessert_id || !size || !pickup_delivery || !requested_date) {
     return res.status(400).json({ error: 'Missing required customer or order details' });
   }
 
@@ -253,7 +253,8 @@ app.post('/api/orders', async (req, res) => {
       toppings,
       notes,
       total_price,
-      pickup_delivery
+      pickup_delivery,
+      requested_date
     };
 
     const result = await db.createOrder(orderObj);

@@ -22,7 +22,8 @@ data class Order(
     val status: String?,
     val pickup_delivery: String,
     val created_at: String,
-    val cost_of_making: Double?
+    val cost_of_making: Double?,
+    val requested_date: String? = null
 ) {
     val safeStatus: String
         get() = status ?: "pending"

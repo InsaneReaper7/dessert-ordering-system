@@ -44,6 +44,11 @@ const TRANSLATIONS = {
     dessert_qtys_sold: "Dessert Item Quantities Sold",
     top_toppings_popularity: "Top Toppings Popularity",
     customer_orders_log: "Customer Orders Log",
+    pending_orders_header: "Pending Orders",
+    finished_orders_header: "Completed & Cancelled Orders",
+    no_pending_orders: "No pending orders",
+    no_finished_orders: "No completed or cancelled orders",
+    due_label: "Due:",
     th_order_id: "Order ID",
     th_date: "Date",
     th_customer: "Customer",
@@ -214,6 +219,11 @@ const TRANSLATIONS = {
     dessert_qtys_sold: "Cantidades de Postres Vendidos",
     top_toppings_popularity: "Popularidad de Toppings",
     customer_orders_log: "Registro de Pedidos de Clientes",
+    pending_orders_header: "Pedidos Pendientes",
+    finished_orders_header: "Pedidos Completados y Cancelados",
+    no_pending_orders: "No hay pedidos pendientes",
+    no_finished_orders: "No hay pedidos completados o cancelados",
+    due_label: "Fecha:",
     th_order_id: "ID de Pedido",
     th_date: "Fecha",
     th_customer: "Cliente",
@@ -633,7 +643,10 @@ function renderOrders(orders) {
     return;
   }
 
-  orders.forEach(order => {
+  const pendingOrders = orders.filter(o => o.status === 'pending');
+  const finishedOrders = orders.filter(o => o.status !== 'pending');
+
+  const renderSingleOrderRow = (order) => {
     const tr = document.createElement('tr');
     
     const dateStr = new Date(order.created_at).toLocaleDateString(undefined, {
@@ -738,6 +751,36 @@ function renderOrders(orders) {
       `;
     }
 
+    // Calculate days left alert badge for pending orders
+    let alertBadgeHtml = '';
+    if (order.status === 'pending' && order.requested_date) {
+      try {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        const reqParts = order.requested_date.split('-');
+        const reqDate = new Date(reqParts[0], reqParts[1] - 1, reqParts[2]);
+        reqDate.setHours(0,0,0,0);
+        
+        const diffTime = reqDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0) {
+          alertBadgeHtml = `<div style="margin-top: 6px;"><span class="status-badge cancelled" style="font-size: 10px; font-weight: 700; padding: 2px 6px;">⚠️ ${currentLanguage === 'es' ? 'Atrasado por' : 'Overdue by'} ${Math.abs(diffDays)}d</span></div>`;
+        } else if (diffDays === 0) {
+          alertBadgeHtml = `<div style="margin-top: 6px;"><span class="status-badge cancelled" style="font-size: 10px; font-weight: 700; padding: 2px 6px; background:#ef4444; color:white;">🚨 ${currentLanguage === 'es' ? '¡Hoy!' : 'Due Today!'}</span></div>`;
+        } else if (diffDays === 1) {
+          alertBadgeHtml = `<div style="margin-top: 6px;"><span class="status-badge pending" style="font-size: 10px; font-weight: 700; padding: 2px 6px; background: #f59e0b; color: white;">⏳ ${currentLanguage === 'es' ? 'Mañana' : 'Tomorrow'}</span></div>`;
+        } else if (diffDays === 2) {
+          alertBadgeHtml = `<div style="margin-top: 6px;"><span class="status-badge pending" style="font-size: 10px; font-weight: 700; padding: 2px 6px; background: #fbbf24; color: black;">⏳ ${currentLanguage === 'es' ? '2 días restan' : '2 days left'}</span></div>`;
+        } else {
+          alertBadgeHtml = `<div style="margin-top: 6px;"><span class="status-badge completed" style="font-size: 10px; font-weight: 700; padding: 2px 6px;">📅 ${diffDays} ${currentLanguage === 'es' ? 'días' : 'days'}</span></div>`;
+        }
+      } catch (e) {
+        // ignore date parsing error
+      }
+    }
+
     tr.innerHTML = `
       <td>#${order.id}</td>
       <td>${dateStr}</td>
@@ -754,7 +797,9 @@ function renderOrders(orders) {
         ${order.notes ? `<div class="order-details-sub" style="margin-top: 4px; font-style: italic;">"${order.notes}"</div>` : ''}
       </td>
       <td>
-        <span style="font-weight: 500; font-size: 13px; text-transform: capitalize;">${t(order.pickup_delivery.toLowerCase(), order.pickup_delivery)}</span>
+        <div style="font-weight: 500; font-size: 13px; text-transform: capitalize;">${t(order.pickup_delivery.toLowerCase(), order.pickup_delivery)}</div>
+        ${order.requested_date ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;"><strong>${t('due_label', 'Due:')}</strong> ${order.requested_date}</div>` : ''}
+        ${alertBadgeHtml}
       </td>
       <td>
         <strong>${priceDisplay}</strong>
@@ -770,7 +815,35 @@ function renderOrders(orders) {
       </td>
     `;
     tbody.appendChild(tr);
-  });
+  };
+
+  // 1. Render Pending section
+  const pendingHeader = document.createElement('tr');
+  pendingHeader.className = 'recipe-part-header';
+  pendingHeader.innerHTML = `<td colspan="8" style="background: #eff6ff; color: #1e3a8a; font-weight: 700; padding: 12px 16px; font-size: 13px; border-bottom: 2px solid #bfdbfe;">${t('pending_orders_header', 'Pending Orders')}</td>`;
+  tbody.appendChild(pendingHeader);
+
+  if (pendingOrders.length === 0) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = `<td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted); font-style: italic;">${t('no_pending_orders', 'No pending orders')}</td>`;
+    tbody.appendChild(emptyRow);
+  } else {
+    pendingOrders.forEach(renderSingleOrderRow);
+  }
+
+  // 2. Render Completed & Cancelled section
+  const finishedHeader = document.createElement('tr');
+  finishedHeader.className = 'recipe-part-header';
+  finishedHeader.innerHTML = `<td colspan="8" style="background: #f3f4f6; color: #374151; font-weight: 700; padding: 12px 16px; font-size: 13px; border-bottom: 2px solid #e5e7eb; margin-top: 16px;">${t('finished_orders_header', 'Completed & Cancelled Orders')}</td>`;
+  tbody.appendChild(finishedHeader);
+
+  if (finishedOrders.length === 0) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = `<td colspan="8" class="text-center" style="padding: 20px; color: var(--text-muted); font-style: italic;">${t('no_finished_orders', 'No completed or cancelled orders')}</td>`;
+    tbody.appendChild(emptyRow);
+  } else {
+    finishedOrders.forEach(renderSingleOrderRow);
+  }
 }
 
 async function setOrderPrice(orderId) {

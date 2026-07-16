@@ -39,6 +39,7 @@ const i18n = {
     form_label_notes: "Special Requests / Notes",
     form_placeholder_notes: "Any dietary preferences or custom notes? E.g., 'half walnuts, half chocolate chips'",
     form_label_fulfillment: "Pickup or Delivery?",
+    form_label_requested_date: "Requested Delivery/Pickup Date",
     form_placeholder_fulfillment: "Select fulfillment method...",
     form_fulfillment_pickup: "Self Pickup",
     form_fulfillment_delivery: "Coordinate Delivery (Friends/Coworkers/Family only)",
@@ -60,6 +61,7 @@ const i18n = {
     success_modal_dessert: "Dessert:",
     success_modal_size: "Size:",
     success_modal_fulfillment: "Fulfillment:",
+    success_modal_date: "Requested Date:",
     success_modal_total: "Total Price:",
     success_modal_subtext_template: "A notification has been pinged to the chef's phone. We will contact you at {phone} shortly to confirm price & delivery!",
     success_modal_close: "Close Window",
@@ -124,6 +126,7 @@ const i18n = {
     form_label_notes: "Solicitudes Especiales / Notas",
     form_placeholder_notes: "¿Alguna preferencia alimentaria o nota personalizada? Ej: 'mitad nueces, mitad chispas de chocolate'",
     form_label_fulfillment: "¿Retiro o Entrega?",
+    form_label_requested_date: "Fecha Solicitada de Entrega/Retiro",
     form_placeholder_fulfillment: "Selecciona el método de entrega...",
     form_fulfillment_pickup: "Retiro en Persona",
     form_fulfillment_delivery: "Coordinar Entrega (Solo amigos/compañeros/familia)",
@@ -145,6 +148,7 @@ const i18n = {
     success_modal_dessert: "Postre:",
     success_modal_size: "Tamaño:",
     success_modal_fulfillment: "Entrega:",
+    success_modal_date: "Fecha Solicitada:",
     success_modal_total: "Precio Total:",
     success_modal_subtext_template: "Se ha enviado una notificación al teléfono del chef. Nos comunicaremos contigo al {phone} en breve para confirmar el precio y la entrega.",
     success_modal_close: "Cerrar Ventana",
@@ -622,6 +626,12 @@ function setupEventListeners() {
     radio.addEventListener('change', updateOrderSummary);
   });
 
+  const dateInput = document.getElementById('requested-date');
+  if (dateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+  }
+
   if (form) {
     form.addEventListener('submit', handleFormSubmit);
   }
@@ -921,7 +931,15 @@ async function handleFormSubmit(e) {
   const select = document.getElementById('dessert-select');
   const selectedDessert = dessertsData.find(d => d.id === select.value);
   const pickupDelivery = document.getElementById('pickup-delivery').value;
+  const requestedDate = document.getElementById('requested-date').value;
   const notes = document.getElementById('order-notes').value;
+
+  if (!requestedDate) {
+    alert(currentLang === 'es' ? 'Por favor elige una fecha.' : 'Please select a date.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = i18n[currentLang].btn_submit;
+    return;
+  }
   
   const customerName = document.getElementById('customer-name').value;
   const customerPhone = document.getElementById('customer-phone').value;
@@ -1001,7 +1019,8 @@ async function handleFormSubmit(e) {
     toppings: checkedToppings,
     notes: finalNotes,
     pickup_delivery: pickupDelivery,
-    frosting_id: frosting_id
+    frosting_id: frosting_id,
+    requested_date: requestedDate
   };
 
   try {
@@ -1061,6 +1080,20 @@ async function handleFormSubmit(e) {
     // Translate fulfillment
     const translatedFulfillment = pickupDelivery === 'pickup' ? i18n[currentLang].form_fulfillment_pickup : i18n[currentLang].form_fulfillment_delivery;
     document.getElementById('success-fulfillment').textContent = translatedFulfillment;
+    
+    // Format requested date nicely for success modal
+    const dateParts = requestedDate.split('-');
+    let formattedRequestedDate = requestedDate;
+    if (dateParts.length === 3) {
+      const dObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      formattedRequestedDate = dObj.toLocaleDateString(undefined, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    document.getElementById('success-requested-date').textContent = formattedRequestedDate;
     
     // Total price
     document.getElementById('success-price').textContent = result.total_price === 'TBD' ? `${i18n[currentLang].summary_total_tbd} (${currentLang === 'es' ? 'Por confirmar' : 'To be confirmed'})` : `$${result.total_price.toFixed(2)}`;

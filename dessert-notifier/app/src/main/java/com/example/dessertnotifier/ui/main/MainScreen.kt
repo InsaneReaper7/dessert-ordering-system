@@ -344,8 +344,20 @@ fun OrderLogCard(order: Order) {
                 text = "${order.customer_phone}  |  Fulfillment: ${order.pickup_delivery.uppercase()}",
                 fontSize = 12.sp,
                 color = Color.Gray,
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier.padding(top = 4.dp)
             )
+            
+            order.requested_date?.let { date ->
+                if (date.isNotEmpty()) {
+                    Text(
+                        text = "📅 Due Date: $date",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF10b981), // Green color
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
             
             HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
 
