@@ -3895,7 +3895,7 @@ function renderReportVisuals(orders) {
               return `
                 <tr>
                   <td>#${o.id}</td>
-                  <td>dateStr</td>
+                  <td>${dateStr}</td>
                   <td><strong>${o.customer_name}</strong></td>
                   <td>${dessertName} (${t(o.size, o.size)})</td>
                   <td>${t(o.pickup_delivery.toLowerCase(), o.pickup_delivery)}</td>
@@ -3911,9 +3911,6 @@ function renderReportVisuals(orders) {
       </div>
     </div>
   `;
-
-  // Fix dateStr template literal replacement issue
-  html = html.replace('dateStr', '${dateStr}');
 
   container.innerHTML = html;
 }
