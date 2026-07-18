@@ -157,118 +157,142 @@ app.get('/api/desserts', async (req, res) => {
   }
 });
 
-// Public: Place order
+// Public: Place order (handles single order or array of cart items)
 app.post('/api/orders', async (req, res) => {
-  const { customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, pickup_delivery, frosting_id, requested_date } = req.body;
+  const items = Array.isArray(req.body) ? req.body : [req.body];
 
-  if (!customer_name || !customer_phone || !dessert_id || !size || !pickup_delivery || !requested_date) {
-    return res.status(400).json({ error: 'Missing required customer or order details' });
+  if (items.length === 0) {
+    return res.status(400).json({ error: 'No items in order' });
+  }
+
+  // Validate required customer/order details on all items
+  for (const item of items) {
+    if (!item.customer_name || !item.customer_phone || !item.dessert_id || !item.size || !item.pickup_delivery || !item.requested_date) {
+      return res.status(400).json({ error: 'Missing required customer or order details' });
+    }
   }
 
   try {
-    // Get dessert config
-    const dessert = await db.getDessertById(dessert_id);
-    if (!dessert) {
-      return res.status(404).json({ error: 'Dessert not found' });
-    }
+    // Generate a unique 6-character alphanumeric uppercase group ID for this checkout batch
+    const group_id = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const createdOrders = [];
+    let grandTotal = 0;
+    let isGrandTotalTBD = false;
 
-    // Determine price. If size price is null, then the total price is null (TBD)
-    let total_price = null;
-    let basePrice = null;
+    for (const item of items) {
+      // Get dessert config
+      const dessert = await db.getDessertById(item.dessert_id);
+      if (!dessert) {
+        return res.status(404).json({ error: `Dessert not found: ${item.dessert_id}` });
+      }
 
-    if (dessert_id === 'cinnamon_rolls') {
-      const match = size.match(/^(reg|mini)_(\d+)$/);
-      if (match) {
-        const rollSize = match[1] === 'reg' ? 'regular' : 'mini';
-        const qty = parseInt(match[2]);
-        const rollsPriceObj = await db.getCinnamonRollPrice(rollSize, qty);
-        basePrice = rollsPriceObj ? rollsPriceObj.price : null;
-        
-        if (basePrice !== null) {
-          total_price = basePrice;
-          if (frosting_id && frosting_id !== 'classic') {
-            const frosting = await db.getFrosting(frosting_id);
-            if (frosting && frosting.price) {
-              total_price += qty * frosting.price;
+      // Determine price. If size price is null, then the total price is null (TBD)
+      let total_price = null;
+      let basePrice = null;
+
+      if (item.dessert_id === 'cinnamon_rolls') {
+        const match = item.size.match(/^(reg|mini)_(\d+)$/);
+        if (match) {
+          const rollSize = match[1] === 'reg' ? 'regular' : 'mini';
+          const qty = parseInt(match[2]);
+          const rollsPriceObj = await db.getCinnamonRollPrice(rollSize, qty);
+          basePrice = rollsPriceObj ? rollsPriceObj.price : null;
+          
+          if (basePrice !== null) {
+            total_price = basePrice;
+            if (item.frosting_id && item.frosting_id !== 'classic') {
+              const frosting = await db.getFrosting(item.frosting_id);
+              if (frosting && frosting.price) {
+                total_price += qty * frosting.price;
+              }
             }
           }
+        } else {
+          // Fallback for legacy roll pack sizes (1_roll, 4_pack, etc.)
+          const priceMap = {
+            '1_roll': dessert.price_1_roll,
+            '4_pack': dessert.price_4_pack,
+            '6_pack': dessert.price_6_pack,
+            'full_tray': dessert.price_12_pack
+          };
+          basePrice = priceMap[item.size] !== undefined ? priceMap[item.size] : null;
+          if (basePrice !== null) {
+            total_price = basePrice;
+          }
         }
       } else {
-        // Fallback for legacy roll pack sizes (1_roll, 4_pack, etc.)
-        const priceMap = {
-          '1_roll': dessert.price_1_roll,
-          '4_pack': dessert.price_4_pack,
-          '6_pack': dessert.price_6_pack,
-          'full_tray': dessert.price_12_pack
-        };
-        basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
+        if (item.size === '8x8') {
+          basePrice = dessert.price_8x8;
+        } else if (item.size === '9x9') {
+          basePrice = dessert.price_9x9;
+        } else if (item.size === '8x5') {
+          basePrice = dessert.price_8x5;
+        } else {
+          const priceMap = {
+            '1_roll': dessert.price_1_roll,
+            '4_pack': dessert.price_4_pack,
+            '6_pack': dessert.price_6_pack,
+            'full_tray': dessert.price_12_pack
+          };
+          basePrice = priceMap[item.size] !== undefined ? priceMap[item.size] : null;
+        }
+
         if (basePrice !== null) {
-          total_price = basePrice;
+          // Extra toppings cost $0.75 each — pre-included ones are free
+          const EXTRA_TOPPING_PRICE = 0.75;
+          const preIncludedMap = {
+            'marshmallow_swirl_brownies': ['marshmallow'],
+            'butterscotch_blondies': ['butterscotch chips'],
+            'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
+            'carrot_cake_bars': ['pecans']
+          };
+          const includedToppings = preIncludedMap[item.dessert_id] || [];
+          const toppingList = Array.isArray(item.toppings) ? item.toppings : (item.toppings ? JSON.parse(item.toppings) : []);
+          const extraToppings = toppingList.filter(t => {
+            if (item.dessert_id === 'sweet_cornbread' && t.toLowerCase().trim() === 'honey butter on the side') {
+              return false; // Honey butter is free for sweet cornbread!
+            }
+            return !includedToppings.includes(t);
+          });
+          total_price = basePrice + (extraToppings.length * EXTRA_TOPPING_PRICE);
         }
-      }
-    } else {
-      if (size === '8x8') {
-        basePrice = dessert.price_8x8;
-      } else if (size === '9x9') {
-        basePrice = dessert.price_9x9;
-      } else if (size === '8x5') {
-        basePrice = dessert.price_8x5;
-      } else {
-        const priceMap = {
-          '1_roll': dessert.price_1_roll,
-          '4_pack': dessert.price_4_pack,
-          '6_pack': dessert.price_6_pack,
-          'full_tray': dessert.price_12_pack
-        };
-        basePrice = priceMap[size] !== undefined ? priceMap[size] : null;
       }
 
-      if (basePrice !== null) {
-        // Extra toppings cost $0.75 each — pre-included ones are free
-        const EXTRA_TOPPING_PRICE = 0.75;
-        const preIncludedMap = {
-          'marshmallow_swirl_brownies': ['marshmallow'],
-          'butterscotch_blondies': ['butterscotch chips'],
-          'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
-          'carrot_cake_bars': ['pecans']
-        };
-        const includedToppings = preIncludedMap[dessert_id] || [];
-        const toppingList = Array.isArray(toppings) ? toppings : (toppings ? JSON.parse(toppings) : []);
-        const extraToppings = toppingList.filter(t => {
-          if (dessert_id === 'sweet_cornbread' && t.toLowerCase().trim() === 'honey butter on the side') {
-            return false; // Honey butter is free for sweet cornbread!
-          }
-          return !includedToppings.includes(t);
-        });
-        total_price = basePrice + (extraToppings.length * EXTRA_TOPPING_PRICE);
+      if (total_price === null) {
+        isGrandTotalTBD = true;
+      } else {
+        grandTotal += total_price;
       }
+
+      const orderObj = {
+        customer_name: item.customer_name,
+        customer_phone: item.customer_phone,
+        customer_email: item.customer_email || '',
+        dessert_id: item.dessert_id,
+        size: item.size,
+        toppings: item.toppings,
+        notes: item.notes,
+        total_price,
+        pickup_delivery: item.pickup_delivery,
+        requested_date: item.requested_date,
+        group_id
+      };
+
+      const result = await db.createOrder(orderObj);
+      const orderId = result.insertId || result[0]?.id; // handles SQLite vs pg insert outputs
+
+      const newOrder = { id: orderId, ...orderObj };
+      createdOrders.push(newOrder);
+
+      // Broadcast notification to phone & web (for each item so notifier app wakes up correctly)
+      await broadcastNewOrder(newOrder);
     }
 
-    const orderObj = {
-      customer_name,
-      customer_phone,
-      customer_email,
-      dessert_id,
-      size,
-      toppings,
-      notes,
-      total_price,
-      pickup_delivery,
-      requested_date
-    };
-
-    const result = await db.createOrder(orderObj);
-    const orderId = result.insertId || result[0]?.id; // handles SQLite vs pg insert outputs
-
-    const newOrder = { id: orderId, ...orderObj };
-    
-    // Broadcast notification to phone & web
-    await broadcastNewOrder(newOrder);
-
     res.status(201).json({
-      message: 'Order placed successfully',
-      orderId: orderId,
-      total_price: total_price === null ? 'TBD' : total_price
+      message: 'Orders placed successfully',
+      group_id,
+      orders: createdOrders.map(o => ({ id: o.id, dessert_id: o.dessert_id, total_price: o.total_price })),
+      total_price: isGrandTotalTBD ? 'TBD' : grandTotal
     });
   } catch (err) {
     console.error('Failed to place order:', err);

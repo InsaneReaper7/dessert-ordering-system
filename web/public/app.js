@@ -55,6 +55,12 @@ const i18n = {
     summary_total_tbd: "TBD",
     summary_disclaimer: "* Since some prices are TBD, we will confirm the exact price and payment details when we contact you.",
     btn_submit_order: "Place Order",
+    btn_add_to_cart: "Add to Cart",
+    cart_title: "Your Order Cart",
+    cart_empty: "Your cart is empty. Add a dessert above to start!",
+    btn_remove: "Remove",
+    cart_total: "Cart Total:",
+    success_modal_items: "Items Ordered:",
     btn_submit_loading: "Placing Order...",
     success_modal_title: "Order Placed!",
     success_modal_text_template: "Thank you, {name}! Your order has been successfully sent to the kitchen.",
@@ -142,6 +148,12 @@ const i18n = {
     summary_total_tbd: "TBD",
     summary_disclaimer: "* Dado que algunos precios están por definirse (TBD), confirmaremos el precio exacto y los detalles de pago cuando nos comuniquemos contigo.",
     btn_submit_order: "Realizar Pedido",
+    btn_add_to_cart: "Añadir al Carrito",
+    cart_title: "Tu Carrito de Pedido",
+    cart_empty: "Tu carrito está vacío. ¡Añade un postre arriba para comenzar!",
+    btn_remove: "Eliminar",
+    cart_total: "Total del Carrito:",
+    success_modal_items: "Artículos Pedidos:",
     btn_submit_loading: "Enviando Pedido...",
     success_modal_title: "¡Pedido Realizado!",
     success_modal_text_template: "¡Gracias, {name}! Tu pedido ha sido enviado con éxito a la cocina.",
@@ -283,6 +295,236 @@ const itemTranslations = {
 
 
 let rollsPricingData = { rolls_prices: [], frostings: [] };
+let cart = [];
+
+function t(key, fallback = key) {
+  return (i18n[currentLang] && i18n[currentLang][key]) || fallback;
+}
+
+function addItemToCart() {
+  const select = document.getElementById('dessert-select');
+  if (!select || !select.value) {
+    alert(currentLang === 'es' ? 'Por favor elige un postre primero.' : 'Please select a dessert first.');
+    return;
+  }
+
+  const selectedDessert = dessertsData.find(d => d.id === select.value);
+  const notes = document.getElementById('order-notes').value;
+
+  // Calculate price & settings
+  let basePrice = null;
+  let totalPrice = null;
+  let size = '';
+  let frosting_id = 'classic';
+  let finalNotes = notes;
+  let sizeLabel = '';
+
+  if (selectedDessert.id === 'cinnamon_rolls') {
+    const sizeType = document.querySelector('input[name="roll_size_type"]:checked')?.value || 'regular';
+    const qty = parseInt(document.querySelector('input[name="roll_qty"]:checked')?.value || '1');
+    const style = document.querySelector('input[name="roll_style"]:checked')?.value || 'cooked';
+    frosting_id = document.querySelector('input[name="roll_frosting"]:checked')?.value || 'classic';
+    const placement = document.querySelector('input[name="roll_placement"]:checked')?.value || 'on_rolls';
+
+    size = `${sizeType === 'reg' || sizeType === 'regular' ? 'reg' : 'mini'}_${qty}`;
+
+    const szTitle = sizeType === 'regular' 
+      ? (currentLang === 'es' ? 'Regular' : 'Regular') 
+      : (currentLang === 'es' ? 'Mini' : 'Mini');
+    sizeLabel = `${qty} ${szTitle}`;
+
+    const styleLabel = style === 'cooked' 
+      ? (currentLang === 'es' ? 'Cocido' : 'Cooked') 
+      : (currentLang === 'es' ? 'Crudo' : 'Uncooked');
+    const frostingObj = rollsPricingData.frostings.find(f => f.id === frosting_id);
+    const frostingLabel = frostingObj ? frostingObj.name : frosting_id;
+    const placementLabel = placement === 'on_rolls' 
+      ? (currentLang === 'es' ? 'Sobre los rollos' : 'On rolls') 
+      : (currentLang === 'es' ? 'Aparte' : 'On side');
+
+    finalNotes = `[${currentLang === 'es' ? 'Opción' : 'Style'}: ${styleLabel}, ${currentLang === 'es' ? 'Glaseado' : 'Frosting'}: ${frostingLabel}, ${currentLang === 'es' ? 'Ubicación' : 'Placement'}: ${placementLabel}]` + (notes ? ` ${notes}` : '');
+
+    const found = rollsPricingData.rolls_prices.find(p => p.size === sizeType && p.quantity === qty);
+    basePrice = found && found.price !== null ? found.price : null;
+    if (basePrice !== null) {
+      totalPrice = basePrice;
+      if (frosting_id !== 'classic' && frostingObj && frostingObj.price !== null) {
+        totalPrice += qty * frostingObj.price;
+      }
+    }
+  } else {
+    const selectedSize = document.querySelector('input[name="size"]:checked')?.value;
+    if (!selectedSize) {
+      alert(currentLang === 'es' ? 'Por favor elige un tamaño.' : 'Please select a size.');
+      return;
+    }
+    size = selectedSize;
+
+    if (size === '8x5') {
+      basePrice = selectedDessert.price_8x5;
+      sizeLabel = currentLang === 'es' ? 'Molde 8"x5"' : '8"x5" Pan';
+    } else if (size === '8x8') {
+      basePrice = selectedDessert.price_8x8;
+      sizeLabel = currentLang === 'es' ? 'Molde 8"x8"' : '8"x8" Pan';
+    } else {
+      const sizeKeys = {
+        '1_roll': currentLang === 'es' ? '1 Rollo' : '1 Roll',
+        '4_pack': currentLang === 'es' ? 'Paquete de 4' : '4 Pack',
+        '6_pack': currentLang === 'es' ? 'Paquete de 6' : '6 Pack',
+        'full_tray': currentLang === 'es' ? 'Bandeja Completa' : 'Full Tray'
+      };
+      sizeLabel = sizeKeys[size] || size;
+      const rollPriceMap = {
+        '1_roll': selectedDessert.price_1_roll,
+        '4_pack': selectedDessert.price_4_pack,
+        '6_pack': selectedDessert.price_6_pack,
+        'full_tray': selectedDessert.price_12_pack
+      };
+      basePrice = rollPriceMap[size] !== undefined ? rollPriceMap[size] : null;
+    }
+
+    // Carrot cake icing
+    if (selectedDessert.id === 'carrot_cake_bars') {
+      const icingRadio = document.querySelector('input[name="icing_option"]:checked');
+      const icingValue = icingRadio ? icingRadio.value : 'with_icing';
+      const icingLabels = currentLang === 'es' ? {
+        'with_icing': 'Con Glaseado',
+        'no_icing': 'Sin Glaseado',
+        'icing_side': 'Glaseado Aparte'
+      } : {
+        'with_icing': 'With Icing',
+        'no_icing': 'No Icing',
+        'icing_side': 'Icing on the Side'
+      };
+      const icingText = icingLabels[icingValue] || icingValue;
+      finalNotes = `[${currentLang === 'es' ? 'Glaseado' : 'Icing'}: ${icingText}]` + (notes ? ` ${notes}` : '');
+    }
+
+    const toppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked')).map(cb => cb.value);
+    const extraToppings = toppings.filter(tVal => {
+      const preIncludedMap = {
+        'marshmallow_swirl_brownies': ['marshmallow'],
+        'butterscotch_blondies': ['butterscotch chips'],
+        'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
+        'carrot_cake_bars': ['pecans']
+      };
+      const included = preIncludedMap[selectedDessert.id] || [];
+      if (selectedDessert.id === 'sweet_cornbread' && tVal.toLowerCase().trim() === 'honey butter on the side') {
+        return false; // free
+      }
+      return !included.includes(tVal);
+    });
+
+    const EXTRA_TOPPING_PRICE = 0.75;
+    const extraToppingsCost = extraToppings.length * EXTRA_TOPPING_PRICE;
+    totalPrice = basePrice === null ? null : basePrice + extraToppingsCost;
+  }
+
+  const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked')).map(cb => cb.value);
+
+  const cartItem = {
+    dessert_id: selectedDessert.id,
+    name: itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name,
+    size: size,
+    sizeLabel: sizeLabel,
+    toppings: checkedToppings,
+    notes: finalNotes,
+    price: totalPrice,
+    frosting_id: frosting_id
+  };
+
+  cart.push(cartItem);
+  updateCartUI();
+
+  // Reset fields for next item customization
+  select.value = '';
+  handleDessertChange('');
+  document.getElementById('order-notes').value = '';
+  updateOrderSummary();
+}
+
+window.addItemToCart = addItemToCart;
+
+function removeCartItem(index) {
+  cart.splice(index, 1);
+  updateCartUI();
+}
+
+window.removeCartItem = removeCartItem;
+
+function updateCartUI() {
+  const listContainer = document.getElementById('cart-items-list');
+  const badge = document.getElementById('cart-count-badge');
+  const subtotalPrice = document.getElementById('cart-total-price');
+  const checkoutSection = document.getElementById('checkout-details-section');
+
+  if (!listContainer || !badge || !subtotalPrice || !checkoutSection) return;
+
+  badge.textContent = cart.length;
+
+  if (cart.length === 0) {
+    listContainer.innerHTML = `<p style="font-style: italic; color: var(--text-muted); text-align: center; margin: 12px 0;" data-i18n="cart_empty">${t('cart_empty', 'Your cart is empty. Add a dessert above to start!')}</p>`;
+    subtotalPrice.textContent = '$0.00';
+    checkoutSection.classList.add('hidden');
+    return;
+  }
+
+  checkoutSection.classList.remove('hidden');
+
+  let html = '';
+  let totalSum = 0;
+  let hasTBD = false;
+
+  cart.forEach((item, index) => {
+    const dessertName = itemTranslations[item.dessert_id] ? itemTranslations[item.dessert_id].name[currentLang] : item.name;
+    const priceDisplay = item.price === null ? 'TBD' : `$${item.price.toFixed(2)}`;
+    if (item.price === null) hasTBD = true;
+    else totalSum += item.price;
+
+    const toppingsParts = item.toppings.map(tVal => {
+      const key = 'topping_' + tVal.toLowerCase().replace(' ', '_');
+      const name = i18n[currentLang][key] || tVal;
+      if (tVal === 'honey butter on the side' && item.dessert_id === 'sweet_cornbread') {
+        return `${name} (${currentLang === 'es' ? 'Gratis' : 'Free'})`;
+      }
+      const preIncludedMap = {
+        'marshmallow_swirl_brownies': ['marshmallow'],
+        'butterscotch_blondies': ['butterscotch chips'],
+        'caramel_butterscotch_crunch_blondies': ['butterscotch chips', 'caramels dots', 'walnuts'],
+        'carrot_cake_bars': ['pecans']
+      };
+      const included = preIncludedMap[item.dessert_id] || [];
+      return included.includes(tVal) ? `${name} (${currentLang === 'es' ? 'Incluido' : 'Included'})` : `${name} (+$0.75)`;
+    });
+
+    const toppingsFormatted = toppingsParts.length > 0 ? toppingsParts.join(', ') : (currentLang === 'es' ? 'Ninguno' : 'None');
+
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        <div style="text-align: left;">
+          <div style="font-weight: 700; font-size: 14px; color: var(--text-main);">${dessertName} (${item.sizeLabel})</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;"><strong>Toppings:</strong> ${toppingsFormatted}</div>
+          ${item.notes ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-style: italic;">"${item.notes}"</div>` : ''}
+        </div>
+        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 80px;">
+          <span style="font-weight: 700; color: var(--primary); font-size: 14px;">${priceDisplay}</span>
+          <button type="button" style="background: none; border: none; color: #ef4444; font-size: 11px; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;" onclick="removeCartItem(${index})">${t('btn_remove', 'Remove')}</button>
+        </div>
+      </div>
+    `;
+  });
+
+  listContainer.innerHTML = html;
+
+  if (hasTBD) {
+    subtotalPrice.textContent = totalSum > 0 ? `$${totalSum.toFixed(2)} + TBD` : 'TBD';
+  } else {
+    subtotalPrice.textContent = `$${totalSum.toFixed(2)}`;
+  }
+}
+
+window.updateCartUI = updateCartUI;
+
 
 async function fetchCinnamonRollsPricing() {
   try {
@@ -924,20 +1166,22 @@ function updateOrderSummary() {
 async function handleFormSubmit(e) {
   e.preventDefault();
 
+  if (cart.length === 0) {
+    alert(currentLang === 'es' ? 'Tu carrito está vacío.' : 'Your cart is empty.');
+    return;
+  }
+
   const submitBtn = document.getElementById('submit-order-btn');
   submitBtn.disabled = true;
   submitBtn.textContent = i18n[currentLang].btn_submit_loading;
 
-  const select = document.getElementById('dessert-select');
-  const selectedDessert = dessertsData.find(d => d.id === select.value);
   const pickupDelivery = document.getElementById('pickup-delivery').value;
   const requestedDate = document.getElementById('requested-date').value;
-  const notes = document.getElementById('order-notes').value;
 
   if (!requestedDate) {
     alert(currentLang === 'es' ? 'Por favor elige una fecha.' : 'Please select a date.');
     submitBtn.disabled = false;
-    submitBtn.textContent = i18n[currentLang].btn_submit;
+    submitBtn.textContent = i18n[currentLang].btn_submit_order;
     return;
   }
   
@@ -952,76 +1196,23 @@ async function handleFormSubmit(e) {
       : '⚠️ You didn\'t enter an email address. Without it we won\'t be able to send you order updates.\n\nDo you want to continue without an email?';
     if (!confirm(msg)) {
       submitBtn.disabled = false;
-      submitBtn.textContent = i18n[currentLang].btn_submit;
+      submitBtn.textContent = i18n[currentLang].btn_submit_order;
       return;
     }
   }
 
-  const checkedToppings = Array.from(document.querySelectorAll('input[name="toppings"]:checked'))
-    .map(cb => cb.value);
-
-  let finalNotes = notes;
-  let size = '';
-  let frosting_id = 'classic';
-
-  if (selectedDessert.id === 'cinnamon_rolls') {
-    const sizeType = document.querySelector('input[name="roll_size_type"]:checked').value;
-    const qty = document.querySelector('input[name="roll_qty"]:checked').value;
-    size = `${sizeType === 'regular' ? 'reg' : 'mini'}_${qty}`;
-    
-    frosting_id = document.querySelector('input[name="roll_frosting"]:checked').value;
-    const style = document.querySelector('input[name="roll_style"]:checked').value;
-    const placement = document.querySelector('input[name="roll_placement"]:checked').value;
-    
-    const sizeLabel = sizeType === 'regular' 
-      ? (currentLang === 'es' ? 'Regular' : 'Regular') 
-      : (currentLang === 'es' ? 'Mini' : 'Mini');
-      
-    const styleLabel = style === 'cooked' 
-      ? (currentLang === 'es' ? 'Cocido' : 'Cooked') 
-      : (currentLang === 'es' ? 'Crudo' : 'Uncooked');
-      
-    const frostingObj = rollsPricingData.frostings.find(f => f.id === frosting_id);
-    const frostingLabel = frostingObj ? frostingObj.name : frosting_id;
-    
-    const placementLabel = placement === 'on_rolls' 
-      ? (currentLang === 'es' ? 'Sobre los rollos' : 'On rolls') 
-      : (currentLang === 'es' ? 'Aparte' : 'On side');
-      
-    finalNotes = `[${currentLang === 'es' ? 'Opción' : 'Style'}: ${styleLabel}, ${currentLang === 'es' ? 'Glaseado' : 'Frosting'}: ${frostingLabel}, ${currentLang === 'es' ? 'Ubicación' : 'Placement'}: ${placementLabel}]` + (notes ? ` ${notes}` : '');
-  } else {
-    size = document.querySelector('input[name="size"]:checked').value;
-    
-    // Prepend icing selection to notes for Carrot Cake Bars
-    if (selectedDessert.id === 'carrot_cake_bars') {
-      const icingRadio = document.querySelector('input[name="icing_option"]:checked');
-      const icingValue = icingRadio ? icingRadio.value : 'with_icing';
-      const icingLabels = currentLang === 'es' ? {
-        'with_icing': 'Con Glaseado',
-        'no_icing': 'Sin Glaseado',
-        'icing_side': 'Glaseado Aparte'
-      } : {
-        'with_icing': 'With Icing',
-        'no_icing': 'No Icing',
-        'icing_side': 'Icing on the Side'
-      };
-      const icingText = icingLabels[icingValue] || icingValue;
-      finalNotes = `[${currentLang === 'es' ? 'Glaseado' : 'Icing'}: ${icingText}]` + (notes ? ` ${notes}` : '');
-    }
-  }
-
-  const orderData = {
+  const orderItems = cart.map(item => ({
     customer_name: customerName,
     customer_phone: customerPhone,
     customer_email: customerEmail,
-    dessert_id: selectedDessert.id,
-    size: size,
-    toppings: checkedToppings,
-    notes: finalNotes,
+    dessert_id: item.dessert_id,
+    size: item.size,
+    toppings: item.toppings,
+    notes: item.notes,
     pickup_delivery: pickupDelivery,
-    frosting_id: frosting_id,
+    frosting_id: item.frosting_id,
     requested_date: requestedDate
-  };
+  }));
 
   try {
     const response = await fetch('/api/orders', {
@@ -1029,7 +1220,7 @@ async function handleFormSubmit(e) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(orderData)
+      body: JSON.stringify(orderItems)
     });
 
     const result = await response.json();
@@ -1047,36 +1238,23 @@ async function handleFormSubmit(e) {
     document.getElementById('success-subtext-translated').innerHTML = 
       subtextTemplate.replace('{phone}', `<strong style="font-weight: 700;">${customerPhone}</strong>`);
 
-    // Get translated dessert name
-    const translatedName = itemTranslations[selectedDessert.id] ? itemTranslations[selectedDessert.id].name[currentLang] : selectedDessert.name;
-
-    document.getElementById('success-dessert-name').textContent = translatedName;
-    
-    // Translate size description
-    let translatedSize = '';
-    if (selectedDessert.id === 'cinnamon_rolls') {
-      const match = size.match(/^(reg|mini)_(\d+)$/);
-      if (match) {
-        const sizeLabel = match[1] === 'reg' ? (currentLang === 'es' ? 'Regulares' : 'Regular') : (currentLang === 'es' ? 'Minis' : 'Mini');
-        translatedSize = `${match[2]} ${sizeLabel}`;
-      }
-    } else if (size === '8x5') {
-      translatedSize = i18n[currentLang].form_size_8x5;
-    } else if (size === '8x8') {
-      translatedSize = i18n[currentLang].form_size_8x8;
-    } else if (size === '9x9') {
-      translatedSize = i18n[currentLang].form_size_9x9;
-    } else {
-      const sizeKeys = {
-        '1_roll': currentLang === 'es' ? '1 Rollo' : '1 Roll',
-        '4_pack': currentLang === 'es' ? 'Paquete de 4' : '4 Pack',
-        '6_pack': currentLang === 'es' ? 'Paquete de 6' : '6 Pack',
-        'full_tray': currentLang === 'es' ? 'Bandeja Completa' : 'Full Tray'
-      };
-      translatedSize = sizeKeys[size] || size;
+    // Populate success items list
+    const successListContainer = document.getElementById('success-items-list');
+    if (successListContainer) {
+      let itemsHtml = '';
+      cart.forEach(item => {
+        const dessertName = itemTranslations[item.dessert_id] ? itemTranslations[item.dessert_id].name[currentLang] : item.name;
+        const priceDisplay = item.price === null ? 'TBD' : `$${item.price.toFixed(2)}`;
+        itemsHtml += `
+          <div style="display: flex; justify-content: space-between; font-size: 13px;">
+            <span>• ${dessertName} (${item.sizeLabel})</span>
+            <strong>${priceDisplay}</strong>
+          </div>
+        `;
+      });
+      successListContainer.innerHTML = itemsHtml;
     }
-    document.getElementById('success-size').textContent = translatedSize;
-    
+
     // Translate fulfillment
     const translatedFulfillment = pickupDelivery === 'pickup' ? i18n[currentLang].form_fulfillment_pickup : i18n[currentLang].form_fulfillment_delivery;
     document.getElementById('success-fulfillment').textContent = translatedFulfillment;
@@ -1098,9 +1276,17 @@ async function handleFormSubmit(e) {
     // Total price
     document.getElementById('success-price').textContent = result.total_price === 'TBD' ? `${i18n[currentLang].summary_total_tbd} (${currentLang === 'es' ? 'Por confirmar' : 'To be confirmed'})` : `$${result.total_price.toFixed(2)}`;
 
+    // Display group order reference next to the title
+    const modalTitle = document.querySelector('#success-modal .modal-title');
+    if (modalTitle) {
+      modalTitle.innerHTML = `${i18n[currentLang].success_modal_title} <span style="font-size: 14px; display: block; color: var(--primary); margin-top: 6px; font-weight: 600;">Ref: #${result.group_id}</span>`;
+    }
+
     document.getElementById('success-modal').style.display = 'block';
 
-    // Reset form
+    // Clear/Reset cart and form
+    cart = [];
+    updateCartUI();
     document.getElementById('order-form').reset();
     handleDessertChange('');
     updateOrderSummary();

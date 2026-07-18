@@ -180,7 +180,8 @@ async function createTables() {
       total_price REAL,
       status VARCHAR(20) DEFAULT 'pending',
       pickup_delivery VARCHAR(20) NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      group_id TEXT
     )
   `);
 
@@ -352,6 +353,29 @@ async function createTables() {
     }
   } catch (e) {
     console.error('Error during orders schema migration for requested_date, skipping:', e);
+  }
+
+  // Migrate orders table to include group_id column
+  try {
+    let hasGroupId = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' AND column_name = 'group_id'
+      `);
+      hasGroupId = res.length > 0;
+    } else {
+      const info = await query("PRAGMA table_info(orders)");
+      hasGroupId = info.some(col => col.name === 'group_id');
+    }
+
+    if (!hasGroupId) {
+      console.log('Adding column group_id to orders table...');
+      await query("ALTER TABLE orders ADD COLUMN group_id TEXT");
+    }
+  } catch (e) {
+    console.error('Error during orders schema migration for group_id, skipping:', e);
   }
 }
 
@@ -595,8 +619,8 @@ module.exports = {
   getOrderById: (id) => query('SELECT * FROM orders WHERE id = ?', [id]).then(rows => rows[0]),
   createOrder: (order) => query(
     `INSERT INTO orders 
-     (customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, total_price, status, pickup_delivery, requested_date) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (customer_name, customer_phone, customer_email, dessert_id, size, toppings, notes, total_price, status, pickup_delivery, requested_date, group_id) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       order.customer_name,
       order.customer_phone,
@@ -608,7 +632,8 @@ module.exports = {
       order.total_price, // Will be null or numerical
       'pending',
       order.pickup_delivery,
-      order.requested_date || null
+      order.requested_date || null,
+      order.group_id || null
     ]
   ),
   updateOrderStatus: (id, status) => query('UPDATE orders SET status = ? WHERE id = ?', [status, id]),

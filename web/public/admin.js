@@ -675,6 +675,17 @@ function renderOrders(orders) {
   const renderSingleOrderRow = (order) => {
     const tr = document.createElement('tr');
     
+    let groupBadge = '';
+    if (order.group_id) {
+      groupBadge = `
+        <div style="margin-top: 4px;">
+          <span style="display: inline-block; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
+            Group #${order.group_id}
+          </span>
+        </div>
+      `;
+    }
+    
     const dateStr = new Date(order.created_at).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -808,7 +819,10 @@ function renderOrders(orders) {
     }
 
     tr.innerHTML = `
-      <td>#${order.id}</td>
+      <td>
+        <strong>#${order.id}</strong>
+        ${groupBadge}
+      </td>
       <td>${dateStr}</td>
       <td>
         <div class="order-customer-info">

@@ -185,40 +185,63 @@
             <textarea id="order-notes" name="notes" data-i18n-placeholder="form_placeholder_notes" placeholder="Any dietary preferences or custom notes? E.g., 'half walnuts, half chocolate chips'"></textarea>
           </div>
 
-          <!-- Step 5: Pickup or Delivery -->
-          <div class="form-group">
-            <label for="pickup-delivery" data-i18n="form_label_fulfillment">Pickup or Delivery?</label>
-            <select id="pickup-delivery" name="pickup_delivery" required>
-              <option value="" disabled selected data-i18n="form_placeholder_fulfillment">Select fulfillment method...</option>
-              <option value="pickup" data-i18n="form_fulfillment_pickup">Self Pickup</option>
-              <option value="delivery" data-i18n="form_fulfillment_delivery">Coordinate Delivery (Friends/Coworkers/Family only)</option>
-            </select>
+          <!-- Add to Cart Button -->
+          <div style="margin-top: 24px; margin-bottom: 32px;">
+            <button type="button" id="add-to-cart-btn" class="btn btn-primary btn-block" style="background: var(--accent); border-color: var(--accent); font-weight: 700; font-size: 15px;" onclick="addItemToCart()" data-i18n="btn_add_to_cart">Add to Cart</button>
           </div>
 
-          <!-- Step 5.5: Requested Date -->
-          <div class="form-group">
-            <label for="requested-date"><span data-i18n="form_label_requested_date">Requested Delivery/Pickup Date</span></label>
-            <input type="date" id="requested-date" name="requested_date" required>
-          </div>
-
-          <!-- Step 6: Customer Details -->
-          <div class="customer-info-section">
-            <h3 class="subsection-title" data-i18n="form_label_contact">Your Contact Details</h3>
-            <div class="grid grid-2">
-              <div class="form-group">
-                <label for="customer-name" data-i18n="form_label_name">Full Name</label>
-                <input type="text" id="customer-name" name="customer_name" data-i18n-placeholder="form_label_name" placeholder="John Doe" required>
-              </div>
-              <div class="form-group">
-                <label for="customer-phone" data-i18n="form_label_phone">Phone Number</label>
-                <input type="tel" id="customer-phone" name="customer_phone" placeholder="(555) 000-0000" required>
-              </div>
+          <!-- Shopping Cart Container -->
+          <div id="cart-container" class="order-summary-card" style="margin-bottom: 32px; background: #fafafa; border: 1.5px dashed var(--border); box-shadow: none;">
+            <h3 class="summary-title" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px; font-size: 16px;">
+              <span data-i18n="cart_title">Your Order Cart</span>
+              <span id="cart-count-badge" style="background: var(--primary); color: white; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700;">0</span>
+            </h3>
+            <div id="cart-items-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; margin-top: 12px;">
+              <p style="font-style: italic; color: var(--text-muted); text-align: center; margin: 12px 0;" data-i18n="cart_empty">Your cart is empty. Add a dessert above to start!</p>
             </div>
+            <div class="summary-divider"></div>
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 16px; margin-top: 12px; color: var(--text-main);">
+              <span data-i18n="cart_total">Cart Total:</span>
+              <span id="cart-total-price">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Checkout Details Section (Hidden until cart has items) -->
+          <div id="checkout-details-section" class="hidden">
+            <!-- Step 5: Pickup or Delivery -->
             <div class="form-group">
-              <label for="customer-email" data-i18n="form_label_email">Email Address</label>
-              <input type="email" id="customer-email" name="customer_email" placeholder="john.doe@example.com (optional)">
+              <label for="pickup-delivery" data-i18n="form_label_fulfillment">Pickup or Delivery?</label>
+              <select id="pickup-delivery" name="pickup_delivery" required>
+                <option value="" disabled selected data-i18n="form_placeholder_fulfillment">Select fulfillment method...</option>
+                <option value="pickup" data-i18n="form_fulfillment_pickup">Self Pickup</option>
+                <option value="delivery" data-i18n="form_fulfillment_delivery">Coordinate Delivery (Friends/Coworkers/Family only)</option>
+              </select>
             </div>
-          </div>
+
+            <!-- Step 5.5: Requested Date -->
+            <div class="form-group">
+              <label for="requested-date"><span data-i18n="form_label_requested_date">Requested Delivery/Pickup Date</span></label>
+              <input type="date" id="requested-date" name="requested_date" required>
+            </div>
+
+            <!-- Step 6: Customer Details -->
+            <div class="customer-info-section">
+              <h3 class="subsection-title" data-i18n="form_label_contact">Your Contact Details</h3>
+              <div class="grid grid-2">
+                <div class="form-group">
+                  <label for="customer-name" data-i18n="form_label_name">Full Name</label>
+                  <input type="text" id="customer-name" name="customer_name" data-i18n-placeholder="form_label_name" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                  <label for="customer-phone" data-i18n="form_label_phone">Phone Number</label>
+                  <input type="tel" id="customer-phone" name="customer_phone" placeholder="(555) 000-0000" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="customer-email" data-i18n="form_label_email">Email Address</label>
+                <input type="email" id="customer-email" name="customer_email" placeholder="john.doe@example.com (optional)">
+              </div>
+            </div>
 
           <!-- Pricing & Checkout Summary -->
           <div class="order-summary-card">
@@ -243,7 +266,8 @@
             <p class="price-disclaimer" data-i18n="summary_disclaimer">* Since some prices are TBD, we will confirm the exact price and payment details when we contact you.</p>
           </div>
 
-          <button type="submit" id="submit-order-btn" class="btn btn-primary btn-block" data-i18n="btn_submit_order">Place Order</button>
+            <button type="submit" id="submit-order-btn" class="btn btn-primary btn-block" style="margin-top: 24px;" data-i18n="btn_submit_order">Place Order</button>
+          </div>
         </form>
       </div>
     </div>
@@ -256,8 +280,10 @@
       <h2 class="modal-title" data-i18n="success_modal_title">Order Placed!</h2>
       <p class="modal-text"><span id="success-message-translated">Thank you, <span id="success-customer-name"></span>! Your order has been successfully sent to the kitchen.</span></p>
       <div class="modal-details">
-        <p><strong data-i18n="success_modal_dessert">Dessert:</strong> <span id="success-dessert-name"></span></p>
-        <p><strong data-i18n="success_modal_size">Size:</strong> <span id="success-size"></span></p>
+        <h4 style="text-align: left; font-size: 14px; margin-bottom: 8px; font-weight: 700; color: var(--text-main);" data-i18n="success_modal_items">Items Ordered:</h4>
+        <div id="success-items-list" style="margin-bottom: 16px; border-bottom: 1.5px solid #e5e7eb; padding-bottom: 12px; text-align: left; max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Populated dynamically with each cart item -->
+        </div>
         <p><strong data-i18n="success_modal_fulfillment">Fulfillment:</strong> <span id="success-fulfillment"></span></p>
         <p><strong data-i18n="success_modal_date">Requested Date:</strong> <span id="success-requested-date"></span></p>
         <p class="success-total-price"><strong data-i18n="success_modal_total">Total Price:</strong> <span id="success-price"></span></p>
