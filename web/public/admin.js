@@ -1,4 +1,27 @@
-let token = localStorage.getItem('adminToken');
+let token = sessionStorage.getItem('adminToken');
+let inactivityTimeout = null;
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in ms
+
+function resetInactivityTimer() {
+  if (inactivityTimeout) {
+    clearTimeout(inactivityTimeout);
+  }
+  if (token) {
+    inactivityTimeout = setTimeout(() => {
+      console.log('Logging out due to inactivity.');
+      handleLogout();
+      alert(currentLanguage === 'es' ? 'Tu sesión ha expirado por inactividad (15 minutos).' : 'Your session has expired due to inactivity (15 minutes).');
+    }, INACTIVITY_LIMIT);
+  }
+}
+
+function setupInactivityListeners() {
+  const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+  events.forEach(ev => {
+    document.addEventListener(ev, resetInactivityTimer, { passive: true });
+  });
+  resetInactivityTimer();
+}
 let socket = null;
 
 // ==========================================
@@ -447,6 +470,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup login form submission
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   
+  // Setup activity listeners to auto logout after 15 minutes of inactivity
+  setupInactivityListeners();
+  
   // Toggle recipe amount input based on unit
   const recipeUnitSelect = document.getElementById('recipe-ing-unit');
   if (recipeUnitSelect) {
@@ -513,6 +539,9 @@ function showDashboard() {
   
   // Connect WebSocket for real-time notifications
   connectWebSocket();
+
+  // Reset/Start the inactivity timer
+  resetInactivityTimer();
 }
 
 async function handleLogin(e) {
@@ -532,7 +561,7 @@ async function handleLogin(e) {
     if (!response.ok) throw new Error(result.error || 'Login failed');
     
     token = result.token;
-    localStorage.setItem('adminToken', token);
+    sessionStorage.setItem('adminToken', token);
     showDashboard();
     
   } catch (err) {
@@ -542,7 +571,10 @@ async function handleLogin(e) {
 
 function handleLogout() {
   token = null;
-  localStorage.removeItem('adminToken');
+  sessionStorage.removeItem('adminToken');
+  if (inactivityTimeout) {
+    clearTimeout(inactivityTimeout);
+  }
   if (socket) {
     socket.close();
   }
