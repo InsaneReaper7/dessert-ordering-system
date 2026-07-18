@@ -19,8 +19,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dessert-shop-secret-key-12345';
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Hash admin password for comparison (normally done on startup or saved in DB)
-const adminPasswordHash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
+// Pre-configured admin users and their bcrypt hashes
+const ALLOWED_USERS = {
+  'InsaneReaper7': bcrypt.hashSync('Un3xpected1!23881!', 10),
+  'Dicabulete': bcrypt.hashSync('Bailarin123', 10)
+};
 
 // WebSocket Connections Map
 const clients = {
@@ -300,17 +303,36 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Admin: Login
+// Admin: Login (handles username/password and password-only fallback)
 app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
+  const { username, password } = req.body;
 
   if (!password) {
     return res.status(400).json({ error: 'Password required' });
   }
 
-  const matches = bcrypt.compareSync(password, adminPasswordHash);
-  if (!matches) {
-    return res.status(401).json({ error: 'Invalid password' });
+  if (username) {
+    const trimmedUsername = username.trim();
+    const userHash = ALLOWED_USERS[trimmedUsername];
+    if (!userHash) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    const matches = bcrypt.compareSync(password, userHash);
+    if (!matches) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+  } else {
+    // Password-only check (for background notifier apps / legacy client backward compatibility)
+    let authenticated = false;
+    for (const user in ALLOWED_USERS) {
+      if (bcrypt.compareSync(password, ALLOWED_USERS[user])) {
+        authenticated = true;
+        break;
+      }
+    }
+    if (!authenticated) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
   }
 
   const token = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '7d' });
