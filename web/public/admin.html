@@ -253,7 +253,7 @@
           <div id="add-recipe-ingredient-card" class="analytics-card hidden" style="margin: 16px; padding: 20px; border-bottom: 1px solid var(--border);">
             <h4 class="analytics-title" style="font-size: 16px; margin-bottom: 16px; border-bottom: none; padding-bottom: 0;" data-translate="add_ing_form_title">Add Ingredient to Recipe</h4>
             <form id="add-recipe-ingredient-form" onsubmit="handleAddRecipeIngredient(event)">
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 0;">
+              <div class="recipe-ingredient-grid">
                 <div class="form-group">
                   <label for="recipe-dessert-select" style="display: block; font-weight: 500; font-size: 12px; margin-bottom: 6px;" data-translate="label_select_dessert">Select Dessert / Recipe</label>
                   <select id="recipe-dessert-select" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white; box-sizing: border-box;">
@@ -397,7 +397,7 @@
 
     <!-- Reports Tab Content -->
     <div id="reports-tab" class="tab-content hidden" style="margin-top: 32px;">
-      <div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
+      <div class="reports-grid">
         
         <!-- Filters Sidebar -->
         <div class="analytics-card" style="align-self: start; padding: 20px;">

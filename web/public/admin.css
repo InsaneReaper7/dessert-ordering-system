@@ -523,3 +523,136 @@
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 
+/* Mobile-friendly Enhancements */
+
+/* Container responsiveness */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px !important;
+  }
+}
+
+/* Connection Banner */
+@media (max-width: 576px) {
+  .connection-banner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding: 12px 16px;
+  }
+  .connection-status {
+    justify-content: center;
+  }
+  .btn-test-ping {
+    justify-content: center;
+  }
+}
+
+/* Stats Cards */
+@media (max-width: 576px) {
+  .stat-card {
+    padding: 16px;
+  }
+  .stat-value {
+    font-size: 26px;
+  }
+}
+
+/* Analytics Cards */
+@media (max-width: 576px) {
+  .analytics-card {
+    padding: 16px;
+  }
+}
+
+/* Horizontally Scrolling Dashboard Tabs */
+@media (max-width: 768px) {
+  .dashboard-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    gap: 4px;
+    scrollbar-width: none;
+  }
+  .dashboard-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+}
+
+/* Responsive Grid layouts */
+.recipe-ingredient-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 0;
+}
+@media (max-width: 992px) {
+  .recipe-ingredient-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 576px) {
+  .recipe-ingredient-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+}
+@media (max-width: 992px) {
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cinnamon-pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+@media (max-width: 768px) {
+  .cinnamon-pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Touch targets and adjustments on mobile */
+@media (max-width: 576px) {
+  .btn {
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+  
+  .card-header {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .header-container {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    text-align: center;
+  }
+}
+

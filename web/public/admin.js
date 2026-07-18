@@ -3285,7 +3285,7 @@ function renderCinnamonRollsPricingManager(rollsPricing, baseCosts = {}) {
   });
 
   let html = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px;">
+    <div class="cinnamon-pricing-grid" style="margin-bottom: 24px;">
       <!-- Column 1: Regular Size combos -->
       <div>
         <h4 style="margin: 0 0 12px 0; border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: 15px; color: var(--primary);">
