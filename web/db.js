@@ -162,8 +162,32 @@ async function createTables() {
       await query("ALTER TABLE desserts ADD COLUMN price_6_pack REAL");
       await query("ALTER TABLE desserts ADD COLUMN price_12_pack REAL");
     }
+  // Migrate desserts table to assign default base prices for any items currently set to NULL
+  try {
+    const defaultPrices = [
+      { id: 'brownies', p8x5: 12.00, p8x8: 18.00 },
+      { id: 'blondies', p8x5: 12.00, p8x8: 18.00 },
+      { id: 'lemon_bars', p8x5: 12.00, p8x8: 18.00 },
+      { id: 'mango_bars', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'pineapple_bars', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'butterscotch_blondies', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'caramel_butterscotch_crunch_blondies', p8x5: 15.00, p8x8: 22.00 },
+      { id: 'marshmallow_swirl_brownies', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'pina_colada_bars', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'coconut_cream_bars', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'carrot_cake_bars', p8x5: 14.00, p8x8: 20.00 },
+      { id: 'banana_bread_bars', p8x5: 12.00, p8x8: 18.00 },
+      { id: 'sweet_cornbread', p8x5: 10.00, p8x8: 15.00 }
+    ];
+
+    for (const p of defaultPrices) {
+      await query(
+        "UPDATE desserts SET price_8x5 = COALESCE(price_8x5, ?), price_8x8 = COALESCE(price_8x8, ?) WHERE id = ?",
+        [p.p8x5, p.p8x8, p.id]
+      );
+    }
   } catch (e) {
-    console.error('Error during desserts schema migration for roll pack price columns, skipping:', e);
+    console.error('Error migrating default dessert prices:', e);
   }
 
   // Create orders table
@@ -385,8 +409,9 @@ async function seedData() {
       id: 'brownies',
       name: 'Create Your Own Brownie',
       description: 'Rich, fudgy chocolate brownies made with premium cocoa and a perfectly crackled top.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
+      price_8x5: 12.00,
+      price_9x9: null,
+      price_8x8: 18.00,
       has_toppings: 1,
       image_url: '/images/brownies.png'
     },
@@ -394,8 +419,9 @@ async function seedData() {
       id: 'blondies',
       name: 'Create Your Own Blondie',
       description: 'Chewy brown sugar blondies infused with rich vanilla and a buttery caramel undertone.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
+      price_8x5: 12.00,
+      price_9x9: null,
+      price_8x8: 18.00,
       has_toppings: 1,
       image_url: '/images/blondies.png'
     },
@@ -403,8 +429,9 @@ async function seedData() {
       id: 'lemon_bars',
       name: 'Tangy Lemon Bars',
       description: 'Tangy, sweet freshly squeezed lemon curd on a buttery shortbread crust, dusted with powdered sugar.',
-      price_8x5: 12.00, // Fixed
-      price_9x9: null, // TBD
+      price_8x5: 12.00,
+      price_9x9: null,
+      price_8x8: 18.00,
       has_toppings: 0,
       image_url: '/images/lemon_bars.png'
     },
@@ -412,8 +439,9 @@ async function seedData() {
       id: 'mango_bars',
       name: 'Tangy Mango Bars',
       description: 'Tangy and sweet tropical mango curd on a buttery shortbread crust, dusted with powdered sugar.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 0,
       image_url: '/images/mango_bars.png'
     },
@@ -421,8 +449,9 @@ async function seedData() {
       id: 'pineapple_bars',
       name: 'Sweet Pineapple Bars',
       description: 'Tangy, caramelized golden pineapple curd on a buttery shortbread crust, dusted with powdered sugar.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 0,
       image_url: '/images/pineapple_bars.png'
     },
@@ -430,8 +459,9 @@ async function seedData() {
       id: 'butterscotch_blondies',
       name: 'Golden Butterscotch Blondies',
       description: 'Specialty blondies loaded with premium butterscotch chips, giving a rich brown sugar and butterscotch finish.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 1,
       image_url: '/images/butterscotch_blondies.png'
     },
@@ -439,8 +469,9 @@ async function seedData() {
       id: 'caramel_butterscotch_crunch_blondies',
       name: 'Caramel Butterscotch Crunch Blondies',
       description: 'Specialty blondies loaded with butterscotch chips, chewy caramel bits, and toasted walnuts for the ultimate crunch.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
+      price_8x5: 15.00,
+      price_9x9: null,
+      price_8x8: 22.00,
       has_toppings: 1,
       image_url: '/images/caramel_butterscotch_crunch_blondies.png'
     },
@@ -448,9 +479,9 @@ async function seedData() {
       id: 'marshmallow_swirl_brownies',
       name: 'Marshmallow Swirl Brownies',
       description: 'Rich, fudgy chocolate brownies swirled with sweet, gooey melted marshmallow fluff.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 1,
       image_url: '/images/marshmallow_swirl_brownies.png'
     },
@@ -458,9 +489,9 @@ async function seedData() {
       id: 'pina_colada_bars',
       name: 'Piña Colada Bars',
       description: 'Tropical coconut and sweet pineapple curd layered on a buttery shortbread crust, topped with toasted coconut flakes.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 0,
       image_url: '/images/pina_colada_bars.png'
     },
@@ -468,9 +499,9 @@ async function seedData() {
       id: 'coconut_cream_bars',
       name: 'Coconut Cream Bars',
       description: 'Rich, velvety coconut custard on a buttery shortbread crust, generously dusted with shredded coconut.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 0,
       image_url: '/images/coconut_cream_bars.png'
     },
@@ -478,9 +509,9 @@ async function seedData() {
       id: 'cinnamon_rolls',
       name: 'Artisan Cinnamon Rolls',
       description: 'Soft, fluffy sweet rolls swirled with buttery cinnamon sugar, topped with rich cream cheese icing.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: null,
+      price_9x9: null,
+      price_8x8: null,
       has_toppings: 0,
       image_url: '/images/cinnamon_rolls.png',
       base_mold: 'Batch'
@@ -489,9 +520,9 @@ async function seedData() {
       id: 'carrot_cake_bars',
       name: 'Carrot Cake Bars',
       description: 'Artisan carrot cake bars topped with smooth icing and toasted pecans, cut into perfect squares.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
       has_toppings: 1,
       image_url: '/images/carrot_cake_bars.png',
       base_mold: '9x9'
@@ -500,9 +531,9 @@ async function seedData() {
       id: 'banana_bread_bars',
       name: 'Banana Bread Bars',
       description: 'Dense, moist banana bread bars with a golden-brown caramelized crust and a soft, tender crumb — finished with a delicate vanilla glaze drizzle.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: 12.00,
+      price_9x9: null,
+      price_8x8: 18.00,
       has_toppings: 0,
       image_url: '/images/banana_bread_bars.png',
       base_mold: '9x9'
@@ -511,9 +542,9 @@ async function seedData() {
       id: 'sweet_cornbread',
       name: 'Sweet Cornbread',
       description: 'Sweet, moist cornbread with a golden crumb and a rich corn flavor.',
-      price_8x5: null, // TBD
-      price_9x9: null, // TBD
-      price_8x8: null, // TBD
+      price_8x5: 10.00,
+      price_9x9: null,
+      price_8x8: 15.00,
       has_toppings: 1,
       image_url: '/images/sweet_cornbread.png',
       base_mold: '8x5'
