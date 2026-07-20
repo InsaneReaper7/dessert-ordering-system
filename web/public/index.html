@@ -91,7 +91,7 @@
           <!-- Step 1: Dessert Selection -->
           <div class="form-group">
             <label for="dessert-select" data-i18n="form_label_dessert">Select Dessert</label>
-            <select id="dessert-select" name="dessert_id" required>
+            <select id="dessert-select" name="dessert_id">
               <option value="" disabled selected data-i18n="form_placeholder_dessert">Choose a dessert...</option>
             </select>
           </div>
@@ -159,19 +159,19 @@
             <p class="form-help" data-i18n="form_icing_help">Choose how you'd like your carrot cake bars iced:</p>
             <div class="radio-group" style="display: flex; gap: 16px; margin-top: 8px;">
               <label class="radio-label" style="padding: 10px 16px; border-radius: var(--radius-md); font-size: 14px;">
-                <input type="radio" name="icing_option" value="with_icing" checked required>
+                <input type="radio" name="icing_option" value="with_icing" checked>
                 <div class="radio-design" style="padding: 0;">
                   <span class="size-title" data-i18n="option_with_icing">With Icing (Default)</span>
                 </div>
               </label>
               <label class="radio-label" style="padding: 10px 16px; border-radius: var(--radius-md); font-size: 14px;">
-                <input type="radio" name="icing_option" value="no_icing" required>
+                <input type="radio" name="icing_option" value="no_icing">
                 <div class="radio-design" style="padding: 0;">
                   <span class="size-title" data-i18n="option_no_icing">No Icing</span>
                 </div>
               </label>
               <label class="radio-label" style="padding: 10px 16px; border-radius: var(--radius-md); font-size: 14px;">
-                <input type="radio" name="icing_option" value="icing_side" required>
+                <input type="radio" name="icing_option" value="icing_side">
                 <div class="radio-design" style="padding: 0;">
                   <span class="size-title" data-i18n="option_icing_side">Icing on the Side</span>
                 </div>

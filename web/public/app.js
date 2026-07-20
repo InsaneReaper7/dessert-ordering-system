@@ -718,14 +718,14 @@ function renderSizeOptions(dessertId) {
 
     html += `
       <label class="radio-label">
-        <input type="radio" name="size" value="8x5" ${is8x5Checked ? 'checked' : ''} required>
+        <input type="radio" name="size" value="8x5" ${is8x5Checked ? 'checked' : ''}>
         <div class="radio-design">
           <span class="size-title">${i18n[currentLang].form_size_8x5}</span>
           <span class="size-desc">${price8x5Text}</span>
         </div>
       </label>
       <label class="radio-label">
-        <input type="radio" name="size" value="8x8" ${is8x8Checked ? 'checked' : ''} required>
+        <input type="radio" name="size" value="8x8" ${is8x8Checked ? 'checked' : ''}>
         <div class="radio-design">
           <span class="size-title">${i18n[currentLang].form_size_8x8}</span>
           <span class="size-desc">${price8x8Text}</span>
