@@ -50,11 +50,12 @@ function query(sql, params = []) {
         .then(res => resolve(res.rows))
         .catch(err => reject(err));
     } else {
-      // For SELECT queries
-      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+      // For SELECT and PRAGMA queries
+      const trimmedUpper = sql.trim().toUpperCase();
+      if (trimmedUpper.startsWith('SELECT') || trimmedUpper.startsWith('PRAGMA')) {
         dbClient.all(sql, params, (err, rows) => {
           if (err) reject(err);
-          else resolve(rows);
+          else resolve(rows || []);
         });
       } else {
         // For INSERT, UPDATE, DELETE queries
