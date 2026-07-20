@@ -1299,9 +1299,27 @@ async function handleFormSubmit(e) {
   }
 }
 
+function resetStorefrontForm() {
+  cart = [];
+  updateCartUI();
+  const form = document.getElementById('order-form');
+  if (form) form.reset();
+  const select = document.getElementById('dessert-select');
+  if (select) select.value = '';
+  handleDessertChange('');
+  updateOrderSummary();
+}
+
+window.resetStorefrontForm = resetStorefrontForm;
+
 // Modal handling
 window.closeSuccessModal = function() {
   document.getElementById('success-modal').style.display = 'none';
+  resetStorefrontForm();
+  const orderSection = document.getElementById('order');
+  if (orderSection) {
+    orderSection.scrollIntoView({ behavior: 'smooth' });
+  }
 };
 
 // Render custom Cinnamon Rolls selectors dynamically
