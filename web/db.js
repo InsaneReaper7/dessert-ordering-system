@@ -162,6 +162,10 @@ async function createTables() {
       await query("ALTER TABLE desserts ADD COLUMN price_6_pack REAL");
       await query("ALTER TABLE desserts ADD COLUMN price_12_pack REAL");
     }
+  } catch (e) {
+    console.error('Error during desserts schema migration for roll pack price columns, skipping:', e);
+  }
+
   // Migrate desserts table to assign default base prices for any items currently set to NULL
   try {
     const defaultPrices = [
