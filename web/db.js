@@ -110,9 +110,11 @@ async function createTables() {
       // Update initial values (brownies/blondies recipes are formulated for 11x7 pan)
       await query("UPDATE desserts SET base_mold = '11x7' WHERE id IN ('brownies', 'blondies', 'marshmallow_swirl_brownies', 'butterscotch_blondies', 'caramel_butterscotch_crunch_blondies')");
       await query("UPDATE desserts SET base_mold = '1 Batch' WHERE id = 'cinnamon_rolls'");
+      await query("UPDATE desserts SET base_mold = '8x8' WHERE id = 'sweet_cornbread'");
     } else {
-      // Make sure existing database updates cinnamon_rolls to 1 Batch
+      // Make sure existing database updates cinnamon_rolls to 1 Batch and sweet_cornbread to 8x8
       await query("UPDATE desserts SET base_mold = '1 Batch' WHERE id = 'cinnamon_rolls' AND base_mold = '9x9'");
+      await query("UPDATE desserts SET base_mold = '8x8' WHERE id = 'sweet_cornbread' AND (base_mold IS NULL OR base_mold = '8x5' OR base_mold = '9x9')");
     }
   } catch (e) {
     console.error('Error during desserts schema migration for base_mold, skipping:', e);
@@ -552,7 +554,7 @@ async function seedData() {
       price_8x8: 15.00,
       has_toppings: 1,
       image_url: '/images/sweet_cornbread.png',
-      base_mold: '8x5'
+      base_mold: '8x8'
     }
   ];
 
@@ -774,12 +776,19 @@ module.exports = {
         multiplier = legacyMultipliers[order.size] || 1.0;
       }
     } else {
-      const SIZE_MULTIPLIERS = {
-        '8x5': 1.0,
-        '9x9': 1.8,
-        '8x8': 1.6
+      const desserts = await query('SELECT base_mold FROM desserts WHERE id = ?', [order.dessert_id]);
+      const baseMold = (desserts && desserts[0] && desserts[0].base_mold) ? desserts[0].base_mold : '8x5';
+
+      const MOLD_AREAS = {
+        '8x5': 8 * 5,   // 40 sq in
+        '8x8': 8 * 8,   // 64 sq in
+        '9x9': 9 * 9,   // 81 sq in
+        '11x7': 11 * 7  // 77 sq in
       };
-      multiplier = SIZE_MULTIPLIERS[order.size] || 1.0;
+
+      const baseArea = MOLD_AREAS[baseMold] || 40;
+      const targetArea = MOLD_AREAS[order.size] || baseArea;
+      multiplier = targetArea / baseArea;
     }
     
     let baseCost = 0;
