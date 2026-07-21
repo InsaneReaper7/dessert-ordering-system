@@ -870,8 +870,12 @@ function setupEventListeners() {
 
   const dateInput = document.getElementById('requested-date');
   if (dateInput) {
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.min = today;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
+    dateInput.min = `${yyyy}-${mm}-${dd}`;
   }
 
   if (form) {
@@ -1183,6 +1187,25 @@ async function handleFormSubmit(e) {
     submitBtn.disabled = false;
     submitBtn.textContent = i18n[currentLang].btn_submit_order;
     return;
+  }
+
+  // Ensure requested date is tomorrow or later
+  const tomorrowObj = new Date();
+  tomorrowObj.setHours(0, 0, 0, 0);
+  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+
+  const reqParts = requestedDate.split('-');
+  if (reqParts.length === 3) {
+    const selectedD = new Date(parseInt(reqParts[0]), parseInt(reqParts[1]) - 1, parseInt(reqParts[2]));
+    selectedD.setHours(0, 0, 0, 0);
+    if (selectedD < tomorrowObj) {
+      alert(currentLang === 'es' 
+        ? 'Las entregas o retiradas requieren al menos 1 día de anticipación. Por favor elige a partir de mañana.' 
+        : 'Deliveries or pickups require at least 1 day advance notice. Please select tomorrow or a later date.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = i18n[currentLang].btn_submit_order;
+      return;
+    }
   }
   
   const customerName = document.getElementById('customer-name').value;

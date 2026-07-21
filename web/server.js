@@ -168,10 +168,22 @@ app.post('/api/orders', async (req, res) => {
     return res.status(400).json({ error: 'No items in order' });
   }
 
-  // Validate required customer/order details on all items
+  // Validate required customer/order details and date advance notice on all items
+  const todayServer = new Date();
+  todayServer.setHours(0, 0, 0, 0);
+
   for (const item of items) {
     if (!item.customer_name || !item.customer_phone || !item.dessert_id || !item.size || !item.pickup_delivery || !item.requested_date) {
       return res.status(400).json({ error: 'Missing required customer or order details' });
+    }
+
+    const parts = item.requested_date.split('-');
+    if (parts.length === 3) {
+      const itemDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      itemDate.setHours(0, 0, 0, 0);
+      if (itemDate <= todayServer) {
+        return res.status(400).json({ error: 'Orders require at least 1 day advance notice. Please select tomorrow or a later date.' });
+      }
     }
   }
 
