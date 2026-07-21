@@ -470,6 +470,7 @@ function updateCartUI() {
   }
 
   checkoutSection.classList.remove('hidden');
+  initOrUpdateMinDate();
 
   let html = '';
   let totalSum = 0;
@@ -868,6 +869,14 @@ function setupEventListeners() {
     radio.addEventListener('change', updateOrderSummary);
   });
 
+  initOrUpdateMinDate();
+
+  if (form) {
+    form.addEventListener('submit', handleFormSubmit);
+  }
+}
+
+function initOrUpdateMinDate() {
   const dateInput = document.getElementById('requested-date');
   if (dateInput) {
     const tomorrow = new Date();
@@ -875,11 +884,11 @@ function setupEventListeners() {
     const yyyy = tomorrow.getFullYear();
     const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
     const dd = String(tomorrow.getDate()).padStart(2, '0');
-    dateInput.min = `${yyyy}-${mm}-${dd}`;
-  }
-
-  if (form) {
-    form.addEventListener('submit', handleFormSubmit);
+    const minStr = `${yyyy}-${mm}-${dd}`;
+    dateInput.min = minStr;
+    if (!dateInput.value || dateInput.value < minStr) {
+      dateInput.value = minStr;
+    }
   }
 }
 
@@ -1330,6 +1339,7 @@ function resetStorefrontForm() {
   const select = document.getElementById('dessert-select');
   if (select) select.value = '';
   handleDessertChange('');
+  initOrUpdateMinDate();
   updateOrderSummary();
 }
 
