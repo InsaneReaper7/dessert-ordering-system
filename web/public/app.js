@@ -775,7 +775,7 @@ function renderMenuGrid(desserts) {
 
   desserts.forEach(item => {
     const card = document.createElement('div');
-    card.className = 'menu-card';
+    card.className = item.is_out_of_stock ? 'menu-card out-of-stock' : 'menu-card';
     
     // Get translations for item names/descriptions
     const translatedName = itemTranslations[item.id] ? itemTranslations[item.id].name[currentLang] : item.name;
@@ -798,10 +798,19 @@ function renderMenuGrid(desserts) {
     const toppingsBadge = item.has_toppings ? `<span class="menu-card-badge">${customizableText}</span>` : '';
     const customizeBtnText = i18n[currentLang].card_customize_btn;
 
+    const outOfStockOverlay = item.is_out_of_stock 
+      ? `<div class="out-of-stock-overlay"><span>${currentLang === 'es' ? 'Agotado' : 'Out of Stock'}</span></div>` 
+      : '';
+
+    const actionBtn = item.is_out_of_stock
+      ? `<button class="btn" style="padding: 8px 16px; font-size: 14px; border-radius: 8px; background-color: var(--border); border-color: var(--border); color: var(--text-muted); cursor: not-allowed;" disabled>${currentLang === 'es' ? 'Agotado' : 'Out of Stock'}</button>`
+      : `<a href="#order" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; border-radius: 8px;" onclick="selectDessertForOrder('${item.id}')">${customizeBtnText}</a>`;
+
     card.innerHTML = `
       <div class="menu-card-img-wrapper">
         <img class="menu-card-img" src="${item.image_url}" alt="${translatedName}">
         ${toppingsBadge}
+        ${outOfStockOverlay}
       </div>
       <div class="menu-card-content">
         <h3 class="menu-card-title">${translatedName}</h3>
@@ -811,7 +820,7 @@ function renderMenuGrid(desserts) {
             <div class="menu-card-price-label">${i18n[currentLang].card_starting_at}</div>
             ${priceLabel}
           </div>
-          <a href="#order" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; border-radius: 8px;" onclick="selectDessertForOrder('${item.id}')">${customizeBtnText}</a>
+          ${actionBtn}
         </div>
       </div>
     `;
@@ -840,7 +849,13 @@ function populateDessertSelect(desserts) {
   desserts.forEach(item => {
     const option = document.createElement('option');
     option.value = item.id;
-    option.textContent = itemTranslations[item.id] ? itemTranslations[item.id].name[currentLang] : item.name;
+    const translatedName = itemTranslations[item.id] ? itemTranslations[item.id].name[currentLang] : item.name;
+    if (item.is_out_of_stock) {
+      option.disabled = true;
+      option.textContent = `${translatedName} (${currentLang === 'es' ? 'Agotado' : 'Out of Stock'})`;
+    } else {
+      option.textContent = translatedName;
+    }
     select.appendChild(option);
   });
 

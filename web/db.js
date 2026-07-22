@@ -84,7 +84,8 @@ async function createTables() {
       price_12_pack REAL,
       has_toppings INTEGER DEFAULT 0,
       image_url VARCHAR(255),
-      base_mold VARCHAR(50) DEFAULT '9x9'
+      base_mold VARCHAR(50) DEFAULT '9x9',
+      is_out_of_stock INTEGER DEFAULT 0
     )
   `);
 
@@ -196,6 +197,29 @@ async function createTables() {
     }
   } catch (e) {
     console.error('Error migrating default dessert prices:', e);
+  }
+
+  // Migrate desserts table to include is_out_of_stock column if missing
+  try {
+    let hasOutOfStock = false;
+    if (isPostgres) {
+      const res = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'desserts' AND column_name = 'is_out_of_stock'
+      `);
+      hasOutOfStock = res.length > 0;
+    } else {
+      const info = await query("SELECT name FROM sqlite_master WHERE type='table' AND name='desserts' AND sql LIKE '%is_out_of_stock%'");
+      hasOutOfStock = info.length > 0;
+    }
+
+    if (!hasOutOfStock) {
+      console.log('Adding column is_out_of_stock to desserts table...');
+      await query("ALTER TABLE desserts ADD COLUMN is_out_of_stock INTEGER DEFAULT 0");
+    }
+  } catch (e) {
+    console.error('Error during desserts schema migration for is_out_of_stock, skipping:', e);
   }
 
   // Create orders table

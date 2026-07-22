@@ -200,6 +200,9 @@ app.post('/api/orders', async (req, res) => {
       if (!dessert) {
         return res.status(404).json({ error: `Dessert not found: ${item.dessert_id}` });
       }
+      if (dessert.is_out_of_stock) {
+        return res.status(400).json({ error: `Dessert is currently out of stock: ${dessert.name}` });
+      }
 
       // Determine price. If size price is null, then the total price is null (TBD)
       let total_price = null;
@@ -746,6 +749,20 @@ app.put('/api/admin/desserts/:id/prices', authenticateAdminToken, async (req, re
     res.json({ message: 'Dessert prices updated successfully' });
   } catch (err) {
     console.error('Failed to update dessert prices:', err);
+    res.status(500).json({ error: 'Database update failed' });
+  }
+});
+
+// Admin: Toggle dessert stock status
+app.put('/api/admin/desserts/:id/stock', authenticateAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { is_out_of_stock } = req.body;
+
+  try {
+    await db.query('UPDATE desserts SET is_out_of_stock = ? WHERE id = ?', [is_out_of_stock ? 1 : 0, id]);
+    res.json({ message: 'Dessert stock status updated successfully' });
+  } catch (err) {
+    console.error('Failed to update dessert stock status:', err);
     res.status(500).json({ error: 'Database update failed' });
   }
 });

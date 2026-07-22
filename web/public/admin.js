@@ -65,6 +65,7 @@ const TRANSLATIONS = {
     col_price_8x5: "Price (8\" x 5\")",
     col_price_9x9: "Price (9\" x 9\")",
     col_price_8x8: "Price (8\" x 8\")",
+    col_status: "Stock Status",
     col_actions: "Actions",
     cinnamon_rolls_pricing_title: "Artisan Cinnamon Rolls Pricing",
     cinnamon_rolls_pricing_desc: "Configure the pricing for individual rolls, and packs of 4, 6, and 12.",
@@ -254,6 +255,7 @@ const TRANSLATIONS = {
     col_price_8x5: "Precio (8\" x 5\")",
     col_price_9x9: "Precio (9\" x 9\")",
     col_price_8x8: "Precio (8\" x 8\")",
+    col_status: "Estado de Stock",
     col_actions: "Acciones",
     cinnamon_rolls_pricing_title: "Precios de Rollos de Canela Artesanales",
     cinnamon_rolls_pricing_desc: "Configure los precios para rollos individuales y paquetes de 4, 6 y 12.",
@@ -2909,6 +2911,11 @@ function renderDessertsPricing(desserts, baseCosts = {}, rollsPricing = { rolls_
           ${sug8x8HTML}
         </td>
         <td style="text-align: center;">
+          <span class="status-badge ${item.is_out_of_stock ? 'cancelled' : 'completed'}" style="cursor: pointer; user-select: none;" onclick="toggleDessertStock('${item.id}', ${item.is_out_of_stock ? 0 : 1})">
+            ${item.is_out_of_stock ? (currentLanguage === 'es' ? 'Agotado' : 'Out of Stock') : (currentLanguage === 'es' ? 'En Stock' : 'In Stock')}
+          </span>
+        </td>
+        <td style="text-align: center;">
           <div class="row-actions">
             <button class="btn btn-edit-prices btn-primary" onclick="editDessertPricesRow(this, '${item.id}')" style="padding: 6px 12px; font-size: 13px;">${t('action_edit')}</button>
             <button class="btn btn-save-prices btn-success hidden" onclick="saveDessertPrices(this, '${item.id}')" style="padding: 6px 12px; font-size: 13px; margin-right: 6px;">${t('action_save')}</button>
@@ -2987,6 +2994,29 @@ async function saveDessertPrices(btn, id) {
 
     // Success - reload pricing list
     alert(currentLanguage === 'es' ? 'Precios actualizados con éxito' : 'Prices updated successfully');
+    loadDessertsPricing();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function toggleDessertStock(id, newStatus) {
+  try {
+    const response = await fetch(`/api/admin/desserts/${id}/stock`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ is_out_of_stock: newStatus })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to update stock status');
+    }
+
+    // Success - reload pricing list
     loadDessertsPricing();
   } catch (err) {
     alert(err.message);
