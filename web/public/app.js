@@ -214,6 +214,13 @@ const itemTranslations = {
       es: "Crema de limón fresca, ácida y dulce sobre una base de galleta de mantequilla, espolvoreada con azúcar glass." 
     }
   },
+  lemon_brownies: {
+    name: { en: "Lemon Brownies", es: "Brownies de Limón" },
+    desc: { 
+      en: "Fudgy, dense lemon brownies baked to a delicate golden finish, topped with a tart, crackly lemon juice and powdered sugar glaze.", 
+      es: "Brownies de limón densos y melosos horneados con un acabado dorado delicado, cubiertos con un glaseado de azúcar glass y jugo de limón ácido y crujiente." 
+    }
+  },
   mango_bars: {
     name: { en: "Tangy Mango Bars", es: "Barras de Mango" },
     desc: { 

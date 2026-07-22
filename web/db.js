@@ -184,7 +184,8 @@ async function createTables() {
       { id: 'coconut_cream_bars', p8x5: 14.00, p8x8: 20.00 },
       { id: 'carrot_cake_bars', p8x5: 14.00, p8x8: 20.00 },
       { id: 'banana_bread_bars', p8x5: 12.00, p8x8: 18.00 },
-      { id: 'sweet_cornbread', p8x5: 10.00, p8x8: 15.00 }
+      { id: 'sweet_cornbread', p8x5: 10.00, p8x8: 15.00 },
+      { id: 'lemon_brownies', p8x5: 14.00, p8x8: 20.00 }
     ];
 
     for (const p of defaultPrices) {
@@ -555,6 +556,17 @@ async function seedData() {
       has_toppings: 1,
       image_url: '/images/sweet_cornbread.png',
       base_mold: '8x8'
+    },
+    {
+      id: 'lemon_brownies',
+      name: 'Lemon Brownies',
+      description: 'Fudgy, dense lemon brownies baked to a delicate golden finish, topped with a tart, crackly lemon juice and powdered sugar glaze.',
+      price_8x5: 14.00,
+      price_9x9: null,
+      price_8x8: 20.00,
+      has_toppings: 0,
+      image_url: '/images/lemon_brownies.png',
+      base_mold: '9x9'
     }
   ];
 
@@ -567,6 +579,32 @@ async function seedData() {
         [dessert.id, dessert.name, dessert.description, dessert.price_8x5, dessert.price_9x9, dessert.price_8x8 || null, null, null, null, null, dessert.has_toppings, dessert.image_url, dessert.base_mold || '9x9']
       );
     }
+  }
+
+  // Seed recipe ingredients for Lemon Brownies
+  try {
+    const recipeIngCount = await query('SELECT COUNT(*) as count FROM recipe_ingredients WHERE dessert_id = ?', ['lemon_brownies']);
+    if (Number(recipeIngCount[0].count) === 0) {
+      console.log('Seeding recipe ingredients for Lemon Brownies...');
+      const lemonBrownieIngredients = [
+        { name: 'Unsalted Butter', amount: 170, unit: 'g', part: 'Brownie Base' },
+        { name: 'Granulated Sugar', amount: 300, unit: 'g', part: 'Brownie Base' },
+        { name: 'Fresh Lemon Zest', amount: 2, unit: 'tbsp', part: 'Brownie Base' },
+        { name: 'Eggs', amount: 3, unit: 'unit', part: 'Brownie Base' },
+        { name: 'Fresh Lemon Juice', amount: 40, unit: 'g', part: 'Brownie Base' },
+        { name: 'Vanilla Extract', amount: 1, unit: 'tsp', part: 'Brownie Base' },
+        { name: 'Salt', amount: 0.5, unit: 'tsp', part: 'Brownie Base' },
+        { name: 'All-Purpose Flour', amount: 210, unit: 'g', part: 'Brownie Base' },
+        { name: 'Powdered Sugar', amount: 200, unit: 'g', part: 'Glaze' },
+        { name: 'Fresh Lemon Juice', amount: 35, unit: 'g', part: 'Glaze' },
+        { name: 'Fresh Lemon Zest', amount: 1, unit: 'tsp', part: 'Glaze' }
+      ];
+      for (const ing of lemonBrownieIngredients) {
+        await module.exports.addRecipeIngredient('lemon_brownies', ing.name, ing.amount, ing.unit, 0, null, ing.part);
+      }
+    }
+  } catch (err) {
+    console.error('Error seeding Lemon Brownies recipe ingredients:', err);
   }
 
   // Clean up any previously seeded fictional frosting ingredients and placeholder prices
