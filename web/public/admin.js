@@ -3764,6 +3764,117 @@ async function generateReport() {
   }
 }
 
+function getOrderScalingMultiplier(dessertId, size) {
+  const dessert = dessertsCache.find(d => d.id === dessertId);
+  if (!dessert) return 1.0;
+
+  if (dessertId === 'cinnamon_rolls') {
+    const match = (size || '').match(/^(reg|mini)_(\d+)$/);
+    if (match) {
+      const rollType = match[1];
+      const count = parseInt(match[2]);
+      if (rollType === 'reg') return count / 9.0;
+      if (rollType === 'mini') return count / 24.0;
+    }
+    const legacyMap = {
+      '1_roll': 1/9.0,
+      '3_rolls': 3/9.0,
+      '4_pack': 4/9.0,
+      '6_pack': 6/9.0,
+      'full_tray': 1.0
+    };
+    return legacyMap[size] !== undefined ? legacyMap[size] : 1.0;
+  }
+
+  const baseMold = dessert.base_mold || '9x9';
+  return getScalingMultiplier(baseMold, size);
+}
+
+function calculateIngredientUsageForOrders(orders) {
+  const totals = {};
+
+  const costMap = {};
+  (inventoryCache || []).forEach(item => {
+    const costWithTax = item.bulk_cost * (1 + (item.tax_rate || 0.0));
+    costMap[item.name.toLowerCase().trim()] = costWithTax / item.bulk_qty;
+  });
+
+  orders.forEach(order => {
+    const mult = getOrderScalingMultiplier(order.dessert_id, order.size);
+
+    // Process base recipe ingredients
+    const baseIngredients = (recipeIngredientsCache || []).filter(ing => ing.dessert_id === order.dessert_id && !ing.is_topping);
+    baseIngredients.forEach(ing => {
+      const nameTrim = ing.ingredient_name.trim();
+      const nameLower = nameTrim.toLowerCase();
+
+      const recipeAmountScaled = ing.amount * mult;
+      const gramsNeeded = convertRecipeAmountToInventoryGrams(ing.ingredient_name, recipeAmountScaled, ing.unit);
+
+      const resolvedName = resolveInventoryIngredientName(ing.ingredient_name, inventoryCache || []);
+      const inventoryItem = (inventoryCache || []).find(item => item.name.toLowerCase().trim() === resolvedName.toLowerCase().trim());
+      const targetUnit = inventoryItem ? inventoryItem.unit : (ing.unit === 'tsp' || ing.unit === 'tbsp' ? 'g' : ing.unit);
+
+      const unitCost = costMap[resolvedName.toLowerCase().trim()] || 0.0;
+      const estCost = gramsNeeded * unitCost;
+
+      if (!totals[nameLower]) {
+        totals[nameLower] = {
+          name: nameTrim,
+          grams: 0,
+          unit: targetUnit,
+          cost: 0
+        };
+      }
+      totals[nameLower].grams += gramsNeeded;
+      totals[nameLower].cost += estCost;
+    });
+
+    // Process toppings
+    const toppingsList = Array.isArray(order.toppings) ? order.toppings : (order.toppings ? JSON.parse(order.toppings) : []);
+    if (Array.isArray(toppingsList)) {
+      toppingsList.forEach(tName => {
+        const topLower = String(tName).toLowerCase().trim();
+        if (topLower === 'none' || topLower === 'sin coberturas' || topLower === 'no toppings') return;
+
+        const toppingIng = (recipeIngredientsCache || []).find(ing => 
+          ing.dessert_id === order.dessert_id && 
+          ing.is_topping && 
+          (ing.topping_value || '').toLowerCase().trim() === topLower
+        );
+
+        if (toppingIng) {
+          const recipeAmountScaled = toppingIng.amount * mult;
+          const gramsNeeded = convertRecipeAmountToInventoryGrams(toppingIng.ingredient_name, recipeAmountScaled, toppingIng.unit);
+
+          const resolvedName = resolveInventoryIngredientName(toppingIng.ingredient_name, inventoryCache || []);
+          const inventoryItem = (inventoryCache || []).find(item => item.name.toLowerCase().trim() === resolvedName.toLowerCase().trim());
+          const targetUnit = inventoryItem ? inventoryItem.unit : (toppingIng.unit === 'tsp' || toppingIng.unit === 'tbsp' ? 'g' : toppingIng.unit);
+
+          const unitCost = costMap[resolvedName.toLowerCase().trim()] || 0.0;
+          const estCost = gramsNeeded * unitCost;
+
+          const nameTrim = toppingIng.ingredient_name.trim();
+          const nameKey = nameTrim.toLowerCase();
+
+          if (!totals[nameKey]) {
+            totals[nameKey] = {
+              name: nameTrim,
+              grams: 0,
+              unit: targetUnit,
+              cost: 0
+            };
+          }
+          totals[nameKey].grams += gramsNeeded;
+          totals[nameKey].cost += estCost;
+        }
+      });
+    }
+  });
+
+  return totals;
+}
+
 function renderReportVisuals(orders) {
   const container = document.getElementById('report-visuals-container');
   if (!container) return;
@@ -3817,6 +3928,36 @@ function renderReportVisuals(orders) {
 
   const sortedDesserts = Object.keys(dessertStats).sort((a,b) => dessertStats[b].qty - dessertStats[a].qty);
   const sortedToppings = Object.keys(toppingStats).sort((a,b) => toppingStats[b] - toppingStats[a]);
+
+  // Compute ingredient usage breakdown for the report
+  const ingredientTotals = calculateIngredientUsageForOrders(orders);
+  const sortedIngKeys = Object.keys(ingredientTotals).sort();
+  let totalIngCost = 0;
+
+  const ingTableRows = sortedIngKeys.map(key => {
+    const item = ingredientTotals[key];
+    totalIngCost += item.cost;
+    let lbsStr = '-';
+    let qtyStr = '';
+
+    if (item.unit === 'g' || item.unit === 'ml') {
+      const lbs = item.grams / 453.59237;
+      lbsStr = `<strong>${lbs.toFixed(2)} lbs</strong>`;
+      qtyStr = `${Math.round(item.grams).toLocaleString()} ${item.unit}`;
+    } else {
+      lbsStr = `-`;
+      qtyStr = `<strong>${Number(item.grams.toFixed(1))} ${item.unit}</strong>`;
+    }
+
+    return `
+      <tr>
+        <td><strong>${item.name}</strong></td>
+        <td>${lbsStr}</td>
+        <td>${qtyStr}</td>
+        <td>$${item.cost.toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
 
   let html = `
     <div class="grid grid-4" style="gap: 16px; margin-bottom: 24px;">
@@ -3905,6 +4046,33 @@ function renderReportVisuals(orders) {
             `;
           }).join('')}
         </div>
+      </div>
+    </div>
+
+    <!-- Raw Ingredient Usage Breakdown Table -->
+    <div class="analytics-card" style="padding: 20px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px;">
+        <h4 class="analytics-title" style="margin: 0; border: none; padding: 0;">
+          ${isEs ? 'Uso Consolidado de Ingredientes Materia Prima' : 'Consolidated Raw Ingredient Usage'}
+        </h4>
+        <span style="font-size: 13px; font-weight: 600; color: var(--primary);">
+          ${isEs ? 'Costo Est. Ingredientes' : 'Est. Total Ingredient Cost'}: $${totalIngCost.toFixed(2)}
+        </span>
+      </div>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>${isEs ? 'Ingrediente' : 'Ingredient Name'}</th>
+              <th>${isEs ? 'Libras Usadas (lbs)' : 'Pounds Used (lbs)'}</th>
+              <th>${isEs ? 'Cantidad Total (Gramos / Unidades)' : 'Total Quantity (Grams / Units)'}</th>
+              <th>${isEs ? 'Costo Estimado ($)' : 'Est. Ingredient Cost ($)'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedIngKeys.length > 0 ? ingTableRows : `<tr><td colspan="4" class="text-center" style="padding: 20px; color: var(--text-muted);">${isEs ? 'No hay datos de uso de ingredientes para los pedidos seleccionados.' : 'No ingredient usage data for selected orders.'}</td></tr>`}
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -4185,6 +4353,51 @@ function printReport() {
           </div>
         </div>
         
+        <!-- Raw Ingredient Usage Table for Print/PDF -->
+        <div style="margin-bottom: 24px;">
+          <div class="section-title">${isEs ? 'Uso Consolidado de Ingredientes Materia Prima' : 'Consolidated Raw Ingredient Usage'}</div>
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>${isEs ? 'Ingrediente' : 'Ingredient Name'}</th>
+                <th>${isEs ? 'Libras Usadas (lbs)' : 'Pounds Used (lbs)'}</th>
+                <th>${isEs ? 'Cantidad Total (Gramos / Unidades)' : 'Total Quantity (Grams / Units)'}</th>
+                <th>${isEs ? 'Costo Estimado ($)' : 'Est. Ingredient Cost ($)'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(() => {
+                const ingTotals = calculateIngredientUsageForOrders(reportsOrders);
+                const sortedKeys = Object.keys(ingTotals).sort();
+                if (sortedKeys.length === 0) {
+                  return `<tr><td colspan="4" style="text-align:center; padding:12px; color:#6b7280;">No data</td></tr>`;
+                }
+                return sortedKeys.map(k => {
+                  const item = ingTotals[k];
+                  let lbsStr = '-';
+                  let qtyStr = '';
+                  if (item.unit === 'g' || item.unit === 'ml') {
+                    const lbs = item.grams / 453.59237;
+                    lbsStr = `<strong>${lbs.toFixed(2)} lbs</strong>`;
+                    qtyStr = `${Math.round(item.grams).toLocaleString()} ${item.unit}`;
+                  } else {
+                    lbsStr = `-`;
+                    qtyStr = `<strong>${Number(item.grams.toFixed(1))} ${item.unit}</strong>`;
+                  }
+                  return `
+                    <tr>
+                      <td><strong>${item.name}</strong></td>
+                      <td>${lbsStr}</td>
+                      <td>${qtyStr}</td>
+                      <td>$${item.cost.toFixed(2)}</td>
+                    </tr>
+                  `;
+                }).join('');
+              })()}
+            </tbody>
+          </table>
+        </div>
+
         <div class="section-title">${isEs ? 'Pedidos Detallados' : 'Itemized Orders'}</div>
         <table class="orders-table">
           <thead>
