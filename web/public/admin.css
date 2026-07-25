@@ -70,19 +70,37 @@
   border-color: #ffffff;
 }
 
-/* Stats Cards */
+/* Stats Cards Overview Grid */
+.overview-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 32px;
+}
+
+@media (max-width: 860px) {
+  .overview-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .stat-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 20px 16px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  aspect-ratio: 1 / 1;
   transition: var(--transition);
 }
 
@@ -92,26 +110,28 @@
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 1px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  white-space: nowrap;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--primary);
   line-height: 1.2;
 }
 
 .stat-subtext {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  margin-top: 8px;
+  margin-top: 6px;
   font-style: italic;
+  white-space: nowrap;
 }
 
 /* Analytics Cards & Progress bars */
