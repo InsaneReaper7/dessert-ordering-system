@@ -70,26 +70,28 @@
   border-color: #ffffff;
 }
 
-/* Stats Cards Overview Grid - 4 Compact Half-Size Squares */
+/* Stats Cards Overview Grid - Full Width Symmetrical Row */
 .overview-stats-grid {
   display: flex !important;
   flex-direction: row !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-  gap: 16px !important;
-  margin-top: 24px !important;
-  max-width: 600px !important;
+  justify-content: space-between !important;
+  align-items: stretch !important;
+  gap: 24px !important;
+  margin-top: 32px !important;
+  width: 100% !important;
+  max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .overview-stats-grid .stat-card {
-  width: 125px !important;
-  height: 125px !important;
-  flex: 0 0 125px !important;
+  flex: 1 1 0px !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: auto !important;
   background-color: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 10px 8px;
+  padding: 22px 16px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -106,32 +108,30 @@
 }
 
 .overview-stats-grid .stat-label {
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   color: var(--text-muted);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   font-weight: 600;
-  margin-bottom: 2px;
+  margin-bottom: 6px;
   text-align: center;
   word-break: break-word;
-  line-height: 1.1;
 }
 
 .overview-stats-grid .stat-value {
-  font-size: 18px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--primary);
-  line-height: 1.1;
+  line-height: 1.2;
   margin: 2px 0;
 }
 
 .overview-stats-grid .stat-subtext {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 6px;
   font-style: italic;
   text-align: center;
-  line-height: 1.0;
 }
 
 /* Analytics Cards & Progress bars */
