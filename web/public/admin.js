@@ -3929,7 +3929,37 @@ function renderReportVisuals(orders) {
   const sortedDesserts = Object.keys(dessertStats).sort((a,b) => dessertStats[b].qty - dessertStats[a].qty);
   const sortedToppings = Object.keys(toppingStats).sort((a,b) => toppingStats[b] - toppingStats[a]);
 
-  // Compute ingredient usage breakdown for the report
+  // Compute tips analytics for the report
+  const tippedOrders = orders.filter(o => (o.tip_amount || 0) > 0);
+  const totalTipsCollected = orders.reduce((sum, o) => sum + (o.tip_amount || 0), 0);
+  const avgTipOnTipped = tippedOrders.length > 0 ? (totalTipsCollected / tippedOrders.length) : 0;
+  const overallTipRate = totalSales > 0 ? ((totalTipsCollected / totalSales) * 100) : 0;
+  const tippedOrdersPct = orders.length > 0 ? ((tippedOrders.length / orders.length) * 100) : 0;
+
+  const tippedTableRows = tippedOrders.map(o => {
+    const dateStr = new Date(o.created_at).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric'
+    });
+    const price = o.total_price || 0;
+    const tip = o.tip_amount || 0;
+    const tipPct = price > 0 ? ((tip / price) * 100).toFixed(1) + '%' : 'N/A';
+    const dessertName = t(o.dessert_id);
+
+    return `
+      <tr>
+        <td>#${o.id}</td>
+        <td>${dateStr}</td>
+        <td><strong>${o.customer_name}</strong></td>
+        <td>${dessertName} (${t(o.size, o.size)})</td>
+        <td>$${price.toFixed(2)}</td>
+        <td><strong style="color: #10b981;">+$${tip.toFixed(2)}</strong></td>
+        <td><span class="status-badge completed" style="font-size: 11px; background: #d1fae5; color: #065f46;">${tipPct}</span></td>
+      </tr>
+    `;
+  }).join('');
+
+  // Raw Ingredient Usage Breakdown Table
   const ingredientTotals = calculateIngredientUsageForOrders(orders);
   const sortedIngKeys = Object.keys(ingredientTotals).sort();
   let totalIngCost = 0;
@@ -4071,6 +4101,60 @@ function renderReportVisuals(orders) {
           </thead>
           <tbody>
             ${sortedIngKeys.length > 0 ? ingTableRows : `<tr><td colspan="4" class="text-center" style="padding: 20px; color: var(--text-muted);">${isEs ? 'No hay datos de uso de ingredientes para los pedidos seleccionados.' : 'No ingredient usage data for selected orders.'}</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tips Breakdown & Analytics Card -->
+    <div class="analytics-card" style="padding: 20px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px;">
+        <h4 class="analytics-title" style="margin: 0; border: none; padding: 0;">
+          ${isEs ? 'Desglose y Analítica de Propinas' : 'Tips Breakdown & Analytics'}
+        </h4>
+        <span style="font-size: 13px; font-weight: 600; color: #10b981;">
+          ${isEs ? 'Total Propinas' : 'Total Tips Collected'}: $${totalTipsCollected.toFixed(2)}
+        </span>
+      </div>
+
+      <!-- Tips Summary Mini Cards Grid -->
+      <div class="grid grid-4" style="gap: 12px; margin-bottom: 20px;">
+        <div class="stat-card" style="padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0;">
+          <span class="stat-label" style="color: #166534; font-size: 10px;">${isEs ? 'Propinas Totales' : 'Total Tips Collected'}</span>
+          <span class="stat-value" style="font-size: 20px; color: #15803d;">$${totalTipsCollected.toFixed(2)}</span>
+        </div>
+        <div class="stat-card" style="padding: 12px;">
+          <span class="stat-label" style="font-size: 10px;">${isEs ? 'Pedidos con Propina' : 'Tipped Orders'}</span>
+          <span class="stat-value" style="font-size: 20px;">${tippedOrders.length} / ${orders.length}</span>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${tippedOrdersPct.toFixed(1)}% of orders</div>
+        </div>
+        <div class="stat-card" style="padding: 12px;">
+          <span class="stat-label" style="font-size: 10px;">${isEs ? 'Propina Promedio' : 'Avg Tip (Tipped Orders)'}</span>
+          <span class="stat-value" style="font-size: 20px; color: var(--primary);">$${avgTipOnTipped.toFixed(2)}</span>
+        </div>
+        <div class="stat-card" style="padding: 12px;">
+          <span class="stat-label" style="font-size: 10px;">${isEs ? 'Tasa General Propina' : 'Overall Tip Rate'}</span>
+          <span class="stat-value" style="font-size: 20px; color: #3b82f6;">${overallTipRate.toFixed(1)}%</span>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">of gross sales</div>
+        </div>
+      </div>
+
+      <!-- Tipped Orders Table -->
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>${isEs ? 'Fecha' : 'Date'}</th>
+              <th>${isEs ? 'Cliente' : 'Customer'}</th>
+              <th>${isEs ? 'Postre' : 'Item Details'}</th>
+              <th>${isEs ? 'Precio Pedido ($)' : 'Order Price ($)'}</th>
+              <th>${isEs ? 'Propina ($)' : 'Tip Amount ($)'}</th>
+              <th>${isEs ? '% Propina' : 'Tip %'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tippedOrders.length > 0 ? tippedTableRows : `<tr><td colspan="7" class="text-center" style="padding: 20px; color: var(--text-muted);">${isEs ? 'No se registraron pedidos con propina para el periodo seleccionado.' : 'No tipped orders recorded for the selected period.'}</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -4390,6 +4474,54 @@ function printReport() {
                       <td>${lbsStr}</td>
                       <td>${qtyStr}</td>
                       <td>$${item.cost.toFixed(2)}</td>
+                    </tr>
+                  `;
+                }).join('');
+              })()}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tips Breakdown for Print/PDF -->
+        <div style="margin-bottom: 24px;">
+          <div class="section-title">${isEs ? 'Desglose y Analítica de Propinas' : 'Tips Breakdown & Analytics'}</div>
+          <div style="font-size: 13px; color: #4b5563; margin-bottom: 10px;">
+            <strong>${isEs ? 'Propinas Totales' : 'Total Tips'}:</strong> $${totalTips.toFixed(2)} &nbsp;|&nbsp;
+            <strong>${isEs ? 'Pedidos con Propina' : 'Tipped Orders'}:</strong> ${reportsOrders.filter(o => (o.tip_amount || 0) > 0).length} of ${reportsOrders.length} &nbsp;|&nbsp;
+            <strong>${isEs ? 'Propina Promedio' : 'Avg Tip'}:</strong> $${(reportsOrders.filter(o => (o.tip_amount || 0) > 0).length > 0 ? (totalTips / reportsOrders.filter(o => (o.tip_amount || 0) > 0).length) : 0).toFixed(2)}
+          </div>
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>${isEs ? 'Fecha' : 'Date'}</th>
+                <th>${isEs ? 'Cliente' : 'Customer'}</th>
+                <th>${isEs ? 'Postre' : 'Item Details'}</th>
+                <th>${isEs ? 'Precio' : 'Order Price'}</th>
+                <th>${isEs ? 'Propina' : 'Tip Amount'}</th>
+                <th>${isEs ? '% Propina' : 'Tip %'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(() => {
+                const tipped = reportsOrders.filter(o => (o.tip_amount || 0) > 0);
+                if (tipped.length === 0) {
+                  return `<tr><td colspan="7" style="text-align:center; padding:12px; color:#6b7280;">No tipped orders</td></tr>`;
+                }
+                return tipped.map(o => {
+                  const dateStr = new Date(o.created_at).toLocaleDateString();
+                  const price = o.total_price || 0;
+                  const tip = o.tip_amount || 0;
+                  const tipPct = price > 0 ? ((tip / price) * 100).toFixed(1) + '%' : 'N/A';
+                  return `
+                    <tr>
+                      <td>#${o.id}</td>
+                      <td>${dateStr}</td>
+                      <td>${o.customer_name}</td>
+                      <td>${t(o.dessert_id)} (${t(o.size, o.size)})</td>
+                      <td>$${price.toFixed(2)}</td>
+                      <td>+$${tip.toFixed(2)}</td>
+                      <td>${tipPct}</td>
                     </tr>
                   `;
                 }).join('');
