@@ -363,6 +363,7 @@ app.get('/api/admin/stats', authenticateAdminToken, async (req, res) => {
     const stats = {
       sales: {
         today: 0,
+        week: 0,
         month: 0,
         year: 0
       },
@@ -380,9 +381,13 @@ app.get('/api/admin/stats', authenticateAdminToken, async (req, res) => {
     const monthStr = now.toISOString().slice(0, 7);  // YYYY-MM
     const yearStr = now.toISOString().slice(0, 4);   // YYYY
 
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
     orders.forEach(order => {
       // Parse order date (handles ISO string or SQLite string)
-      const orderDateStr = new Date(order.created_at).toISOString();
+      const orderDateObj = new Date(order.created_at);
+      const orderDateStr = orderDateObj.toISOString();
       const orderDay = orderDateStr.slice(0, 10);
       const orderMonth = orderDateStr.slice(0, 7);
       const orderYear = orderDateStr.slice(0, 4);
@@ -393,6 +398,7 @@ app.get('/api/admin/stats', authenticateAdminToken, async (req, res) => {
 
       // Group totals
       if (orderDay === todayStr) stats.sales.today += totalEarned;
+      if (orderDateObj >= startOfWeek) stats.sales.week += totalEarned;
       if (orderMonth === monthStr) stats.sales.month += totalEarned;
       if (orderYear === yearStr) stats.sales.year += totalEarned;
 

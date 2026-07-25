@@ -75,6 +75,7 @@ const TRANSLATIONS = {
     price_12_pack_label: "Pack of 12 (Full Tray)",
     btn_save_roll_prices: "Save Cinnamon Rolls Prices",
     sales_today: "Sales (Today)",
+    sales_week: "Sales (This Week)",
     sales_month: "Sales (This Month)",
     sales_year: "Sales (This Year)",
     excluding_tbd: "*Excluding TBD orders",
@@ -265,6 +266,7 @@ const TRANSLATIONS = {
     price_12_pack_label: "Paquete de 12 (Bandeja Completa)",
     btn_save_roll_prices: "Guardar Precios de Rollos de Canela",
     sales_today: "Ventas (Hoy)",
+    sales_week: "Ventas (Esta Semana)",
     sales_month: "Ventas (Este Mes)",
     sales_year: "Ventas (Este Año)",
     excluding_tbd: "*Excluyendo pedidos TBD",
@@ -609,6 +611,9 @@ async function loadStats() {
 function renderStats(stats) {
   // Update overview stats
   document.getElementById('stats-sales-today').textContent = `$${stats.sales.today.toFixed(2)}`;
+  if (document.getElementById('stats-sales-week')) {
+    document.getElementById('stats-sales-week').textContent = `$${(stats.sales.week || 0).toFixed(2)}`;
+  }
   document.getElementById('stats-sales-month').textContent = `$${stats.sales.month.toFixed(2)}`;
   document.getElementById('stats-sales-year').textContent = `$${stats.sales.year.toFixed(2)}`;
 
