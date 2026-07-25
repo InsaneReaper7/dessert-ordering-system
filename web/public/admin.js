@@ -420,6 +420,9 @@ function t(key, defaultValue = '') {
   if (dict && dict[key] !== undefined) {
     return dict[key];
   }
+  if (TRANSLATIONS.en && TRANSLATIONS.en[key] !== undefined) {
+    return TRANSLATIONS.en[key];
+  }
   return defaultValue || key;
 }
 
@@ -427,7 +430,10 @@ function applyTranslations() {
   // Translate static text elements
   document.querySelectorAll('[data-translate]').forEach(el => {
     const key = el.getAttribute('data-translate');
-    el.textContent = t(key);
+    if (!el.dataset.defaultText) {
+      el.dataset.defaultText = el.textContent.trim();
+    }
+    el.textContent = t(key, el.dataset.defaultText);
   });
 
   // Translate placeholders
