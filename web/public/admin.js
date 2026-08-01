@@ -1757,7 +1757,8 @@ async function resetIngredientCost(id) {
 
 // ==========================================
 // Tab 3: Current Recipes (Formulation)
-// ====================================let recipeIngredientsCache = [];
+// ==========================================
+let recipeIngredientsCache = [];
 let inventoryCache = [];
 
 async function loadRecipes() {
@@ -3728,6 +3729,19 @@ async function generateReport() {
   const allowedToppings = Array.from(toppingCheckboxes).filter(cb => cb.checked).map(cb => cb.value.toLowerCase().trim());
 
   try {
+    if (!recipeIngredientsCache || recipeIngredientsCache.length === 0) {
+      const recipesResp = await fetch('/api/admin/recipes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (recipesResp.ok) recipeIngredientsCache = await recipesResp.json();
+    }
+    if (!inventoryCache || inventoryCache.length === 0) {
+      const ingResp = await fetch('/api/admin/ingredients', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (ingResp.ok) inventoryCache = await ingResp.json();
+    }
+
     const response = await fetch('/api/admin/orders', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
