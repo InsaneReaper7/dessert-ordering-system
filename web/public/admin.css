@@ -70,13 +70,11 @@
   border-color: #ffffff;
 }
 
-/* Stats Cards Overview Grid - Full Width Symmetrical Row */
+/* Stats Cards Overview Grid - Desktop 4 Columns, Mobile 2x2 Grid */
 .overview-stats-grid {
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: space-between !important;
-  align-items: stretch !important;
-  gap: 24px !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 20px !important;
   margin-top: 32px !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -84,14 +82,12 @@
 }
 
 .overview-stats-grid .stat-card {
-  flex: 1 1 0px !important;
-  min-width: 0 !important;
-  width: auto !important;
-  height: auto !important;
+  width: 100% !important;
+  height: 100% !important;
   background-color: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 22px 16px;
+  padding: 20px 14px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -132,6 +128,30 @@
   margin-top: 6px;
   font-style: italic;
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .overview-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-top: 16px !important;
+  }
+  .overview-stats-grid .stat-card {
+    padding: 14px 10px !important;
+  }
+  .overview-stats-grid .stat-value {
+    font-size: 22px !important;
+  }
+  .overview-stats-grid .stat-label {
+    font-size: 10px !important;
+    letter-spacing: 0.5px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-stats-grid .stat-value {
+    font-size: 20px !important;
+  }
 }
 
 /* Analytics Cards & Progress bars */
@@ -683,6 +703,80 @@
     gap: 12px;
     align-items: center;
     text-align: center;
+  }
+}
+
+/* Comprehensive All-Tabs Mobile UX Overhaul Rules */
+.report-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+  
+  .report-charts-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .table-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    margin-bottom: 12px;
+  }
+
+  .orders-table {
+    width: 100% !important;
+    min-width: 520px;
+  }
+
+  .orders-table th,
+  .orders-table td {
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Form & Filter Stack on Mobile */
+  .reports-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .cinnamon-pricing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .recipe-size-pill {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 110px;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  
+  .stat-card {
+    padding: 12px 8px !important;
   }
 }
 

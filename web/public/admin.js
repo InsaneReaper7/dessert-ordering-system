@@ -4043,7 +4043,7 @@ function renderReportVisuals(orders) {
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+    <div class="report-charts-grid">
       <div class="analytics-card" style="padding: 20px;">
         <h4 class="analytics-title" style="margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
           ${isEs ? 'Ventas por Categoría de Postre' : 'Sales by Dessert Item'}
